@@ -1,0 +1,1119 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AMENSG — Socios en Automatización Inteligente</title>
+  <meta name="description" content="Automatización, integración de sistemas e IA aplicada a procesos reales de negocio. Desde 2011, en Montevideo, Uruguay." />
+  <meta property="og:title" content="AMENSG — Socios en Automatización Inteligente" />
+  <meta property="og:description" content="Automatización inteligente para alcanzar objetivos juntos." />
+  <meta property="og:type" content="website" />
+
+  <!-- Fuentes: Space Grotesk (display) + Inter (body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" />
+
+  <!-- Tailwind (CDN, modo standalone) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            display: ['"Space Grotesk"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- React 18 + Babel para JSX en el navegador -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    html { scroll-behavior: smooth; }
+    body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; background:#06101F; }
+    h1,h2,h3,h4 { font-family:'Space Grotesk','Inter',sans-serif; letter-spacing:-0.02em; }
+
+    /* ── Keyframes exactos del proyecto original ── */
+    @keyframes meshFloat { 0%,100%{transform:translate(0,0) scale(1);} 50%{transform:translate(30px,-20px) scale(1.08);} }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(14px);} to{opacity:1;transform:translateY(0);} }
+    @keyframes rowin { from{opacity:0;transform:translateX(-10px);} to{opacity:1;transform:translateX(0);} }
+    @keyframes intpulseF { from{stroke-dashoffset:276;} to{stroke-dashoffset:0;} }
+    @keyframes intpulseR { from{stroke-dashoffset:0;} to{stroke-dashoffset:276;} }
+    @keyframes intfade { from{opacity:0;} to{opacity:1;} }
+    @keyframes pingRing { 75%,100%{transform:scale(2);opacity:0;} }
+
+    .animate-fade-up { animation: fadeUp 0.7s ease-out both; }
+    .anim-ping { animation: pingRing 1.4s cubic-bezier(0,0,0.2,1) infinite; }
+
+    /* Reveal al scroll (replica del componente Reveal: duration-700 ease-out) */
+    .reveal { opacity:0; transform:translateY(16px); transition:opacity .7s ease-out, transform .7s ease-out; }
+    .reveal.shown { opacity:1; transform:translateY(0); }
+
+    /* tabular nums para los contadores del dashboard */
+    .tnum { font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" data-presets="react">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+/* ============================================================
+   AMENSG — Landing autónoma (clon fiel del proyecto original)
+   Iconos: réplicas SVG de lucide-react (mismo trazo 1.6-2)
+   ============================================================ */
+
+/* ---------- Iconos (lucide-style) ---------- */
+const Ico = ({ d, sw = 1.6, size = 24, fill, children, ...p }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} fill={fill || "none"} stroke="currentColor"
+       strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" {...p}>
+    {d && <path d={d} />}{children}
+  </svg>
+);
+const IcoMenu = (p) => <Ico {...p}><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></Ico>;
+const IcoX = (p) => <Ico {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></Ico>;
+const IcoArrowRight = (p) => <Ico {...p}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></Ico>;
+const IcoCheck = (p) => <Ico {...p}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></Ico>;
+const IcoSearch = (p) => <Ico {...p}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></Ico>;
+const IcoPen = (p) => <Ico {...p}><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></Ico>;
+const IcoCog = (p) => <Ico {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></Ico>;
+const IcoSparkles = (p) => <Ico {...p}><path d="M12 3l1.9 4.6L18.5 9.5 13.9 11.4 12 16l-1.9-4.6L5.5 9.5l4.6-1.9z"/><path d="M19 14l.8 2 .2.8.8.2 2 .8-2 .8-.8.2-.2.8-.8 2-.8-2-.2-.8-.8-.2-2-.8 2-.8.8-.2.2-.8z"/></Ico>;
+const IcoRocket = (p) => <Ico {...p}><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></Ico>;
+const IcoTrending = (p) => <Ico {...p}><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></Ico>;
+const IcoRepeat = (p) => <Ico {...p}><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></Ico>;
+const IcoGitMerge = (p) => <Ico {...p}><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></Ico>;
+const IcoSheet = (p) => <Ico {...p}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="10" y1="9" x2="10" y2="9"/></Ico>;
+const IcoDatabase = (p) => <Ico {...p}><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></Ico>;
+const IcoClock = (p) => <Ico {...p}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></Ico>;
+const IcoAlertT = (p) => <Ico {...p}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12" y2="17"/></Ico>;
+const IcoShieldA = (p) => <Ico {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12" y2="16"/></Ico>;
+const IcoBrain = (p) => <Ico {...p}><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2z"/></Ico>;
+const IcoWorkflow = (p) => <Ico {...p}><rect x="3" y="3" width="8" height="8" rx="2"/><path d="M7 11v4a2 2 0 0 0 2 2h4"/><rect x="13" y="13" width="8" height="8" rx="2"/></Ico>;
+const IcoNetwork = (p) => <Ico {...p}><rect x="9" y="2" width="6" height="6" rx="1"/><rect x="3" y="16" width="6" height="6" rx="1"/><rect x="15" y="16" width="6" height="6" rx="1"/><path d="M12 8v4M12 12H6v4M12 12h6v4"/></Ico>;
+const IcoBot = (p) => <Ico {...p}><rect x="4" y="8" width="16" height="11" rx="2.5"/><path d="M12 3v5"/><circle cx="12" cy="3" r="1.2" fill="currentColor"/><circle cx="9" cy="13" r="1.1" fill="currentColor"/><circle cx="15" cy="13" r="1.1" fill="currentColor"/><path d="M9 16.5h6"/></Ico>;
+const IcoLayers = (p) => <Ico {...p}><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></Ico>;
+const IcoMail = (p) => <Ico {...p}><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></Ico>;
+const IcoMapPin = (p) => <Ico {...p}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></Ico>;
+const IcoAlertC = (p) => <Ico {...p}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12" y2="16"/></Ico>;
+const IcoHeadphones = (p) => <Ico {...p}><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></Ico>;
+const IcoCart = (p) => <Ico {...p}><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></Ico>;
+const IcoBuilding = (p) => <Ico {...p}><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01"/></Ico>;
+const IcoTruck = (p) => <Ico {...p}><path d="M1 3h15v13H1zM16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></Ico>;
+const IcoMapPinned = (p) => <Ico {...p}><path d="M18 8c0 4.5-6 9-6 9s-6-4.5-6-9a6 6 0 0 1 12 0z"/><circle cx="12" cy="8" r="2"/><path d="M8.835 14H5a1 1 0 0 0-.9.7l-2 6c-.1.5.1 1 .5 1.2.2.1.3.1.5.1h18c.6 0 1-.4 1-1 0-.1 0-.2-.1-.3l-2-6a1 1 0 0 0-.9-.7h-3.835"/></Ico>;
+const IcoUsers = (p) => <Ico {...p}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></Ico>;
+
+/* ---------- LogoMark (idéntico al SVG original) ---------- */
+function LogoMark() {
+  return (
+    <span className="inline-flex items-center gap-2.5">
+      <svg viewBox="0 0 100 110" className="h-7 w-auto text-white">
+        <path d="M 50 5 L 93 30 L 93 80 L 50 105 L 7 80 L 7 30 Z" fill="none" stroke="currentColor" strokeWidth="6" strokeLinejoin="round"/>
+        <line x1="27" y1="73" x2="73" y2="37" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+        <circle cx="27" cy="73" r="7" fill="currentColor"/>
+        <circle cx="50" cy="55" r="9" fill="#19C3FF"/>
+        <circle cx="73" cy="37" r="7" fill="currentColor"/>
+      </svg>
+      <span className="text-[22px] font-extrabold tracking-tight text-white lowercase">amensg</span>
+    </span>
+  );
+}
+
+/* ---------- Reveal (scroll, duration-700 ease-out, delay por item) ---------- */
+function Reveal({ children, className = "", delay = 0 }) {
+  const ref = useRef(null);
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    if (!ref.current) return;
+    const io = new IntersectionObserver((es) => {
+      es.forEach((e) => { if (e.isIntersecting) { setShown(true); io.disconnect(); } });
+    }, { threshold: 0.12 });
+    io.observe(ref.current);
+    return () => io.disconnect();
+  }, []);
+  return (
+    <div ref={ref} style={{ transitionDelay: `${delay}ms` }} className={`reveal ${shown ? "shown" : ""} ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+function Eyebrow({ children, light = false }) {
+  return (
+    <p className={`text-[11px] font-semibold uppercase tracking-[2.2px] ${light ? "text-[#1769E0]" : "text-[#19C3FF]"}`}>
+      — {children}
+    </p>
+  );
+}
+
+/* ---------- Header ---------- */
+function SiteHeader() {
+  const [scrolled, setScrolled] = useState(false);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 16);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  const links = [
+    { href: "#propuesta", label: "Propuesta" },
+    { href: "#servicios", label: "Servicios" },
+    { href: "#caso", label: "Caso" },
+    { href: "#proceso", label: "Cómo trabajamos" },
+    { href: "#equipo", label: "Equipo" },
+    { href: "#contacto", label: "Contacto" },
+  ];
+  return (
+    <header className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${scrolled ? "bg-[#06101F]/75 backdrop-blur-xl border-b border-white/5" : "bg-transparent"}`}>
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 md:px-8">
+        <a href="#top" className="shrink-0"><LogoMark /></a>
+        <nav className="hidden md:flex items-center gap-8">
+          {links.map((l) => (
+            <a key={l.href} href={l.href} className="text-sm font-medium text-white/70 hover:text-white transition-colors">{l.label}</a>
+          ))}
+        </nav>
+        <div className="flex items-center gap-3">
+          <a href="#contacto" className="hidden sm:inline-flex h-10 items-center rounded-full bg-white text-[#06101F] px-5 text-sm font-semibold hover:bg-[#19C3FF] transition-colors">Agendar diagnóstico</a>
+          <button aria-label="Menú" onClick={() => setOpen((v) => !v)} className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded-md text-white hover:bg-white/10">
+            {open ? <IcoX size={20}/> : <IcoMenu size={20}/>}
+          </button>
+        </div>
+      </div>
+      {open && (
+        <div className="md:hidden border-t border-white/5 bg-[#06101F]/95 backdrop-blur-xl">
+          <nav className="flex flex-col px-5 py-3">
+            {links.map((l) => (
+              <a key={l.href} href={l.href} onClick={() => setOpen(false)} className="py-3 text-sm font-medium text-white/80 hover:text-white">{l.label}</a>
+            ))}
+            <a href="#contacto" onClick={() => setOpen(false)} className="mt-2 inline-flex h-11 items-center justify-center rounded-full bg-white text-[#06101F] text-sm font-semibold">Agendar diagnóstico</a>
+          </nav>
+        </div>
+      )}
+    </header>
+  );
+}
+
+/* ---------- Hero ---------- */
+function Hero() {
+  return (
+    <section id="top" className="relative overflow-hidden bg-[#06101F] pt-32 pb-20 md:pt-40 md:pb-28">
+      <div aria-hidden className="pointer-events-none absolute inset-0 opacity-80">
+        <div className="absolute -top-40 -right-32 h-[520px] w-[520px] rounded-full blur-3xl" style={{ background: "radial-gradient(closest-side, rgba(25,195,255,0.35), transparent 70%)", animation: "meshFloat 14s ease-in-out infinite" }} />
+        <div className="absolute -bottom-40 -left-20 h-[480px] w-[480px] rounded-full blur-3xl" style={{ background: "radial-gradient(closest-side, rgba(11,31,58,0.9), transparent 70%)", animation: "meshFloat 18s ease-in-out infinite reverse" }} />
+        <div className="absolute top-1/3 left-1/2 h-[360px] w-[360px] -translate-x-1/2 rounded-full blur-3xl" style={{ background: "radial-gradient(closest-side, rgba(32,224,178,0.10), transparent 70%)", animation: "meshFloat 22s ease-in-out infinite" }} />
+      </div>
+      <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "radial-gradient(rgba(255,255,255,0.6) 1px, transparent 1px)", backgroundSize: "26px 26px" }} />
+
+      <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-5 md:px-8 lg:grid-cols-2 lg:gap-10">
+        <Reveal>
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1.5 text-[11px] font-medium tracking-wide text-white/75">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inset-0 anim-ping rounded-full bg-[#20E0B2] opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-[#20E0B2]" />
+              </span>
+              IA APLICADA A PROCESOS REALES
+            </div>
+            <h1 className="mt-8 font-extrabold text-white tracking-[-0.025em] leading-[1.06]" style={{ fontSize: "clamp(32px, 4.8vw, 56px)" }}>
+              Automatización, integración e IA para operaciones reales
+            </h1>
+            <p className="mt-8 max-w-xl text-[17px] leading-relaxed text-white/65">
+              Nos integramos a tu equipo para automatizar procesos, conectar sistemas e incorporar IA donde genera impacto real.
+            </p>
+            <div className="mt-7 flex flex-wrap items-center gap-x-3 gap-y-2 text-[13px] font-medium text-white/55">
+              <span>200–300 usuarios</span><span className="text-white/25">·</span>
+              <span>4 empresas</span><span className="text-white/25">·</span>
+              <span>4 call centers</span><span className="text-white/25">·</span>
+              <span>13+ años</span>
+            </div>
+            <div className="mt-10 flex flex-wrap items-center gap-3">
+              <a href="#contacto" className="inline-flex h-12 items-center gap-2 rounded-full px-6 text-sm font-semibold text-white shadow-[0_10px_30px_-10px_rgba(25,195,255,0.6)] transition-transform hover:-translate-y-0.5" style={{ background: "linear-gradient(135deg, #0B1F3A 0%, #1769E0 100%)" }}>
+                Agendar diagnóstico <IcoArrowRight size={16} sw={2}/>
+              </a>
+              <a href="#caso" className="inline-flex h-12 items-center rounded-full border border-white/15 px-6 text-sm font-semibold text-white hover:bg-white/5 transition-colors">Ver caso destacado</a>
+            </div>
+          </div>
+        </Reveal>
+
+        <Reveal delay={120} className="lg:pl-4">
+          <div>
+            <p className="mb-3 text-[10.5px] font-semibold uppercase tracking-[2px] text-white/40">Capacidades AMENSG en acción</p>
+            <DynamicMockup />
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+
+/* ============================================================
+   DynamicMockup — carrusel del hero (4 escenas)
+   Avanza por evento (onCycleComplete), no por intervalo fijo.
+   ============================================================ */
+const MK_TABS = ["amensg / workflow.n8n", "amensg / agente-ia", "amensg / gestión comercial", "amensg / integraciones"];
+const MK_BADGES = [["cy","RUNNING"],["cy","ONLINE"],["te","EN PRODUCCIÓN"],["te","SINCRONIZANDO"]];
+const MK_ORDER = [
+  { label: "Automatización", scene: 0, desc: "Automatizamos tareas repetitivas, validaciones y flujos críticos." },
+  { label: "Integración",   scene: 3, desc: "Conectamos ERP, CRM, APIs y sistemas legacy sin retrabajo." },
+  { label: "Agentes de IA", scene: 1, desc: "Agentes conectados al conocimiento, datos y procesos de la empresa." },
+  { label: "Gestión",       scene: 2, desc: "Plataformas para ventas, backoffice, distribución y operación en campo." },
+];
+const CONVO = [
+  ["ai","Hola, soy el asistente de operaciones. ¿En qué te ayudo?"],
+  ["u","¿Cuántas activaciones quedaron pendientes hoy?"],
+  ["ai","Hay 312 en curso: 287 dentro del SLA y 25 requieren seguimiento."],
+  ["u","¿Qué tienen las 25?"],
+  ["ai","Documentación incompleta en contratos de Fibra Premium. ¿Genero la lista y aviso a backoffice?"],
+  ["u","Sí, dale."],
+  ["ai","Listo. Reporte generado y 4 operadores notificados."],
+];
+const SV = ["Fibra Premium","Plan Móvil","Fibra Básico","Plan Familia","Fibra Total"];
+const EN = ["Documentación","Equipo enviado","En reparto","Pendiente","Entregado"];
+const ST = [["ok","Activo"],["pr","Proceso"],["wt","En cola"]];
+const R = (a) => a[Math.floor(Math.random()*a.length)];
+
+function DynamicMockup() {
+  const [tabIdx, setTabIdx] = useState(0);
+  const [integrationPairIdx, setIntegrationPairIdx] = useState(0);
+  const [cycleKey, setCycleKey] = useState(0);
+  const [playing, setPlaying] = useState(true);
+  const [reduced, setReduced] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => { setReduced(mq.matches); if (mq.matches) setPlaying(false); };
+    update();
+    mq.addEventListener && mq.addEventListener("change", update);
+    return () => mq.removeEventListener && mq.removeEventListener("change", update);
+  }, []);
+
+  const playingRef = useRef(playing); playingRef.current = playing;
+
+  const handleCycleComplete = useCallback(() => {
+    if (!playingRef.current) return;
+    setTabIdx((i) => {
+      if (MK_ORDER[i].scene === 3) setIntegrationPairIdx((p) => (p + 1) % 2);
+      return (i + 1) % MK_ORDER.length;
+    });
+    setCycleKey((k) => k + 1);
+  }, []);
+
+  const goToTab = (i) => { const n = ((i % MK_ORDER.length) + MK_ORDER.length) % MK_ORDER.length; setTabIdx(n); setCycleKey((k) => k + 1); };
+  const prev = () => goToTab(tabIdx - 1);
+  const next = () => goToTab(tabIdx + 1);
+
+  const cur = MK_ORDER[tabIdx].scene;
+  const [badgeCls, badgeTxt] = MK_BADGES[cur];
+  const sceneKey = `${tabIdx}-${cycleKey}`;
+
+  return (
+    <div className="w-full max-w-[720px] mx-auto">
+      <div className="relative h-[430px] rounded-2xl overflow-hidden border border-white/10 bg-[#0B1F3A]/55 backdrop-blur-xl"
+           style={{ boxShadow: "0 30px 70px -15px rgba(25,195,255,0.22)", transform: "perspective(1500px) rotateY(-5deg) rotateX(2deg)" }}>
+        <div className="flex h-[38px] items-center gap-1.5 border-b border-white/5 bg-[#0a1626] px-3.5">
+          <span className="h-[11px] w-[11px] rounded-full bg-[#ff5f57]"/>
+          <span className="h-[11px] w-[11px] rounded-full bg-[#febc2e]"/>
+          <span className="h-[11px] w-[11px] rounded-full bg-[#28c840]"/>
+          <span className="ml-3 font-mono text-[11.5px] text-[#8ba3c7] truncate">{MK_TABS[cur]}</span>
+          <span className={`ml-auto inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[9.5px] font-semibold tracking-[1px] ${badgeCls === "cy" ? "bg-[#19C3FF]/10 text-[#19C3FF]" : "bg-[#20E0B2]/10 text-[#20E0B2]"}`}>
+            <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${badgeCls === "cy" ? "bg-[#19C3FF]" : "bg-[#20E0B2]"}`}/>
+            {badgeTxt}
+          </span>
+        </div>
+        <div className="relative h-[calc(100%-38px)]">
+          {cur === 0 && <WorkflowScene key={sceneKey} onCycleComplete={handleCycleComplete} reduced={reduced}/>}
+          {cur === 1 && <ChatScene key={sceneKey} onCycleComplete={handleCycleComplete} reduced={reduced}/>}
+          {cur === 2 && <AppScene key={sceneKey} onCycleComplete={handleCycleComplete} reduced={reduced}/>}
+          {cur === 3 && <IntegrationScene key={sceneKey} onCycleComplete={handleCycleComplete} reduced={reduced} pairIdx={integrationPairIdx}/>}
+        </div>
+      </div>
+
+      <div className="mt-5 flex items-center justify-center gap-2">
+        <button onClick={prev} aria-label="Escena anterior" className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-[#aebfd6] hover:text-white hover:border-white/20 transition-all">
+          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <button onClick={() => setPlaying((p) => !p)} aria-label={playing ? "Pausar" : "Reproducir"} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#19C3FF]/30 bg-[#19C3FF]/10 text-[#19C3FF] hover:bg-[#19C3FF]/15 transition-all">
+          {playing ? (
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+          ) : (
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor"><polygon points="7,5 19,12 7,19"/></svg>
+          )}
+        </button>
+        <button onClick={next} aria-label="Escena siguiente" className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-[#aebfd6] hover:text-white hover:border-white/20 transition-all">
+          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+
+      <div className="mt-4 flex flex-wrap justify-center gap-2 px-1">
+        {MK_ORDER.map((t, i) => {
+          const active = tabIdx === i;
+          return (
+            <button key={t.label} onClick={() => goToTab(i)} aria-pressed={active}
+              className={`inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-[12px] font-semibold transition-all ${active ? "bg-[#19C3FF]/20 border-[#19C3FF]/70 text-white shadow-[0_0_0_1px_rgba(25,195,255,0.35)]" : "bg-white/[0.04] border-white/15 text-white/70 hover:text-white hover:border-white/30"}`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${active ? "bg-[#19C3FF]" : "bg-[#5a7090]"}`}/>
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <p className="mt-4 mb-2 px-2 text-center text-[12.5px] leading-relaxed text-white/65 min-h-[2.2em]">{MK_ORDER[tabIdx].desc}</p>
+    </div>
+  );
+}
+
+/* ── Escena Workflow (n8n horizontal) — paso cada 850ms ── */
+function WorkflowScene({ onCycleComplete, reduced }) {
+  const [step, setStep] = useState(0);
+  const order = ["w0","w1","w2","w3","w5"];
+  const doneRef = useRef(false);
+  useEffect(() => {
+    if (reduced) { setStep(order.length); onCycleComplete && onCycleComplete(); return; }
+    let s = 0; setStep(0); doneRef.current = false;
+    const total = order.length + 2;
+    const id = setInterval(() => {
+      s += 1;
+      if (s >= total) { clearInterval(id); setStep(order.length); if (!doneRef.current) { doneRef.current = true; onCycleComplete && onCycleComplete(); } return; }
+      setStep(s);
+    }, 850);
+    return () => clearInterval(id);
+  }, [onCycleComplete, reduced]);
+
+  const nodeState = (i) => { if (step > order.length) return i < order.length ? "done" : ""; if (i < step) return "done"; if (i === step) return "active"; return ""; };
+  const nodes = [
+    { id:"w0", x:30,  y:96,  icon:"⚡",  label:"Webhook\nentrada" },
+    { id:"w1", x:135, y:96,  icon:"⚙",  label:"Validar\ndatos" },
+    { id:"w2", x:240, y:96,  icon:"◇",  label:"Agente\nIA" },
+    { id:"w3", x:345, y:41,  icon:"{ }",label:"Procesar\nrespuesta" },
+    { id:"w4", x:345, y:161, icon:"↻",  label:"Reintentar" },
+    { id:"w5", x:520, y:96,  icon:"↗",  label:"Integrar\nsistema" },
+  ];
+  const litEdges = step;
+  const CW = 620, CH = 270;
+  const X = (px) => `${((px/CW)*100).toFixed(3)}%`;
+  const Y = (py) => `${((py/CH)*100).toFixed(3)}%`;
+  const W = (w) => `${((w/CW)*100).toFixed(3)}%`;
+  const paths = [
+    "M 96 123 C 120 123, 150 123, 147 123",
+    "M 201 123 C 225 123, 255 123, 252 123",
+    "M 306 123 C 335 123, 355 68, 357 68",
+    "M 306 123 C 335 123, 355 188, 357 188",
+    "M 411 68 C 470 68, 500 123, 532 123",
+    "M 411 188 C 470 188, 500 123, 532 123",
+  ];
+
+  return (
+    <div className="flex h-full items-center justify-center px-3">
+      <div className="relative w-full max-w-[620px]" style={{ aspectRatio: `${CW} / ${CH}` }}>
+        <svg className="absolute inset-0 h-full w-full pointer-events-none" viewBox={`0 0 ${CW} ${CH}`} preserveAspectRatio="none">
+          {paths.map((d, i) => <path key={i} d={d} stroke="rgba(255,255,255,0.13)" strokeWidth="1.8" fill="none" vectorEffect="non-scaling-stroke"/>)}
+          {[paths[0],paths[1],paths[2],paths[4]].map((d, i) => (
+            <path key={`l${i}`} d={d} stroke="#19C3FF" strokeWidth="1.8" fill="none" vectorEffect="non-scaling-stroke" style={{ opacity: i < litEdges ? 1 : 0, transition: "opacity 0.6s ease" }}/>
+          ))}
+        </svg>
+        {nodes.map((n) => {
+          const idx = order.indexOf(n.id);
+          const state = idx >= 0 ? nodeState(idx) : (step >= 4 ? "active" : "");
+          const visible = idx >= 0 ? step >= idx : step >= 4;
+          const isActive = state === "active", isDone = state === "done", isAgent = n.id === "w2";
+          return (
+            <div key={n.id} className="absolute transition-all duration-300" style={{ left: X(n.x), top: Y(n.y), width: W(78), opacity: visible ? 1 : 0, transform: visible ? "scale(1)" : "scale(0.8)" }}>
+              <div className={`relative mx-auto flex h-[54px] w-[54px] items-center justify-center rounded-[13px] border transition-all ${isAgent ? "text-[18px]" : "text-[21px]"} ${
+                isActive ? "border-[#19C3FF] bg-[#19C3FF]/12 text-[#19C3FF] shadow-[0_0_22px_-4px_rgba(25,195,255,0.5)]"
+                : isDone ? "border-[#20E0B2]/45 bg-white/5 text-[#20E0B2]"
+                : isAgent ? "border-[#a78bfa]/40 bg-[#a78bfa]/8 text-[#c4b5fd]"
+                : "border-white/12 bg-white/5 text-[#cfe4f7]"}`}>
+                {isAgent ? (<>
+                  <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="4" y="8" width="16" height="11" rx="2.5"/><path d="M12 3v5"/><circle cx="12" cy="3" r="1.2" fill="currentColor"/><circle cx="9" cy="13" r="1.1" fill="currentColor"/><circle cx="15" cy="13" r="1.1" fill="currentColor"/><path d="M9 16.5h6"/>
+                  </svg>
+                  <span className="absolute -top-1.5 -right-1.5 rounded-[5px] bg-[#a78bfa] px-1 py-[1px] text-[7px] font-bold text-[#1a0f2e] leading-none">AI</span>
+                </>) : n.icon}
+              </div>
+              <div className="mt-1.5 text-center text-[9.5px] font-medium leading-tight text-[#aebfd6] whitespace-pre-line">{n.label}</div>
+            </div>
+          );
+        })}
+        <div className="absolute text-[8px] font-semibold px-1.5 py-0.5 rounded text-[#20E0B2] bg-[#20E0B2]/15 transition-opacity" style={{ left: X(340), top: Y(74), opacity: step >= 3 ? 1 : 0 }}>true</div>
+        <div className="absolute text-[8px] font-semibold px-1.5 py-0.5 rounded text-[#7088a8] bg-white/[0.06] transition-opacity" style={{ left: X(340), top: Y(200), opacity: step >= 3 ? 1 : 0 }}>false</div>
+        <div className="absolute transition-opacity duration-300" style={{ left: X(253), top: Y(215), width: W(48), opacity: step >= 2 ? 1 : 0 }}>
+          <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.04] text-sm text-[#7e9fc4]">◎</div>
+          <div className="mt-0.5 text-center text-[8px] text-[#7088a8]">OpenAI</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Escena Chat — typing 600ms, pausas 600/700ms, hold 1200ms ── */
+function ChatScene({ onCycleComplete, reduced }) {
+  const [msgs, setMsgs] = useState([]);
+  const iRef = useRef(0);
+  useEffect(() => {
+    iRef.current = 0; setMsgs([]);
+    if (reduced) { onCycleComplete && onCycleComplete(); return; }
+    let cancelled = false, done = false;
+    const timeouts = [];
+    const finish = () => { if (done || cancelled) return; done = true; onCycleComplete && onCycleComplete(); };
+    const next = () => {
+      if (cancelled) return;
+      if (iRef.current >= CONVO.length) { timeouts.push(setTimeout(finish, 1200)); return; }
+      const [w, t] = CONVO[iRef.current];
+      if (w === "ai") {
+        setMsgs((m) => [...m, { w, t: "", typing: true }].slice(-4));
+        timeouts.push(setTimeout(() => {
+          setMsgs((m) => { const c = [...m]; const last = c[c.length-1]; if (last && last.typing) c[c.length-1] = { w, t }; return c; });
+          iRef.current++; timeouts.push(setTimeout(next, 700));
+        }, 600));
+      } else {
+        setMsgs((m) => [...m, { w, t }].slice(-4));
+        iRef.current++; timeouts.push(setTimeout(next, 600));
+      }
+    };
+    next();
+    return () => { cancelled = true; timeouts.forEach(clearTimeout); };
+  }, []);
+
+  return (
+    <div className="flex h-full flex-col gap-2.5 p-5">
+      {msgs.map((m, i) => (
+        <div key={i} className={`flex gap-2.5 items-start ${m.w === "u" ? "flex-row-reverse" : ""}`} style={{ animation: "fadeUp 0.4s ease both" }}>
+          <div className={`flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[9px] text-sm ${m.w === "ai" ? "bg-[#19C3FF]/12 border border-[#19C3FF]/25 text-[#19C3FF]" : "bg-white/[0.06] border border-white/12 text-[#aebfd6]"}`}>
+            {m.w === "ai" ? "◇" : "◍"}
+          </div>
+          <div className={`max-w-[78%] rounded-[11px] px-3 py-2 text-[12px] leading-snug ${m.w === "ai" ? "bg-[#19C3FF]/10 border border-[#19C3FF]/16 text-[#cfeeff]" : "bg-white/[0.05] border border-white/10 text-[#e6eefc]"}`}>
+            {m.typing ? (
+              <span className="inline-flex gap-0.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#19C3FF] animate-pulse"/>
+                <span className="h-1.5 w-1.5 rounded-full bg-[#19C3FF] animate-pulse" style={{ animationDelay: "0.2s" }}/>
+                <span className="h-1.5 w-1.5 rounded-full bg-[#19C3FF] animate-pulse" style={{ animationDelay: "0.4s" }}/>
+              </span>
+            ) : m.t}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── Escena App (dashboard) — 4 updates cada 1600ms ── */
+const mkRow = () => ({ s: R(SV), a: `${10 + Math.floor(Math.random()*18)}/03`, e: R(EN), st: R(ST) });
+function AppScene({ onCycleComplete, reduced }) {
+  const [act, setAct] = useState(1247);
+  const [exito, setExito] = useState("98,4%");
+  const [entregas, setEntregas] = useState(312);
+  const [rows, setRows] = useState([mkRow(), mkRow(), mkRow()]);
+  useEffect(() => {
+    if (reduced) { onCycleComplete && onCycleComplete(); return; }
+    let ticks = 0; const TOTAL = 4;
+    const id = setInterval(() => {
+      setAct((a) => a + Math.floor(Math.random()*5) + 1);
+      setEntregas(300 + Math.floor(Math.random()*25));
+      setExito(`${(97.5 + Math.random()*1.4).toFixed(1)}%`);
+      setRows((rs) => [mkRow(), ...rs].slice(0, 3));
+      ticks += 1;
+      if (ticks >= TOTAL) { clearInterval(id); onCycleComplete && onCycleComplete(); }
+    }, 1600);
+    return () => clearInterval(id);
+  }, [onCycleComplete, reduced]);
+  const stats = [
+    [act.toLocaleString("es"), "Activaciones hoy", "text-white"],
+    [exito, "Tasa de éxito", "text-[#19C3FF]"],
+    [String(entregas), "Entregas en curso", "text-[#20E0B2]"],
+  ];
+  return (
+    <div className="h-full p-5">
+      <div className="mb-3 flex gap-2.5">
+        {stats.map(([n,l,cls]) => (
+          <div key={l} className="flex-1 rounded-[11px] border border-white/10 bg-white/[0.04] p-2.5">
+            <div className={`text-[20px] font-bold tnum ${cls}`}>{n}</div>
+            <div className="mt-0.5 text-[9px] uppercase tracking-[0.4px] text-[#7088a8]">{l}</div>
+          </div>
+        ))}
+      </div>
+      <table className="w-full border-collapse">
+        <thead><tr>{["Servicio","Activación","Entrega","Estado"].map((h) => (
+          <th key={h} className="border-b border-white/[0.08] px-1.5 py-1.5 text-left text-[9px] font-semibold uppercase tracking-[0.4px] text-[#5a7090]">{h}</th>
+        ))}</tr></thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={`${r.s}-${i}`} style={i === 0 ? { animation: "rowin 0.5s ease" } : undefined}>
+              <td className="border-b border-white/[0.04] px-1.5 py-1.5 text-[11px] text-[#aebfd6]">{r.s}</td>
+              <td className="border-b border-white/[0.04] px-1.5 py-1.5 text-[11px] text-[#aebfd6]">{r.a}</td>
+              <td className="border-b border-white/[0.04] px-1.5 py-1.5 text-[11px] text-[#aebfd6]">{r.e}</td>
+              <td className="border-b border-white/[0.04] px-1.5 py-1.5">
+                <span className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${r.st[0]==="ok" ? "text-[#20E0B2] bg-[#20E0B2]/12" : r.st[0]==="pr" ? "text-[#19C3FF] bg-[#19C3FF]/12" : "text-[#f0b840] bg-[#f0b840]/12"}`}>{r.st[1]}</span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* ── Escena Integración (hub) — 2 escenarios x 4200ms, pulso 1.6s ── */
+function IntegrationScene({ onCycleComplete, reduced, pairIdx = 0 }) {
+  const LEFT = [
+    { name:"ERP", ico:"▤", color:"#20E0B2" },
+    { name:"CRM", ico:"◍", color:"#19C3FF" },
+    { name:"Operaciones", ico:"▦", color:"#f0b840" },
+    { name:"Sistema legacy", ico:"▣", color:"#8ba3c7" },
+  ];
+  const RIGHT = [
+    { name:"Analítica / BI", ico:"▥", color:"#19C3FF" },
+    { name:"API pública", ico:"◇", color:"#20E0B2" },
+    { name:"SaaS externos", ico:"☁", color:"#a78bfa" },
+    { name:"Facturación", ico:"⚡", color:"#a78bfa" },
+    { name:"Agente IA", ico:"◆", color:"#c4b5fd" },
+  ];
+  const SCENARIOS = [
+    { pattern:"sync bidireccional", desc:"Mantenemos ERP y CRM sincronizados para que finanzas y comercial trabajen sobre la misma información.", leftActive:[0,1], rightActive:[0], edges:[{side:"L",idx:0,bi:true},{side:"L",idx:1,bi:true},{side:"R",idx:0,bi:false}] },
+    { pattern:"orquestación event-driven", desc:"Eventos de tu operación disparan acciones en SaaS externos y facturación electrónica, sin intervención manual.", leftActive:[0], rightActive:[2,3], edges:[{side:"L",idx:0,bi:false},{side:"R",idx:2,bi:false},{side:"R",idx:3,bi:false}] },
+    { pattern:"fachada de API", desc:"Envolvemos tus sistemas heredados y exponemos una API moderna, sin reemplazar lo que ya funciona.", leftActive:[3], rightActive:[1], edges:[{side:"L",idx:3,bi:false},{side:"R",idx:1,bi:false}] },
+    { pattern:"contexto para IA", desc:"Unificamos sistemas y datos para que la IA opere con el contexto real de tu negocio.", leftActive:[0,1,2], rightActive:[4], edges:[{side:"L",idx:0,bi:false},{side:"L",idx:1,bi:false},{side:"L",idx:2,bi:false},{side:"R",idx:4,bi:false}] },
+  ];
+  const pair = [pairIdx*2, pairIdx*2+1];
+  const [step, setStep] = useState(0);
+  const STEP_MS = 4200;
+  useEffect(() => {
+    setStep(0);
+    if (reduced) { onCycleComplete && onCycleComplete(); return; }
+    const t1 = setTimeout(() => setStep(1), STEP_MS);
+    const t2 = setTimeout(() => { onCycleComplete && onCycleComplete(); }, STEP_MS*2);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [onCycleComplete, reduced, pairIdx]);
+
+  const active = pair[step];
+  const scene = SCENARIOS[active];
+  const CW = 720, CH = 352;
+  const X = (px) => `${((px/CW)*100).toFixed(3)}%`;
+  const Y = (py) => `${((py/CH)*100).toFixed(3)}%`;
+  const W = (w) => `${((w/CW)*100).toFixed(3)}%`;
+  const H = (h) => `${((h/CH)*100).toFixed(3)}%`;
+  const LEFT_EDGE_X = 180, RIGHT_EDGE_X = 540;
+  const leftTops = [40,110,180,250], rightTops = [12,80,148,216,284];
+  const hub = { x:315, y:134, w:90, h:90, cx:360, cy:179 }, NODE_H = 38;
+  const leftPath = (i) => { const y = leftTops[i] + NODE_H/2; return `M ${LEFT_EDGE_X} ${y} C 250 ${y}, 280 ${hub.cy}, ${hub.x} ${hub.cy}`; };
+  const rightPath = (i) => { const y = rightTops[i] + NODE_H/2; return `M ${hub.x+hub.w} ${hub.cy} C 450 ${hub.cy}, 480 ${y}, ${RIGHT_EDGE_X} ${y}`; };
+
+  return (
+    <div className="flex h-full items-center justify-center px-6">
+      <div className="relative w-full max-w-[720px] h-[352px]">
+        <div className="absolute top-2 left-2 z-10 flex items-center gap-2">
+          <div key={`pat-${active}`} className="rounded-md border border-[#19C3FF]/30 bg-[#19C3FF]/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.6px] text-[#7DD8FF] whitespace-nowrap" style={{ animation: "intfade 0.4s ease" }}>{scene.pattern}</div>
+        </div>
+        <svg className="absolute inset-0 h-full w-full pointer-events-none" viewBox={`0 0 ${CW} ${CH}`} preserveAspectRatio="none">
+          <defs>
+            <marker id="arrHub" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#19C3FF"/></marker>
+            <marker id="arrOut" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#19C3FF"/></marker>
+            <marker id="arrBack" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#19C3FF"/></marker>
+          </defs>
+          {LEFT.map((_, i) => <path key={`Lb${i}`} d={leftPath(i)} stroke="#ffffff" strokeWidth="1.4" fill="none" opacity="0.06" vectorEffect="non-scaling-stroke"/>)}
+          {RIGHT.map((_, i) => <path key={`Rb${i}`} d={rightPath(i)} stroke="#ffffff" strokeWidth="1.4" fill="none" opacity="0.06" vectorEffect="non-scaling-stroke"/>)}
+          {scene.edges.map((e, k) => {
+            const d = e.side === "L" ? leftPath(e.idx) : rightPath(e.idx);
+            return (
+              <g key={`act-${active}-${k}`} style={{ animation: "intfade 0.4s ease" }}>
+                <path d={d} stroke="#19C3FF" strokeWidth="1.6" fill="none" opacity="0.45" vectorEffect="non-scaling-stroke" markerEnd={e.side === "R" ? "url(#arrOut)" : "url(#arrHub)"} markerStart={e.bi ? "url(#arrBack)" : undefined}/>
+                {!reduced && <path d={d} stroke="#19C3FF" strokeWidth="2.4" fill="none" strokeLinecap="round" vectorEffect="non-scaling-stroke" style={{ strokeDasharray: "16 260", animation: "intpulseF 1.6s linear infinite" }}/>}
+                {!reduced && e.bi && <path d={d} stroke="#20E0B2" strokeWidth="2.4" fill="none" strokeLinecap="round" vectorEffect="non-scaling-stroke" style={{ strokeDasharray: "16 260", animation: "intpulseR 1.6s linear infinite" }}/>}
+              </g>
+            );
+          })}
+        </svg>
+        {LEFT.map((s, i) => {
+          const isOn = scene.leftActive.includes(i);
+          return (
+            <div key={s.name} className="absolute flex items-center gap-2 rounded-[10px] border bg-white/[0.04] transition-all duration-[400ms]"
+              style={{ right: X(CW - LEFT_EDGE_X), top: Y(leftTops[i]), height: H(NODE_H), width: "fit-content", paddingLeft: "16px", paddingRight: "16px", zIndex: 1, opacity: isOn ? 1 : 0.25, borderColor: isOn ? s.color : "rgba(255,255,255,0.1)", boxShadow: isOn ? `0 0 18px -4px ${s.color}66` : "none" }}>
+              <div className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md text-[12px]" style={{ background: `${s.color}26`, color: s.color }}>{s.ico}</div>
+              <div className="text-[13px] font-semibold leading-tight text-[#e6eefc] whitespace-nowrap">{s.name}</div>
+            </div>
+          );
+        })}
+        <div className="absolute flex flex-col items-center justify-center rounded-[18px] bg-[#19C3FF]/15 border-2 border-[#19C3FF]/55"
+          style={{ left: X(hub.x), top: Y(hub.y), width: W(hub.w), height: H(hub.h), zIndex: 2, boxShadow: "0 0 28px -6px rgba(25,195,255,0.55)" }}>
+          <div className="text-[24px] text-[#19C3FF] leading-none">⇄</div>
+          <div className="mt-1 text-[13px] font-bold text-white">amensg</div>
+          <div className="text-[10px] text-[#19C3FF] mt-0.5 uppercase tracking-[0.8px]">hub</div>
+        </div>
+        {RIGHT.map((s, i) => {
+          const isOn = scene.rightActive.includes(i);
+          return (
+            <div key={s.name} className="absolute flex items-center gap-2 rounded-[10px] border bg-white/[0.04] transition-all duration-[400ms]"
+              style={{ left: X(RIGHT_EDGE_X), top: Y(rightTops[i]), height: H(NODE_H), width: "fit-content", paddingLeft: "16px", paddingRight: "16px", zIndex: 1, opacity: isOn ? 1 : 0.25, borderColor: isOn ? s.color : "rgba(255,255,255,0.1)", boxShadow: isOn ? `0 0 18px -4px ${s.color}66` : "none" }}>
+              <div className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md text-[11px]" style={{ background: `${s.color}26`, color: s.color }}>{s.ico}</div>
+              <div className="text-[13px] font-semibold leading-tight text-[#e6eefc] whitespace-nowrap">{s.name}</div>
+            </div>
+          );
+        })}
+        <div key={`desc-${active}`} className="absolute bottom-1 left-4 right-4 text-center text-[11px] leading-snug text-[#aebfd6]" style={{ animation: "intfade 0.4s ease" }}>{scene.desc}</div>
+      </div>
+    </div>
+  );
+}
+
+
+/* ============================================================
+   Secciones del cuerpo
+   ============================================================ */
+
+/* 2. PROPUESTA DE VALOR */
+function Propuesta() {
+  const steps = [
+    { icon: IcoSearch, label: "Diagnóstico\ndel proceso" },
+    { icon: IcoPen, label: "Diseño\nde solución" },
+    { icon: IcoCog, label: "Automatización\ne integración" },
+    { icon: IcoSparkles, label: "IA\naplicada" },
+    { icon: IcoRocket, label: "Puesta\nen producción" },
+    { icon: IcoTrending, label: "Evolución\ncontinua" },
+  ];
+  return (
+    <section id="propuesta" className="bg-[#F5F7FA] py-24 md:py-32">
+      <div className="mx-auto max-w-7xl px-5 md:px-8">
+        <Reveal>
+          <Eyebrow light>Propuesta de valor</Eyebrow>
+          <h2 className="mt-3 max-w-3xl font-extrabold tracking-[-0.025em] text-[#0B1F3A]" style={{ fontSize: "clamp(32px,4.2vw,52px)" }}>Tecnología aplicada a objetivos reales de negocio.</h2>
+          <p className="mt-6 max-w-2xl text-[16px] leading-relaxed text-[#5a6a82]">Trabajamos junto a nuestros clientes para identificar oportunidades, automatizar procesos, integrar sistemas e incorporar inteligencia artificial donde realmente genera impacto operativo.</p>
+        </Reveal>
+        <Reveal delay={100}>
+          <div className="mt-14 grid grid-cols-2 gap-y-10 gap-x-4 sm:grid-cols-3 lg:grid-cols-6 lg:gap-x-2">
+            {steps.map((s, i) => (
+              <div key={s.label} className="relative flex flex-col items-center text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#0B1F3A]/10 bg-white text-[#1769E0] shadow-[0_8px_20px_-12px_rgba(11,31,58,0.25)]"><s.icon size={24} sw={1.6}/></div>
+                <span className="mt-3 whitespace-pre-line text-[12.5px] font-semibold leading-tight text-[#0B1F3A]">{s.label}</span>
+                {i < steps.length - 1 && <div aria-hidden className="absolute right-[-8px] top-7 hidden h-px w-4 bg-gradient-to-r from-[#1769E0]/40 to-[#1769E0]/0 lg:block"/>}
+              </div>
+            ))}
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+/* 3. PROBLEMAS */
+function Problemas() {
+  const items = [
+    { icon: IcoRepeat, t: "Procesos manuales repetitivos", d: "Automatizamos tareas operativas con reglas claras y trazabilidad." },
+    { icon: IcoGitMerge, t: "Sistemas que no se comunican", d: "Conectamos plataformas, bases de datos y APIs para eliminar retrabajo." },
+    { icon: IcoSheet, t: "Uso excesivo de planillas", d: "Reemplazamos planillas por flujos operativos sostenibles." },
+    { icon: IcoDatabase, t: "Datos dispersos entre áreas", d: "Centralizamos información para decisiones más rápidas." },
+    { icon: IcoClock, t: "Tiempos operativos altos", d: "Reducimos cuellos de botella y aceleramos el ciclo de trabajo." },
+    { icon: IcoAlertT, t: "Errores por carga manual", d: "Validaciones automáticas que mejoran la calidad del dato." },
+    { icon: IcoShieldA, t: "Automatizaciones frágiles", d: "Construimos soluciones mantenibles, monitoreadas y en producción real." },
+    { icon: IcoBrain, t: "IA difícil de aplicar al negocio", d: "Llevamos la IA al proceso real, no como capa aislada." },
+  ];
+  return (
+    <section className="bg-[#06101F] py-24 md:py-32">
+      <div className="mx-auto max-w-7xl px-5 md:px-8">
+        <Reveal>
+          <Eyebrow>Problemas que resolvemos</Eyebrow>
+          <h2 className="mt-3 max-w-3xl font-extrabold tracking-[-0.025em] text-white" style={{ fontSize: "clamp(32px,4.2vw,52px)" }}>Convertimos procesos en ventajas reales.</h2>
+        </Reveal>
+        <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {items.map((it, i) => (
+            <Reveal key={it.t} delay={i * 60}>
+              <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-6 transition-all hover:-translate-y-1 hover:border-[#19C3FF]/30 hover:bg-white/[0.05]">
+                <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-[#19C3FF]"><it.icon size={20} sw={1.6}/></div>
+                <h3 className="mt-5 text-[15.5px] font-bold leading-snug text-white">{it.t}</h3>
+                <p className="mt-2 text-[13.5px] leading-relaxed text-white/60">{it.d}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* 4. SERVICIOS */
+function Servicios() {
+  const items = [
+    { icon: IcoWorkflow, t: "Automatización de procesos", d: "Diseñamos automatizaciones que reducen tareas manuales, aceleran procesos y mejoran la trazabilidad operativa." },
+    { icon: IcoNetwork, t: "Integración de sistemas", d: "Conectamos sistemas empresariales, APIs, bases de datos y plataformas existentes para eliminar silos de información." },
+    { icon: IcoBot, t: "Agentes de IA aplicados", d: "Creamos agentes conectados al conocimiento, los datos y los procesos de la empresa para asistir, responder y ejecutar tareas con contexto." },
+    { icon: IcoLayers, t: "Plataformas empresariales", d: "Desarrollamos aplicaciones web y sistemas de gestión sostenibles, pensados para operación diaria y evolución continua." },
+  ];
+  return (
+    <section id="servicios" className="bg-[#F5F7FA] py-24 md:py-32">
+      <div className="mx-auto max-w-7xl px-5 md:px-8">
+        <Reveal>
+          <Eyebrow light>Lo que hacemos</Eyebrow>
+          <h2 className="mt-3 max-w-3xl font-extrabold tracking-[-0.025em] text-[#0B1F3A]" style={{ fontSize: "clamp(32px,4.2vw,52px)" }}>Automatización, integración e IA para operaciones reales.</h2>
+        </Reveal>
+        <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {items.map((it, i) => (
+            <Reveal key={it.t} delay={i * 80}>
+              <div className="flex h-full flex-col rounded-2xl border border-[#0B1F3A]/10 bg-white p-7 transition-all hover:-translate-y-1 hover:border-[#19C3FF]/40 hover:shadow-[0_20px_40px_-20px_rgba(11,31,58,0.18)]">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-[#0B1F3A]/10 text-[#1769E0]"><it.icon size={24} sw={1.5}/></div>
+                <h3 className="mt-6 text-[18px] font-bold tracking-tight text-[#0B1F3A]">{it.t}</h3>
+                <p className="mt-3 text-[14.5px] leading-relaxed text-[#5a6a82]">{it.d}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* 5. CASO DESTACADO (con flujo operativo animado, paso cada 700ms en loop) */
+function CasoDestacado() {
+  const metrics = [
+    { n: "200–300", l: "usuarios" },
+    { n: "4", l: "empresas" },
+    { n: "4", l: "call centers" },
+    { n: "13+", l: "años en producción" },
+  ];
+  const flow = [
+    { icon: IcoHeadphones, label: "Call Center" },
+    { icon: IcoCart, label: "Venta" },
+    { icon: IcoBuilding, label: "Backoffice" },
+    { icon: IcoTruck, label: "Distribución" },
+    { icon: IcoMapPinned, label: "Cadete" },
+    { icon: IcoUsers, label: "Cliente" },
+  ];
+  const [lit, setLit] = useState(-1);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    let interval;
+    const io = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) {
+        let i = 0;
+        interval = setInterval(() => { setLit(i); i++; if (i > flow.length + 2) i = 0; }, 700);
+        io.disconnect();
+      }
+    }, { threshold: 0.3 });
+    io.observe(ref.current);
+    return () => { io.disconnect(); if (interval) clearInterval(interval); };
+  }, []);
+  return (
+    <section id="caso" className="bg-[#06101F] py-24 md:py-32">
+      <div className="mx-auto max-w-7xl px-5 md:px-8">
+        <Reveal>
+          <Eyebrow>Caso destacado</Eyebrow>
+          <h2 className="mt-3 max-w-4xl font-extrabold tracking-[-0.025em] text-white" style={{ fontSize: "clamp(30px,4vw,48px)" }}>Plataforma central de gestión comercial y operativa.</h2>
+          <p className="mt-5 max-w-3xl text-[16px] leading-relaxed text-white/65">Una solución empresarial en producción real, utilizada por cientos de usuarios y conectada con procesos críticos del negocio.</p>
+        </Reveal>
+        <Reveal delay={80}>
+          <div className="mt-12 rounded-2xl border border-white/10 bg-white/[0.03] p-8 md:p-12 backdrop-blur-sm">
+            <p className="max-w-4xl text-[15.5px] leading-relaxed text-white/70">
+              AMENSG desarrolló y mantiene una aplicación central de gestión utilizada por entre <strong className="text-white">200 y 300 usuarios</strong>, distribuidos en <strong className="text-white">4 empresas</strong>, cada una con su propio call center. La plataforma soporta procesos críticos de ventas, backoffice, distribución, gestión de puntos de venta y entregas en campo mediante una web móvil utilizada por cadetes.
+            </p>
+            <div className="mt-10 grid grid-cols-2 gap-y-8 border-y border-white/10 py-8 md:grid-cols-4">
+              {metrics.map((m) => (
+                <div key={m.l}>
+                  <div className="font-extrabold tracking-[-0.03em] text-white" style={{ fontSize: "clamp(30px,3.4vw,46px)" }}>{m.n}</div>
+                  <div className="mt-1 text-[11px] font-semibold uppercase tracking-[1.4px] text-[#7088a8]">{m.l}</div>
+                </div>
+              ))}
+            </div>
+            <div ref={ref} className="mt-12">
+              <div className="text-[11px] font-semibold uppercase tracking-[1.6px] text-[#19C3FF]">Flujo operativo</div>
+              <div className="mt-5 grid grid-cols-2 gap-y-6 sm:grid-cols-3 lg:grid-cols-6 lg:gap-x-2">
+                {flow.map((f, i) => {
+                  const active = lit === i;
+                  const done = lit > i && lit <= flow.length;
+                  return (
+                    <div key={f.label} className="relative flex flex-col items-center text-center">
+                      <div className={`flex h-14 w-14 items-center justify-center rounded-2xl border transition-all duration-500 ${active ? "border-[#19C3FF] bg-[#19C3FF]/12 text-[#19C3FF] shadow-[0_0_28px_-4px_rgba(25,195,255,0.6)] scale-105" : done ? "border-[#20E0B2]/40 bg-white/5 text-[#20E0B2]" : "border-white/12 bg-white/5 text-white/55"}`}>
+                        <f.icon size={24} sw={1.6}/>
+                      </div>
+                      <span className="mt-3 text-[12px] font-semibold text-white/80">{f.label}</span>
+                      {i < flow.length - 1 && <div aria-hidden className="absolute right-[-8px] top-7 hidden h-px w-4 bg-gradient-to-r from-[#19C3FF]/40 to-[#19C3FF]/0 lg:block"/>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <p className="mt-12 max-w-3xl text-[15px] italic leading-relaxed text-white/55">Este caso refleja nuestra capacidad de construir, mantener y evolucionar soluciones críticas que conectan personas, procesos y sistemas en la operación diaria.</p>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+/* 6. IA APLICADA */
+function IAAplicada() {
+  const bullets = [
+    "Agentes conectados al conocimiento de la empresa",
+    "Automatizaciones integradas con APIs y sistemas internos",
+    "RAG sobre documentación y datos corporativos",
+    "Asistentes conversacionales internos o para clientes",
+    "Flujos con n8n, OpenAI, Claude y otras tecnologías",
+    "Integración con web, email, WhatsApp o sistemas internos",
+  ];
+  const layers = [
+    { t: "Datos · Documentos · Sistemas", c: "from-[#1769E0]/30 to-[#1769E0]/5" },
+    { t: "Capa de integración", c: "from-[#19C3FF]/30 to-[#19C3FF]/5" },
+    { t: "Agente IA", c: "from-[#a78bfa]/30 to-[#a78bfa]/5" },
+    { t: "Usuarios · Procesos · Canales", c: "from-[#20E0B2]/30 to-[#20E0B2]/5" },
+  ];
+  return (
+    <section className="bg-[#F5F7FA] py-24 md:py-32">
+      <div className="mx-auto grid max-w-7xl gap-12 px-5 md:px-8 lg:grid-cols-2 lg:gap-16">
+        <Reveal>
+          <div>
+            <Eyebrow light>IA aplicada, no IA aislada</Eyebrow>
+            <h2 className="mt-3 font-extrabold tracking-[-0.025em] text-[#0B1F3A]" style={{ fontSize: "clamp(30px,3.8vw,48px)" }}>IA aplicada sobre procesos reales.</h2>
+            <p className="mt-6 text-[16px] leading-relaxed text-[#5a6a82]">No incorporamos inteligencia artificial como una capa aislada. La integramos con sistemas, datos, reglas de negocio y procesos existentes para que genere valor operativo concreto.</p>
+            <ul className="mt-8 space-y-3">
+              {bullets.map((b) => (
+                <li key={b} className="flex items-start gap-3 text-[14.5px] text-[#0B1F3A]/80"><IcoCheck size={16} className="mt-0.5 shrink-0 text-[#1769E0]"/>{b}</li>
+              ))}
+            </ul>
+          </div>
+        </Reveal>
+        <Reveal delay={120}>
+          <div className="relative space-y-3 rounded-2xl border border-[#0B1F3A]/10 bg-white p-6 shadow-[0_30px_60px_-30px_rgba(11,31,58,0.25)]">
+            <div className="text-[11px] font-semibold uppercase tracking-[1.4px] text-[#5a6a82]">Arquitectura simplificada</div>
+            {layers.map((l, i) => (
+              <div key={l.t} className="flex items-center gap-3 animate-fade-up" style={{ animationDelay: `${i * 120}ms` }}>
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#0B1F3A] text-[11px] font-bold text-white">{i + 1}</div>
+                <div className={`flex-1 rounded-xl border border-[#0B1F3A]/10 bg-gradient-to-r ${l.c} px-5 py-4 text-[14px] font-semibold text-[#0B1F3A]`}>{l.t}</div>
+              </div>
+            ))}
+            <div className="mt-4 text-center text-[11px] text-[#5a6a82]/70">Cada capa se construye con tecnología existente del cliente.</div>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+/* 7. TECNOLOGÍAS */
+function Tecnologias() {
+  const groups = [
+    { t: "Core empresarial", items: ["Java","PostgreSQL","APIs REST","SQL / NoSQL"] },
+    { t: "Automatización e integración", items: ["n8n","RPA","Webhooks","Integraciones corporativas"] },
+    { t: "IA aplicada", items: ["OpenAI","Claude","RAG","Agentes conversacionales","Voz y chat"] },
+    { t: "Operación y evolución", items: ["AWS","GitHub","Monitoreo","Mantenimiento evolutivo"] },
+  ];
+  return (
+    <section className="bg-[#06101F] py-24 md:py-32">
+      <div className="mx-auto max-w-7xl px-5 md:px-8">
+        <Reveal>
+          <Eyebrow>Tecnologías</Eyebrow>
+          <h2 className="mt-3 max-w-3xl font-extrabold tracking-[-0.025em] text-white" style={{ fontSize: "clamp(30px,3.8vw,48px)" }}>Tecnologías que conectan estrategia, operación e inteligencia.</h2>
+        </Reveal>
+        <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {groups.map((g, i) => (
+            <Reveal key={g.t} delay={i * 100}>
+              <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+                <div className="text-[11px] font-semibold uppercase tracking-[1.6px] text-[#19C3FF]">Capa {i + 1}</div>
+                <h3 className="mt-2 text-[16px] font-bold text-white">{g.t}</h3>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {g.items.map((it) => <span key={it} className="rounded-full border border-white/12 bg-white/[0.04] px-3 py-1.5 text-[12.5px] font-medium text-white/80">{it}</span>)}
+                </div>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* 8. CÓMO TRABAJAMOS */
+function Proceso() {
+  const steps = ["Entendemos el objetivo","Relevamos el proceso real","Diseñamos una solución viable","Construimos e integramos","Acompañamos la puesta en producción","Evolucionamos junto al negocio"];
+  return (
+    <section id="proceso" className="bg-[#F5F7FA] py-24 md:py-32">
+      <div className="mx-auto max-w-7xl px-5 md:px-8">
+        <Reveal>
+          <Eyebrow light>Cómo trabajamos</Eyebrow>
+          <h2 className="mt-3 max-w-3xl font-extrabold tracking-[-0.025em] text-[#0B1F3A]" style={{ fontSize: "clamp(30px,3.8vw,48px)" }}>Trabajamos junto a tu empresa.</h2>
+          <p className="mt-6 max-w-2xl text-[16px] leading-relaxed text-[#5a6a82]">Nos involucramos en el proceso, entendemos la operación y construimos soluciones sostenibles junto a los equipos del cliente. Nuestro objetivo no es solo entregar software, sino ayudar a alcanzar resultados concretos.</p>
+        </Reveal>
+        <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {steps.map((s, i) => (
+            <Reveal key={s} delay={i * 70}>
+              <div className="flex h-full items-start gap-4 rounded-2xl border border-[#0B1F3A]/10 bg-white p-6 transition-all hover:border-[#19C3FF]/40">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0B1F3A] text-[14px] font-bold text-white">{String(i + 1).padStart(2, "0")}</div>
+                <p className="mt-1.5 text-[15px] font-semibold leading-snug text-[#0B1F3A]">{s}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+        <Reveal delay={200}>
+          <p className="mt-14 max-w-3xl text-[18px] font-medium italic leading-relaxed text-[#0B1F3A]">“Más que entregar tecnología, acompañamos la evolución operativa de nuestros clientes.”</p>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+/* 9. POR QUÉ AMENSG */
+function PorQue() {
+  const reasons = ["Experiencia desde 2011","Soluciones reales en producción","Conocimiento de procesos empresariales","Capacidad de integrar sistemas existentes","Automatización con visión de negocio","IA aplicada con criterio operativo","Relación cercana y de largo plazo"];
+  return (
+    <section className="bg-[#06101F] py-24 md:py-32">
+      <div className="mx-auto max-w-7xl px-5 md:px-8">
+        <Reveal>
+          <Eyebrow>Por qué elegir AMENSG</Eyebrow>
+          <h2 className="mt-3 max-w-3xl font-extrabold tracking-[-0.025em] text-white" style={{ fontSize: "clamp(30px,3.8vw,48px)" }}>Socios tecnológicos.</h2>
+        </Reveal>
+        <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {reasons.map((r, i) => (
+            <Reveal key={r} delay={i * 60}>
+              <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-5 py-4">
+                <IcoCheck size={20} className="shrink-0 text-[#19C3FF]"/>
+                <span className="text-[14.5px] font-medium text-white/85">{r}</span>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* 9.5 EQUIPO */
+function Equipo() {
+  const team = [
+    { initials: "NL", name: "Néstor Lemo", role: "Director Comercial · Cofundador", area: "Procesos, negocio y relación con clientes.", bio: "Ingeniero de Sistemas. Lidera la relación comercial y la definición de soluciones junto al negocio." },
+    { initials: "LB", name: "Liber Batalla", role: "Director Técnico · Cofundador", area: "Arquitectura, integración y plataformas en producción.", bio: "Ingeniero de Sistemas. Lidera la arquitectura de integración, el backend y la evolución de plataformas empresariales." },
+  ];
+  return (
+    <section id="equipo" className="bg-[#F5F7FA] py-16 md:py-20">
+      <div className="mx-auto max-w-4xl px-5 md:px-8">
+        <Reveal>
+          <Eyebrow light>Equipo</Eyebrow>
+          <h2 className="mt-2 font-extrabold tracking-[-0.025em] text-[#0B1F3A]" style={{ fontSize: "clamp(26px,3.2vw,40px)" }}>Equipo fundador</h2>
+          <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-[#5a6a82]">Perfiles complementarios en negocio, procesos, arquitectura e integración de sistemas empresariales.</p>
+        </Reveal>
+        <div className="mt-10 grid gap-5 sm:grid-cols-2">
+          {team.map((p, i) => (
+            <Reveal key={p.name} delay={i * 80}>
+              <div className="flex h-full flex-col rounded-2xl border border-[#0B1F3A]/10 bg-white p-6 transition-all hover:border-[#19C3FF]/40">
+                <div className="flex items-center gap-3.5">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-white" style={{ background: "linear-gradient(135deg,#0B1F3A 0%, #1769E0 100%)" }}>{p.initials}</div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-[15px] font-medium tracking-tight text-[#0B1F3A]">{p.name}</h3>
+                    <p className="text-[12px] font-medium text-[#1769E0]">{p.role}</p>
+                  </div>
+                </div>
+                <p className="mt-4 text-[13px] font-medium leading-snug text-[#0B1F3A]">{p.area}</p>
+                <p className="mt-2 text-[13px] leading-relaxed text-[#5a6a82]">{p.bio}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+        <Reveal delay={120}>
+          <p className="mx-auto mt-10 max-w-xl text-center text-[13px] leading-relaxed text-[#5a6a82]">Capacidad técnica y cercanía operativa para integrarnos rápido a los equipos de nuestros clientes.</p>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+/* 10. CONTACTO */
+function ContactBlock() {
+  const [f, setF] = useState({ nombre: "", empresa: "", email: "", telefono: "", proceso: "", mensaje: "" });
+  const [errors, setErrors] = useState({});
+  const [sent, setSent] = useState(false);
+  const validate = () => {
+    const e = {};
+    if (f.nombre.trim().length < 2) e.nombre = "Ingresá tu nombre.";
+    if (f.empresa.trim().length < 1) e.empresa = "Ingresá tu empresa.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email)) e.email = "Email inválido.";
+    if (f.mensaje.trim().length < 10) e.mensaje = "Contanos brevemente tu caso.";
+    return e;
+  };
+  const submit = (ev) => {
+    ev.preventDefault();
+    const e = validate(); setErrors(e);
+    if (Object.keys(e).length === 0) { setSent(true); setF({ nombre: "", empresa: "", email: "", telefono: "", proceso: "", mensaje: "" }); }
+  };
+  const inp = "w-full h-11 rounded-lg border border-white/10 bg-white/[0.04] px-4 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-[#19C3FF] focus:ring-2 focus:ring-[#19C3FF]/30 transition";
+  const lbl = "block text-[11px] font-semibold uppercase tracking-[1.2px] text-white/60 mb-1.5";
+  return (
+    <div className="grid gap-12 lg:grid-cols-5 lg:gap-16">
+      <form onSubmit={submit} className="space-y-4 lg:col-span-3" noValidate>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block"><span className={lbl}>Nombre</span><input className={inp} value={f.nombre} onChange={(e) => setF({ ...f, nombre: e.target.value })} placeholder="Tu nombre"/>{errors.nombre && <span className="mt-1 block text-xs text-red-400">{errors.nombre}</span>}</label>
+          <label className="block"><span className={lbl}>Empresa</span><input className={inp} value={f.empresa} onChange={(e) => setF({ ...f, empresa: e.target.value })} placeholder="Tu empresa"/>{errors.empresa && <span className="mt-1 block text-xs text-red-400">{errors.empresa}</span>}</label>
+          <label className="block"><span className={lbl}>Email</span><input type="email" className={inp} value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} placeholder="nombre@empresa.com"/>{errors.email && <span className="mt-1 block text-xs text-red-400">{errors.email}</span>}</label>
+          <label className="block"><span className={lbl}>Teléfono</span><input className={inp} value={f.telefono} onChange={(e) => setF({ ...f, telefono: e.target.value })} placeholder="Opcional"/></label>
+        </div>
+        <label className="block"><span className={lbl}>¿Qué proceso te gustaría mejorar?</span><input className={inp} value={f.proceso} onChange={(e) => setF({ ...f, proceso: e.target.value })} placeholder="Ej: gestión de ventas, integración entre sistemas, agente de soporte…"/></label>
+        <label className="block"><span className={lbl}>Mensaje</span><textarea rows={5} className={`${inp} h-auto py-3 resize-y`} value={f.mensaje} onChange={(e) => setF({ ...f, mensaje: e.target.value })} placeholder="Contanos el proceso, sistemas involucrados y qué te gustaría mejorar."/>{errors.mensaje && <span className="mt-1 block text-xs text-red-400">{errors.mensaje}</span>}</label>
+        <button type="submit" className="inline-flex h-12 items-center gap-2 rounded-full px-6 text-sm font-semibold text-white shadow-[0_10px_30px_-10px_rgba(25,195,255,0.6)] hover:-translate-y-0.5 transition-transform" style={{ background: "linear-gradient(135deg,#0B1F3A 0%, #1769E0 100%)" }}>Agendar diagnóstico de automatización</button>
+        {sent && <div className="flex items-start gap-2 rounded-lg border border-[#20E0B2]/40 bg-[#20E0B2]/10 px-4 py-3 text-sm text-white"><IcoCheck size={16} className="mt-0.5 text-[#20E0B2]"/>Gracias. Recibimos tu mensaje y te respondemos a la brevedad.</div>}
+        {!sent && Object.keys(errors).length > 0 && <div className="flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/5 px-4 py-3 text-xs text-white/70"><IcoAlertC size={16} className="mt-0.5 text-red-400"/>Revisá los campos marcados.</div>}
+      </form>
+      <div className="space-y-6 lg:col-span-2">
+        <div>
+          <h3 className="text-2xl font-bold tracking-tight text-white">Hablemos.</h3>
+          <p className="mt-3 text-[15px] leading-relaxed text-white/65">Coordinemos una primera conversación para analizar procesos, sistemas involucrados y oportunidades concretas de automatización e IA.</p>
+        </div>
+        <div className="space-y-3">
+          <a href="mailto:contacto@amensg.com" className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-5 py-4 hover:border-[#19C3FF]/40 transition-colors"><IcoMail size={20} className="text-[#19C3FF]"/><span className="text-sm text-white">contacto@amensg.com</span></a>
+          <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-5 py-4"><IcoMapPin size={20} className="text-white/60"/><span className="text-sm text-white/80">Montevideo, Uruguay</span></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Contacto() {
+  return (
+    <section id="contacto" className="bg-[#06101F] pt-24 md:pt-32">
+      <div className="mx-auto max-w-7xl px-5 md:px-8">
+        <Reveal>
+          <Eyebrow>Contacto</Eyebrow>
+          <h2 className="mt-3 max-w-3xl font-extrabold tracking-[-0.025em] text-white" style={{ fontSize: "clamp(30px,3.8vw,48px)" }}>Identifiquemos juntos oportunidades de automatización.</h2>
+          <p className="mt-5 max-w-2xl text-[16px] leading-relaxed text-white/65">Te respondemos en menos de 24 horas hábiles.</p>
+        </Reveal>
+        <div className="mt-16"><Reveal><ContactBlock/></Reveal></div>
+      </div>
+      <footer className="mt-24 border-t border-white/5 py-8">
+        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-4 px-5 md:flex-row md:items-center md:px-8">
+          <LogoMark/>
+          <p className="text-xs text-white/50">© 2026 AMENSG SRL — Socios en Automatización Inteligente · Montevideo, Uruguay · Desde 2011.</p>
+        </div>
+      </footer>
+    </section>
+  );
+}
+
+/* ---------- App + montaje ---------- */
+function LandingPage() {
+  return (
+    <div className="min-h-screen bg-[#06101F]" style={{ fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" }}>
+      <SiteHeader/>
+      <main>
+        <Hero/>
+        <Propuesta/>
+        <Problemas/>
+        <Servicios/>
+        <CasoDestacado/>
+        <IAAplicada/>
+        <Tecnologias/>
+        <Proceso/>
+        <PorQue/>
+        <Equipo/>
+        <Contacto/>
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<LandingPage/>);
+
+  </script>
+</body>
+</html>
