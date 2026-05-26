@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 
@@ -308,9 +309,9 @@ function ConfirmationResult({ result }: { result: ConfirmResult }) {
           </tbody>
         </table>
       </div>
-      <a className="mt-4 inline-flex text-sm font-semibold text-emerald-950 underline" href="/importaciones">
+      <Link className="mt-4 inline-flex text-sm font-semibold text-emerald-950 underline" href="/importaciones">
         Ver importaciones
-      </a>
+      </Link>
     </section>
   )
 }
