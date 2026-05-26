@@ -37,6 +37,8 @@
 - `ActivacionImportada.empresaNombreArchivo` stores the company name as it appeared in the imported file.
 - `FacturacionMensual.precioUnitario` stores the unit price snapshot used for that billing period.
 - `FacturacionMensual.porcentajeIva` stores the IVA percentage snapshot used for that billing period.
+- `ImportacionActivacion.hashArchivo` stores the confirmed file hash and prevents duplicate confirmation.
+- `FacturacionMensual.estadoCobro` starts as `PENDIENTE`.
 - `CierreMensual.snapshot` stores the monthly close snapshot.
 - `CierreSocio.snapshot` stores the partner close snapshot.
 

@@ -30,6 +30,7 @@ backups/
 *.bak
 *.dump
 *.sql
+!prisma/migrations/**/*.sql
 
 # logs
 *.log

@@ -29,6 +29,17 @@
 - Preview calculates uploaded file hash.
 - Preview includes economic totals using current parameters with Decimal-safe calculations.
 - Preview does not persist `ActivacionImportada` rows.
-- Import confirmation is not implemented.
+- Import confirmation is implemented at `POST /api/importaciones/confirmar`.
+- Confirmation persists `ImportacionActivacion`.
+- Confirmation persists all CSV rows as `ActivacionImportada`.
+- Confirmation preserves `empresaNombreArchivo` and `rawRowJson`.
+- Confirmation blocks missing companies from the master `Empresa` table.
+- Confirmation generates one `FacturacionMensual` per company.
+- Generated facturaciones start with `EstadoCobro=PENDIENTE`.
+- Confirmation stores file hash and blocks duplicate file confirmation.
+- MVP blocks more than one confirmed importation per period.
+- Confirmation is transactional and rolls back on failure.
+- Confirmation writes basic audit entries.
+- Import cancellation is not implemented.
 - Full authentication is not implemented.
 - Business workflows are not implemented.

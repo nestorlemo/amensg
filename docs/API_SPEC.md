@@ -60,3 +60,34 @@ Response shape:
   }
 }
 ```
+
+## Import Confirmation
+
+- `POST /api/importaciones/confirmar`
+- Request: `multipart/form-data` with a CSV file in field `file`.
+- The endpoint re-runs preview validation before writing.
+- If a company from the CSV does not exist in `Empresa`, the endpoint returns `409` with `missingCompanies`.
+- The endpoint blocks duplicate file confirmation by `hashArchivo`.
+- The endpoint blocks a second confirmed importation for the same period in the MVP.
+- The endpoint persists `ImportacionActivacion`, all `ActivacionImportada` rows, one `FacturacionMensual` per company, and basic `Auditoria` entries in one transaction.
+
+Success response shape:
+
+```json
+{
+  "importacionId": "uuid",
+  "facturaciones": [
+    {
+      "id": "uuid",
+      "empresaId": "uuid",
+      "empresaNombreArchivo": "Empresa CSV",
+      "anio": 2026,
+      "mes": 4,
+      "cantidadActivaciones": 100,
+      "subtotal": "1000.00",
+      "iva": "220.00",
+      "total": "1220.00"
+    }
+  ]
+}
+```

@@ -1,8 +1,6 @@
 # IMPORT_SPEC
 
-CSV import confirmation and persistence are intentionally not implemented in this phase.
-
-This phase implements only CSV import preview:
+This phase implements CSV import preview and confirmation.
 
 - User uploads only the CSV file.
 - User does not select company, month, or year.
@@ -23,4 +21,23 @@ This phase implements only CSV import preview:
 - Preview calculates a SHA-256 hash of the uploaded file.
 - Preview must not write `ActivacionImportada` rows to the database.
 
-Future confirmation may store imported files under `storage/importaciones/` when using the local storage driver. Future persistence must store imported activation rows one row per `ActivacionImportada`, preserve `rawRowJson`, preserve `empresaNombreArchivo`, and avoid physical deletion of importation records.
+Confirmation rules:
+
+- The same uploaded CSV is submitted for confirmation.
+- Confirmation must re-run preview validation before writing.
+- If a CSV company does not exist in `Empresa`, confirmation is blocked with the missing names.
+- Confirmation persists one `ImportacionActivacion` per confirmed file/period.
+- Confirmation persists all CSV rows as `ActivacionImportada`.
+- Confirmation preserves `rawRowJson` and `empresaNombreArchivo` for every row.
+- Confirmation associates every row with an existing `Empresa`.
+- Confirmation generates one `FacturacionMensual` per company.
+- Confirmation uses current `precio_unitario_activacion` and `porcentaje_iva`.
+- Confirmation stores `precioUnitario` and `porcentajeIva` snapshots.
+- Confirmation sets generated facturaciones to `EstadoCobro=PENDIENTE`.
+- Confirmation stores `hashArchivo` and blocks duplicate file confirmation.
+- MVP allows one confirmed importation per period.
+- Confirmation is transactional and must rollback all writes if any step fails.
+- Confirmation writes basic `Auditoria` entries for the import and generated facturaciones.
+- Import cancellation is not implemented yet.
+- Full company reconciliation UI is not implemented yet.
+- Imported activation row editing is not implemented.

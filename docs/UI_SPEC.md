@@ -34,4 +34,8 @@ The current UI is a placeholder shell only.
 - The UI must not ask the user to select company, month, or year.
 - The UI displays file name, size, hash, detected period, row counts, company count, lot count, state count, activation date counts, validation results, company summary, state summary, lot summary, and economic preview.
 - Blocking errors and non-blocking warnings must be displayed separately.
-- The UI must not expose import confirmation in this phase.
+- After successful preview without blocking errors, the UI shows `Confirmar importación`.
+- Before confirming, the UI shows a clear confirmation step.
+- If companies are missing in `Empresa`, the UI shows the missing company names and blocks confirmation.
+- If confirmation succeeds, the UI shows `importacionId` and generated facturaciones.
+- The UI provides a link back to importaciones after confirmation.

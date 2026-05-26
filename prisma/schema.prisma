@@ -22,7 +22,6 @@ model Empresa {
   nombre          String
   activa          Boolean                @default(true)
   creadaEn        DateTime               @default(now())
-  importaciones   ImportacionActivacion[]
   activaciones    ActivacionImportada[]
   facturaciones   FacturacionMensual[]
   cierresSocio    CierreSocio[]
@@ -45,24 +44,25 @@ model Parametro {
 }
 
 model EstadoCobro {
-  id     String @id @default(uuid()) @db.Uuid
-  codigo String @unique
-  nombre String
+  id             String                @id @default(uuid()) @db.Uuid
+  codigo         String                @unique
+  nombre         String
+  facturaciones  FacturacionMensual[]
 }
 
 model ImportacionActivacion {
   id                   String                 @id @default(uuid()) @db.Uuid
-  empresaId            String                 @db.Uuid
   anio                 Int
   mes                  Int
   nombreArchivo        String?
+  hashArchivo          String                 @unique
   estado               String                 @default("ACTIVA")
   anuladaEn            DateTime?
   creadaEn             DateTime               @default(now())
-  empresa              Empresa                @relation(fields: [empresaId], references: [id])
   activaciones         ActivacionImportada[]
+  facturaciones        FacturacionMensual[]
 
-  @@index([empresaId, anio, mes])
+  @@unique([anio, mes])
 }
 
 model ActivacionImportada {
@@ -74,6 +74,11 @@ model ActivacionImportada {
   mid                  String
   chip                 String
   empresaNombreArchivo String
+  estadoActivacion     String
+  lote                 String
+  fechaImportacion     DateTime
+  fechaActivacion      DateTime?
+  tieneFechaRealActivacion Boolean            @default(false)
   monto                Decimal                @db.Decimal(18, 2)
   rawRowJson           Json
   creadaEn             DateTime               @default(now())
@@ -87,19 +92,26 @@ model ActivacionImportada {
 
 model FacturacionMensual {
   id             String   @id @default(uuid()) @db.Uuid
+  importacionId  String   @db.Uuid
   empresaId      String   @db.Uuid
+  estadoCobroId  String   @db.Uuid
   anio           Int
   mes            Int
+  cantidadActivaciones Int
   precioUnitario Decimal  @db.Decimal(18, 2)
   porcentajeIva  Decimal  @db.Decimal(18, 6)
-  subtotal       Decimal  @db.Decimal(18, 2)
+  totalSinIva    Decimal  @db.Decimal(18, 2)
   iva            Decimal  @db.Decimal(18, 2)
-  total          Decimal  @db.Decimal(18, 2)
+  totalConIva    Decimal  @db.Decimal(18, 2)
   snapshot       Json?
   creadaEn       DateTime @default(now())
+  importacion    ImportacionActivacion @relation(fields: [importacionId], references: [id])
   empresa        Empresa  @relation(fields: [empresaId], references: [id])
+  estadoCobro    EstadoCobro @relation(fields: [estadoCobroId], references: [id])
 
   @@unique([empresaId, anio, mes])
+  @@index([importacionId])
+  @@index([estadoCobroId])
 }
 
 model GastoConcepto {

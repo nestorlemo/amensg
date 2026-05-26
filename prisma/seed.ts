@@ -22,8 +22,8 @@ async function main() {
   }
 
   const parametros: Array<[string, Prisma.Decimal]> = [
-    ['precio_unitario_activacion', new Prisma.Decimal(0)],
-    ['porcentaje_iva', new Prisma.Decimal(22)],
+    ['precio_unitario_activacion', new Prisma.Decimal(4)],
+    ['porcentaje_iva', new Prisma.Decimal(0.22)],
     ['tipo_cambio_usd', new Prisma.Decimal(1)],
   ]
 
@@ -49,6 +49,19 @@ async function main() {
       update: {},
       create: { nombre },
     })
+  }
+
+  for (const nombre of ['VOS', 'RELPONT', 'Phinternet', 'Ciudad Móvil']) {
+    const existingEmpresa = await prisma.empresa.findFirst({
+      where: { nombre },
+      select: { id: true },
+    })
+
+    if (!existingEmpresa) {
+      await prisma.empresa.create({
+        data: { nombre },
+      })
+    }
   }
 }
 

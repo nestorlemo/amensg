@@ -10,7 +10,7 @@ import type {
   ValidationIssue,
 } from './types'
 
-const REQUIRED_COLUMNS = [
+export const REQUIRED_COLUMNS = [
   'Fecha de importación',
   'Empresa',
   'Estado de activación',
@@ -20,7 +20,7 @@ const REQUIRED_COLUMNS = [
   'Fecha de activación',
 ]
 
-const TECHNICAL_ACTIVATION_DATES = new Set(['01/01/1900', '01/01/2000'])
+export const TECHNICAL_ACTIVATION_DATES = new Set(['01/01/1900', '01/01/2000'])
 
 type BuildImportPreviewInput = {
   csvText: string
@@ -198,7 +198,7 @@ export function buildImportPreview(input: BuildImportPreviewInput): ImportPrevie
   }
 }
 
-function parseDatePeriod(value: string): ImportPeriod | null {
+export function parseDatePeriod(value: string): ImportPeriod | null {
   const match = value.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
   if (!match) {
     return null
@@ -295,7 +295,7 @@ function calculateEconomicPreview(facturableRows: number, parameters: ImportPrev
   const precioUnitarioActivacion = new Prisma.Decimal(parameters.precioUnitarioActivacion || 0)
   const porcentajeIva = new Prisma.Decimal(parameters.porcentajeIva || 0)
   const totalSinIva = precioUnitarioActivacion.mul(facturableRows)
-  const iva = totalSinIva.mul(porcentajeIva).div(100)
+  const iva = totalSinIva.mul(porcentajeIva)
   const totalConIva = totalSinIva.add(iva)
 
   return {
@@ -307,12 +307,12 @@ function calculateEconomicPreview(facturableRows: number, parameters: ImportPrev
   }
 }
 
-function hasRealActivationDate(value: string) {
+export function hasRealActivationDate(value: string) {
   const trimmed = value.trim()
   return trimmed.length > 0 && !isTechnicalActivationDate(trimmed)
 }
 
-function isTechnicalActivationDate(value: string) {
+export function isTechnicalActivationDate(value: string) {
   return TECHNICAL_ACTIVATION_DATES.has(value.trim())
 }
 

@@ -5,11 +5,31 @@ import { useState } from 'react'
 
 import type { ImportPreviewResult } from '@/lib/import-preview/types'
 
+type ConfirmResult = {
+  importacionId: string
+  facturaciones: Array<{
+    id: string
+    empresaId: string
+    empresaNombreArchivo: string
+    anio: number
+    mes: number
+    cantidadActivaciones: number
+    subtotal: string
+    iva: string
+    total: string
+  }>
+}
+
 export function ImportPreviewForm() {
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<ImportPreviewResult | null>(null)
+  const [confirmResult, setConfirmResult] = useState<ConfirmResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [confirmError, setConfirmError] = useState<string | null>(null)
+  const [missingCompanies, setMissingCompanies] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [isConfirming, setIsConfirming] = useState(false)
+  const [showConfirmStep, setShowConfirmStep] = useState(false)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -21,7 +41,11 @@ export function ImportPreviewForm() {
 
     setIsLoading(true)
     setError(null)
+    setConfirmError(null)
+    setMissingCompanies([])
     setPreview(null)
+    setConfirmResult(null)
+    setShowConfirmStep(false)
 
     const formData = new FormData()
     formData.append('file', file)
@@ -44,6 +68,41 @@ export function ImportPreviewForm() {
       setError('No se pudo conectar con el endpoint de vista previa.')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  async function handleConfirm() {
+    if (!file || !preview || preview.validation.hasBlockingErrors) {
+      return
+    }
+
+    setIsConfirming(true)
+    setConfirmError(null)
+    setMissingCompanies([])
+    setConfirmResult(null)
+
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+      const response = await fetch('/api/importaciones/confirmar', {
+        method: 'POST',
+        body: formData,
+      })
+      const payload = await response.json()
+
+      if (!response.ok) {
+        setConfirmError(payload.error ?? 'No se pudo confirmar la importación.')
+        setMissingCompanies(payload.missingCompanies ?? [])
+        return
+      }
+
+      setShowConfirmStep(false)
+      setConfirmResult(payload)
+    } catch {
+      setConfirmError('No se pudo conectar con el endpoint de confirmación.')
+    } finally {
+      setIsConfirming(false)
     }
   }
 
@@ -78,12 +137,44 @@ export function ImportPreviewForm() {
         <section className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</section>
       ) : null}
 
-      {preview ? <PreviewResult preview={preview} /> : null}
+      {preview ? (
+        <PreviewResult
+          confirmError={confirmError}
+          confirmResult={confirmResult}
+          isConfirming={isConfirming}
+          missingCompanies={missingCompanies}
+          onCancelConfirm={() => setShowConfirmStep(false)}
+          onConfirm={handleConfirm}
+          onRequestConfirm={() => setShowConfirmStep(true)}
+          preview={preview}
+          showConfirmStep={showConfirmStep}
+        />
+      ) : null}
     </div>
   )
 }
 
-function PreviewResult({ preview }: { preview: ImportPreviewResult }) {
+function PreviewResult({
+  confirmError,
+  confirmResult,
+  isConfirming,
+  missingCompanies,
+  onCancelConfirm,
+  onConfirm,
+  onRequestConfirm,
+  preview,
+  showConfirmStep,
+}: {
+  confirmError: string | null
+  confirmResult: ConfirmResult | null
+  isConfirming: boolean
+  missingCompanies: string[]
+  onCancelConfirm: () => void
+  onConfirm: () => void
+  onRequestConfirm: () => void
+  preview: ImportPreviewResult
+  showConfirmStep: boolean
+}) {
   const period = preview.detectedPeriod
     ? `${String(preview.detectedPeriod.mes).padStart(2, '0')}/${preview.detectedPeriod.anio}`
     : 'No detectado'
@@ -110,6 +201,62 @@ function PreviewResult({ preview }: { preview: ImportPreviewResult }) {
 
       <ValidationPanel preview={preview} />
 
+      {!preview.validation.hasBlockingErrors && !confirmResult ? (
+        <section className="rounded-lg border border-slate-200 bg-white p-5">
+          <h2 className="text-lg font-semibold text-slate-950">Confirmar importación</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            La confirmación persiste la importación, todas las filas del CSV y genera una facturación mensual por
+            empresa. Esta acción no implementa cancelación ni edición de filas importadas.
+          </p>
+          {!showConfirmStep ? (
+            <button
+              className="mt-4 rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
+              onClick={onRequestConfirm}
+              type="button"
+            >
+              Confirmar importación
+            </button>
+          ) : (
+            <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-4">
+              <p className="text-sm font-medium text-amber-950">Confirme que desea guardar esta importación.</p>
+              <div className="mt-3 flex gap-3">
+                <button
+                  className="rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isConfirming}
+                  onClick={onConfirm}
+                  type="button"
+                >
+                  {isConfirming ? 'Confirmando...' : 'Sí, confirmar'}
+                </button>
+                <button
+                  className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  disabled={isConfirming}
+                  onClick={onCancelConfirm}
+                  type="button"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      {confirmError ? (
+        <section className="rounded-lg border border-red-200 bg-red-50 p-5 text-sm text-red-900">
+          <p className="font-semibold">{confirmError}</p>
+          {missingCompanies.length > 0 ? (
+            <ul className="mt-3 list-inside list-disc">
+              {missingCompanies.map((company) => (
+                <li key={company}>{company}</li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
+      ) : null}
+
+      {confirmResult ? <ConfirmationResult result={confirmResult} /> : null}
+
       <section className="grid gap-6 xl:grid-cols-3">
         <SummaryTable title="Empresas" rows={preview.companySummary} />
         <SummaryTable title="Estados" rows={preview.stateSummary} />
@@ -127,6 +274,44 @@ function PreviewResult({ preview }: { preview: ImportPreviewResult }) {
         </div>
       </section>
     </div>
+  )
+}
+
+function ConfirmationResult({ result }: { result: ConfirmResult }) {
+  return (
+    <section className="rounded-lg border border-emerald-200 bg-emerald-50 p-5">
+      <h2 className="text-lg font-semibold text-emerald-950">Importación confirmada</h2>
+      <p className="mt-2 text-sm text-emerald-900">Importacion ID: {result.importacionId}</p>
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead className="text-emerald-900">
+            <tr>
+              <th className="border-b border-emerald-200 py-2 pr-3 font-medium">Empresa</th>
+              <th className="border-b border-emerald-200 py-2 pr-3 font-medium">Activaciones</th>
+              <th className="border-b border-emerald-200 py-2 pr-3 font-medium">Subtotal</th>
+              <th className="border-b border-emerald-200 py-2 pr-3 font-medium">IVA</th>
+              <th className="border-b border-emerald-200 py-2 pr-3 font-medium">Total</th>
+              <th className="border-b border-emerald-200 py-2 pr-3 font-medium">Facturación ID</th>
+            </tr>
+          </thead>
+          <tbody>
+            {result.facturaciones.map((facturacion) => (
+              <tr key={facturacion.id}>
+                <td className="border-b border-emerald-100 py-2 pr-3">{facturacion.empresaNombreArchivo}</td>
+                <td className="border-b border-emerald-100 py-2 pr-3">{facturacion.cantidadActivaciones}</td>
+                <td className="border-b border-emerald-100 py-2 pr-3">{facturacion.subtotal}</td>
+                <td className="border-b border-emerald-100 py-2 pr-3">{facturacion.iva}</td>
+                <td className="border-b border-emerald-100 py-2 pr-3">{facturacion.total}</td>
+                <td className="border-b border-emerald-100 py-2 pr-3">{facturacion.id}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <a className="mt-4 inline-flex text-sm font-semibold text-emerald-950 underline" href="/importaciones">
+        Ver importaciones
+      </a>
+    </section>
   )
 }
 
