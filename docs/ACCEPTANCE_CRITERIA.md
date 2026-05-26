@@ -1,0 +1,34 @@
+# ACCEPTANCE_CRITERIA
+
+- Documentation files exist under `docs/`.
+- `AGENTS.md`, `README.md`, `.env.example`, `.gitignore`, `Dockerfile`, and `docker-compose.yml` exist.
+- Next.js App Router project exists with TypeScript.
+- Tailwind CSS and shadcn/ui-ready configuration exist.
+- Sidebar navigation and placeholder pages exist for every required module.
+- Prisma schema uses PostgreSQL.
+- Prisma models use UUID ids.
+- Monetary values use Decimal, not Float.
+- MID is not globally unique.
+- Chip is not globally unique.
+- MID is unique by `empresaId + anio + mes`.
+- Chip is unique by `empresaId + anio + mes`.
+- `ActivacionImportada.rawRowJson` exists.
+- `ActivacionImportada.empresaNombreArchivo` exists.
+- `FacturacionMensual.precioUnitario` and `FacturacionMensual.porcentajeIva` exist as snapshots.
+- `CierreMensual.snapshot` and `CierreSocio.snapshot` exist.
+- Importations are modeled so they can be cancelled without physical deletion.
+- Seed creates admin user, estados de cobro, parametros, and gasto conceptos.
+- Docker Compose defines app and postgres services plus a persistent PostgreSQL volume.
+- CSV import preview is implemented at `/importaciones/nueva`.
+- `POST /api/importaciones/preview` accepts a CSV file and returns preview data.
+- Preview uses semicolon separator.
+- Preview validates required columns and required fields per row.
+- Preview detects period from `Fecha de importación` only.
+- Preview validates that the file contains only one month/year.
+- Preview detects companies, states, lots, technical activation dates, completed activations, rows without real activation date, and duplicates within Empresa + año + mes.
+- Preview calculates uploaded file hash.
+- Preview includes economic totals using current parameters with Decimal-safe calculations.
+- Preview does not persist `ActivacionImportada` rows.
+- Import confirmation is not implemented.
+- Full authentication is not implemented.
+- Business workflows are not implemented.

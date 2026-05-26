@@ -1,0 +1,17 @@
+export const navigationItems = [
+  { href: '/', label: 'Dashboard' },
+  { href: '/importaciones', label: 'Importaciones' },
+  { href: '/activaciones', label: 'Activaciones' },
+  { href: '/facturacion', label: 'Facturacion' },
+  { href: '/cobros', label: 'Cobros' },
+  { href: '/empresas', label: 'Empresas' },
+  { href: '/gastos', label: 'Gastos' },
+  { href: '/ingresos-adicionales', label: 'Ingresos adicionales' },
+  { href: '/liquidaciones', label: 'Liquidaciones' },
+  { href: '/cierres', label: 'Cierres' },
+  { href: '/reportes', label: 'Reportes' },
+  { href: '/parametros', label: 'Parametros' },
+  { href: '/socios', label: 'Socios' },
+  { href: '/usuarios', label: 'Usuarios' },
+  { href: '/auditoria', label: 'Auditoria' },
+]

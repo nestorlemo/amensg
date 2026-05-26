@@ -1,0 +1,43 @@
+# dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+tsconfig.tsbuildinfo
+
+# production
+dist/
+build/
+
+# environment
+.env
+.env.*
+!.env.example
+
+# local storage and uploads
+storage/
+uploads/
+!storage/
+!storage/importaciones/
+!storage/importaciones/.gitkeep
+
+# backups and dumps
+backups/
+!backups/
+!backups/.gitkeep
+*.backup
+*.bak
+*.dump
+*.sql
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# system
+.DS_Store
+Thumbs.db

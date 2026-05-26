@@ -1,0 +1,239 @@
+'use client'
+
+import type { FormEvent } from 'react'
+import { useState } from 'react'
+
+import type { ImportPreviewResult } from '@/lib/import-preview/types'
+
+export function ImportPreviewForm() {
+  const [file, setFile] = useState<File | null>(null)
+  const [preview, setPreview] = useState<ImportPreviewResult | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (!file) {
+      setError('Seleccione un archivo CSV para previsualizar.')
+      return
+    }
+
+    setIsLoading(true)
+    setError(null)
+    setPreview(null)
+
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+      const response = await fetch('/api/importaciones/preview', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const payload = await response.json()
+
+      if (!response.ok) {
+        setError(payload.error ?? 'No se pudo generar la vista previa.')
+        return
+      }
+
+      setPreview(payload)
+    } catch {
+      setError('No se pudo conectar con el endpoint de vista previa.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <section className="rounded-lg border border-slate-200 bg-white p-5">
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <div>
+            <label className="block text-sm font-medium text-slate-700" htmlFor="csv-file">
+              Archivo CSV
+            </label>
+            <input
+              accept=".csv,text/csv"
+              className="mt-2 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
+              id="csv-file"
+              name="file"
+              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+              type="file"
+            />
+          </div>
+          <button
+            className="rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={isLoading}
+            type="submit"
+          >
+            {isLoading ? 'Generando preview...' : 'Generar preview'}
+          </button>
+        </form>
+      </section>
+
+      {error ? (
+        <section className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</section>
+      ) : null}
+
+      {preview ? <PreviewResult preview={preview} /> : null}
+    </div>
+  )
+}
+
+function PreviewResult({ preview }: { preview: ImportPreviewResult }) {
+  const period = preview.detectedPeriod
+    ? `${String(preview.detectedPeriod.mes).padStart(2, '0')}/${preview.detectedPeriod.anio}`
+    : 'No detectado'
+
+  return (
+    <div className="space-y-6">
+      <section className="rounded-lg border border-slate-200 bg-white p-5">
+        <h2 className="text-lg font-semibold text-slate-950">Resultado de preview</h2>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Metric label="Archivo" value={preview.file.name} />
+          <Metric label="Tamaño" value={`${preview.file.size} bytes`} />
+          <Metric label="Periodo" value={period} />
+          <Metric label="Hash SHA-256" value={preview.file.hash} wide />
+          <Metric label="Filas totales" value={preview.totalRows} />
+          <Metric label="Filas importables" value={preview.importableRows} />
+          <Metric label="Filas facturables" value={preview.facturableRows} />
+          <Metric label="Empresas" value={preview.detectedCompaniesCount} />
+          <Metric label="Lotes" value={preview.detectedLotsCount} />
+          <Metric label="Estados" value={preview.detectedStatesCount} />
+          <Metric label="Completadas" value={preview.completedActivationsCount} />
+          <Metric label="Sin fecha real" value={preview.activationsWithoutRealActivationDateCount} />
+        </div>
+      </section>
+
+      <ValidationPanel preview={preview} />
+
+      <section className="grid gap-6 xl:grid-cols-3">
+        <SummaryTable title="Empresas" rows={preview.companySummary} />
+        <SummaryTable title="Estados" rows={preview.stateSummary} />
+        <SummaryTable title="Lotes" rows={preview.lotSummary} />
+      </section>
+
+      <section className="rounded-lg border border-slate-200 bg-white p-5">
+        <h2 className="text-lg font-semibold text-slate-950">Preview económico</h2>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <Metric label="Precio unitario" value={preview.economicPreview.precioUnitarioActivacion} />
+          <Metric label="IVA %" value={preview.economicPreview.porcentajeIva} />
+          <Metric label="Total sin IVA" value={preview.economicPreview.totalSinIva} />
+          <Metric label="IVA" value={preview.economicPreview.iva} />
+          <Metric label="Total con IVA" value={preview.economicPreview.totalConIva} />
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function ValidationPanel({ preview }: { preview: ImportPreviewResult }) {
+  return (
+    <section className="grid gap-6 lg:grid-cols-2">
+      <IssueList
+        emptyText="No hay errores bloqueantes."
+        items={preview.validation.errors}
+        tone="error"
+        title="Errores bloqueantes"
+      />
+      <IssueList
+        emptyText="No hay advertencias."
+        items={preview.validation.warnings}
+        tone="warning"
+        title="Advertencias"
+      />
+    </section>
+  )
+}
+
+function IssueList({
+  emptyText,
+  items,
+  title,
+  tone,
+}: {
+  emptyText: string
+  items: ImportPreviewResult['validation']['errors']
+  title: string
+  tone: 'error' | 'warning'
+}) {
+  const classes =
+    tone === 'error'
+      ? 'border-red-200 bg-red-50 text-red-900'
+      : 'border-amber-200 bg-amber-50 text-amber-900'
+
+  return (
+    <div className={`rounded-lg border p-5 ${classes}`}>
+      <h2 className="text-lg font-semibold">{title}</h2>
+      {items.length > 0 ? (
+        <ul className="mt-3 space-y-2 text-sm">
+          {items.map((item, index) => (
+            <li key={`${item.code}-${item.row ?? 'global'}-${index}`}>
+              {item.row ? `Fila ${item.row}: ` : ''}
+              {item.message}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-3 text-sm">{emptyText}</p>
+      )}
+    </div>
+  )
+}
+
+function SummaryTable({
+  title,
+  rows,
+}: {
+  title: string
+  rows: Array<{ name: string; count: number; importableRows?: number; facturableRows?: number }>
+}) {
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-5">
+      <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead className="text-slate-500">
+            <tr>
+              <th className="border-b border-slate-200 py-2 pr-3 font-medium">Nombre</th>
+              <th className="border-b border-slate-200 py-2 pr-3 font-medium">Filas</th>
+              {rows.some((row) => row.importableRows !== undefined) ? (
+                <th className="border-b border-slate-200 py-2 pr-3 font-medium">Importables</th>
+              ) : null}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.name}>
+                <td className="border-b border-slate-100 py-2 pr-3 text-slate-900">{row.name}</td>
+                <td className="border-b border-slate-100 py-2 pr-3 text-slate-700">{row.count}</td>
+                {row.importableRows !== undefined ? (
+                  <td className="border-b border-slate-100 py-2 pr-3 text-slate-700">{row.importableRows}</td>
+                ) : null}
+              </tr>
+            ))}
+            {rows.length === 0 ? (
+              <tr>
+                <td className="py-2 text-slate-500" colSpan={3}>
+                  Sin datos.
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )
+}
+
+function Metric({ label, value, wide = false }: { label: string; value: string | number; wide?: boolean }) {
+  return (
+    <div className={`rounded-md border border-slate-200 bg-slate-50 p-3 ${wide ? 'lg:col-span-3' : ''}`}>
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 break-words text-sm font-semibold text-slate-950">{value}</p>
+    </div>
+  )
+}
