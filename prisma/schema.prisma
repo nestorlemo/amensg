@@ -1,0 +1,23 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario { id String @id @default(uuid()) @db.Uuid nombre String email String @unique passwordHash String activo Boolean @default(true) creadoEn DateTime @default(now()) }
+model Empresa { id String @id @default(uuid()) @db.Uuid nombre String creadaEn DateTime @default(now()) }
+model Socio { id String @id @default(uuid()) @db.Uuid nombre String activo Boolean @default(true) }
+model Parametro { id String @id @default(uuid()) @db.Uuid clave String @unique valor Decimal @db.Decimal(18,6) }
+model EstadoCobro { id String @id @default(uuid()) @db.Uuid codigo String @unique nombre String }
+model ImportacionActivacion { id String @id @default(uuid()) @db.Uuid empresaId String @db.Uuid anio Int mes Int estado String @default("ACTIVA") creadaEn DateTime @default(now()) activaciones ActivacionImportada[] }
+model ActivacionImportada { id String @id @default(uuid()) @db.Uuid importacionId String @db.Uuid empresaId String @db.Uuid anio Int mes Int mid String chip String monto Decimal @db.Decimal(18,2) filaRaw Json importacion ImportacionActivacion @relation(fields: [importacionId], references: [id]) @@unique([empresaId, anio, mes, mid]) @@unique([empresaId, anio, mes, chip]) }
+model FacturacionMensual { id String @id @default(uuid()) @db.Uuid empresaId String @db.Uuid anio Int mes Int subtotal Decimal @db.Decimal(18,2) iva Decimal @db.Decimal(18,2) total Decimal @db.Decimal(18,2) }
+model GastoConcepto { id String @id @default(uuid()) @db.Uuid nombre String @unique activo Boolean @default(true) }
+model GastoMensual { id String @id @default(uuid()) @db.Uuid conceptoId String @db.Uuid anio Int mes Int monto Decimal @db.Decimal(18,2) }
+model IngresoAdicional { id String @id @default(uuid()) @db.Uuid descripcion String anio Int mes Int monto Decimal @db.Decimal(18,2) }
+model CierreMensual { id String @id @default(uuid()) @db.Uuid anio Int mes Int snapshot Json creadoEn DateTime @default(now()) }
+model CierreSocio { id String @id @default(uuid()) @db.Uuid cierreMensualId String @db.Uuid socioId String @db.Uuid snapshot Json }
+model Auditoria { id String @id @default(uuid()) @db.Uuid usuarioId String? @db.Uuid entidad String entidadId String accion String detalle Json? creadoEn DateTime @default(now()) }
