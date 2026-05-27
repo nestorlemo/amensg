@@ -24,6 +24,7 @@ model Empresa {
   creadaEn        DateTime               @default(now())
   activaciones    ActivacionImportada[]
   facturaciones   FacturacionMensual[]
+  ingresosAdicionales IngresoAdicional[]
   cierresSocio    CierreSocio[]
 }
 
@@ -119,6 +120,7 @@ model FacturacionMensual {
 model GastoConcepto {
   id      String         @id @default(uuid()) @db.Uuid
   nombre  String         @unique
+  tipo    String         @default("VARIABLE")
   activo  Boolean        @default(true)
   gastos  GastoMensual[]
 }
@@ -128,17 +130,31 @@ model GastoMensual {
   conceptoId String        @db.Uuid
   anio       Int
   mes        Int
-  monto      Decimal       @db.Decimal(18, 2)
+  fecha      DateTime
+  importe    Decimal       @db.Decimal(18, 2)
+  observaciones String?
   concepto   GastoConcepto @relation(fields: [conceptoId], references: [id])
+
+  @@index([conceptoId])
+  @@index([anio, mes])
 }
 
 model IngresoAdicional {
   id          String   @id @default(uuid()) @db.Uuid
-  descripcion String
+  concepto    String
+  empresaId   String?  @db.Uuid
   anio        Int
   mes         Int
-  monto       Decimal  @db.Decimal(18, 2)
+  montoSinIva Decimal  @db.Decimal(18, 2)
+  porcentajeIva Decimal @db.Decimal(18, 6)
+  iva         Decimal  @db.Decimal(18, 2)
+  montoConIva Decimal  @db.Decimal(18, 2)
+  observaciones String?
   creadoEn    DateTime @default(now())
+  empresa     Empresa? @relation(fields: [empresaId], references: [id])
+
+  @@index([empresaId])
+  @@index([anio, mes])
 }
 
 model CierreMensual {

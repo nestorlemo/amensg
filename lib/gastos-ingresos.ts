@@ -1,0 +1,481 @@
+import { Prisma } from '@prisma/client'
+
+import { prisma } from '@/lib/prisma'
+import type { SearchParamsInput } from '@/lib/read-models'
+
+const CONCEPTO_TIPOS = new Set(['FIJO', 'VARIABLE'])
+
+function param(params: SearchParamsInput, key: string) {
+  if (params instanceof URLSearchParams) {
+    return params.get(key) ?? undefined
+  }
+
+  const value = params[key]
+  return Array.isArray(value) ? value[0] : value
+}
+
+function stringParam(params: SearchParamsInput, key: string) {
+  const value = param(params, key)?.trim()
+  return value ? value : undefined
+}
+
+function numberParam(params: SearchParamsInput, key: string) {
+  const value = stringParam(params, key)
+  if (!value) {
+    return undefined
+  }
+
+  const parsed = Number(value)
+  return Number.isInteger(parsed) ? parsed : undefined
+}
+
+function money(value: Prisma.Decimal) {
+  return value.toDecimalPlaces(2).toFixed(2)
+}
+
+function rate(value: Prisma.Decimal) {
+  return value.toDecimalPlaces(6).toString()
+}
+
+function iso(value: Date | null | undefined) {
+  return value ? value.toISOString() : null
+}
+
+function requiredString(body: Record<string, unknown>, key: string) {
+  const value = body[key]
+  return typeof value === 'string' && value.trim() ? value.trim() : null
+}
+
+function optionalString(body: Record<string, unknown>, key: string) {
+  const value = body[key]
+  return typeof value === 'string' && value.trim() ? value.trim() : null
+}
+
+function requiredInt(body: Record<string, unknown>, key: string) {
+  const value = body[key]
+  const parsed = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN
+  return Number.isInteger(parsed) ? parsed : null
+}
+
+function requiredDecimal(body: Record<string, unknown>, key: string) {
+  const value = body[key]
+
+  if (typeof value !== 'string' && typeof value !== 'number') {
+    return null
+  }
+
+  try {
+    const decimal = new Prisma.Decimal(value)
+    return decimal.greaterThanOrEqualTo(0) ? decimal : null
+  } catch {
+    return null
+  }
+}
+
+function requiredDate(body: Record<string, unknown>, key: string) {
+  const value = body[key]
+
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return null
+  }
+
+  const [year, month, day] = value.split('-').map(Number)
+  const date = new Date(Date.UTC(year, month - 1, day))
+
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+    return null
+  }
+
+  return date
+}
+
+async function assertOpenPeriod(anio: number, mes: number) {
+  const cierre = await prisma.cierreMensual.findUnique({
+    where: {
+      anio_mes: {
+        anio,
+        mes,
+      },
+    },
+    select: { id: true },
+  })
+
+  if (cierre) {
+    return {
+      error: 'PERIODO_CERRADO',
+      message: 'El periodo ya tiene cierre mensual y no permite cambios.',
+    }
+  }
+
+  return null
+}
+
+export async function getGastoConceptos() {
+  const rows = await prisma.gastoConcepto.findMany({
+    orderBy: [{ activo: 'desc' }, { nombre: 'asc' }],
+  })
+
+  return {
+    rows: rows.map((row) => ({
+      id: row.id,
+      nombre: row.nombre,
+      tipo: row.tipo,
+      activo: row.activo,
+    })),
+  }
+}
+
+export async function createGastoConcepto(body: Record<string, unknown>) {
+  const nombre = requiredString(body, 'nombre')
+  const tipo = requiredString(body, 'tipo') ?? 'VARIABLE'
+
+  if (!nombre || !CONCEPTO_TIPOS.has(tipo)) {
+    return { error: { error: 'CONCEPTO_INVALIDO', message: 'Nombre y tipo valido son requeridos.' }, status: 422 }
+  }
+
+  const concepto = await prisma.$transaction(async (tx) => {
+    const created = await tx.gastoConcepto.create({
+      data: { nombre, tipo },
+    })
+
+    await tx.auditoria.create({
+      data: {
+        entidad: 'GastoConcepto',
+        entidadId: created.id,
+        accion: 'CREAR_CONCEPTO_GASTO',
+        detalle: { nombre, tipo },
+      },
+    })
+
+    return created
+  })
+
+  return { data: concepto, status: 201 }
+}
+
+export async function updateGastoConcepto(id: string, body: Record<string, unknown>) {
+  const nombre = requiredString(body, 'nombre')
+  const tipo = requiredString(body, 'tipo')
+  const activo = typeof body.activo === 'boolean' ? body.activo : undefined
+
+  if (!nombre || !tipo || !CONCEPTO_TIPOS.has(tipo)) {
+    return { error: { error: 'CONCEPTO_INVALIDO', message: 'Nombre y tipo valido son requeridos.' }, status: 422 }
+  }
+
+  const concepto = await prisma.$transaction(async (tx) => {
+    const updated = await tx.gastoConcepto.update({
+      where: { id },
+      data: { nombre, tipo, ...(activo === undefined ? {} : { activo }) },
+    })
+
+    await tx.auditoria.create({
+      data: {
+        entidad: 'GastoConcepto',
+        entidadId: id,
+        accion: 'EDITAR_CONCEPTO_GASTO',
+        detalle: { nombre, tipo, activo },
+      },
+    })
+
+    return updated
+  })
+
+  return { data: concepto, status: 200 }
+}
+
+export async function deactivateGastoConcepto(id: string) {
+  const concepto = await prisma.$transaction(async (tx) => {
+    const updated = await tx.gastoConcepto.update({
+      where: { id },
+      data: { activo: false },
+    })
+
+    await tx.auditoria.create({
+      data: {
+        entidad: 'GastoConcepto',
+        entidadId: id,
+        accion: 'DESACTIVAR_CONCEPTO_GASTO',
+        detalle: { nombre: updated.nombre },
+      },
+    })
+
+    return updated
+  })
+
+  return { data: concepto, status: 200 }
+}
+
+export async function getGastos(params: SearchParamsInput) {
+  const anio = numberParam(params, 'anio')
+  const mes = numberParam(params, 'mes')
+  const conceptoId = stringParam(params, 'conceptoId') ?? stringParam(params, 'concepto')
+  const tipo = stringParam(params, 'tipo')
+  const where: Prisma.GastoMensualWhereInput = {
+    ...(anio ? { anio } : {}),
+    ...(mes ? { mes } : {}),
+    ...(conceptoId ? { conceptoId } : {}),
+    ...(tipo ? { concepto: { tipo } } : {}),
+  }
+
+  const [rows, conceptos] = await Promise.all([
+    prisma.gastoMensual.findMany({
+      where,
+      orderBy: [{ anio: 'desc' }, { mes: 'desc' }, { fecha: 'desc' }],
+      include: { concepto: true },
+    }),
+    prisma.gastoConcepto.findMany({ orderBy: [{ activo: 'desc' }, { nombre: 'asc' }] }),
+  ])
+  const total = rows.reduce((acc, row) => acc.add(row.importe), new Prisma.Decimal(0))
+  const totalFijos = rows
+    .filter((row) => row.concepto.tipo === 'FIJO')
+    .reduce((acc, row) => acc.add(row.importe), new Prisma.Decimal(0))
+  const totalVariables = rows
+    .filter((row) => row.concepto.tipo === 'VARIABLE')
+    .reduce((acc, row) => acc.add(row.importe), new Prisma.Decimal(0))
+
+  return {
+    rows: rows.map(serializeGasto),
+    conceptos: conceptos.map(serializeConcepto),
+    resumen: {
+      totalGastosMes: money(total),
+      totalGastosFijos: money(totalFijos),
+      totalGastosVariables: money(totalVariables),
+      cantidadGastos: rows.length,
+    },
+  }
+}
+
+export async function createGasto(body: Record<string, unknown>) {
+  const parsed = parseGastoBody(body)
+  if ('error' in parsed) return parsed
+
+  const closed = await assertOpenPeriod(parsed.data.anio, parsed.data.mes)
+  if (closed) return { error: closed, status: 409 }
+
+  const gasto = await prisma.$transaction(async (tx) => {
+    const created = await tx.gastoMensual.create({ data: parsed.data, include: { concepto: true } })
+    await tx.auditoria.create({
+      data: {
+        entidad: 'GastoMensual',
+        entidadId: created.id,
+        accion: 'CREAR_GASTO',
+        detalle: serializeGasto(created),
+      },
+    })
+    return created
+  })
+
+  return { data: serializeGasto(gasto), status: 201 }
+}
+
+export async function updateGasto(id: string, body: Record<string, unknown>) {
+  const parsed = parseGastoBody(body)
+  if ('error' in parsed) return parsed
+
+  const closed = await assertOpenPeriod(parsed.data.anio, parsed.data.mes)
+  if (closed) return { error: closed, status: 409 }
+
+  const gasto = await prisma.$transaction(async (tx) => {
+    const updated = await tx.gastoMensual.update({ where: { id }, data: parsed.data, include: { concepto: true } })
+    await tx.auditoria.create({
+      data: {
+        entidad: 'GastoMensual',
+        entidadId: id,
+        accion: 'EDITAR_GASTO',
+        detalle: serializeGasto(updated),
+      },
+    })
+    return updated
+  })
+
+  return { data: serializeGasto(gasto), status: 200 }
+}
+
+export async function deleteGasto(id: string) {
+  const existing = await prisma.gastoMensual.findUnique({ where: { id }, include: { concepto: true } })
+  if (!existing) return { error: { error: 'GASTO_NO_ENCONTRADO' }, status: 404 }
+
+  const closed = await assertOpenPeriod(existing.anio, existing.mes)
+  if (closed) return { error: closed, status: 409 }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.gastoMensual.delete({ where: { id } })
+    await tx.auditoria.create({
+      data: {
+        entidad: 'GastoMensual',
+        entidadId: id,
+        accion: 'ELIMINAR_GASTO',
+        detalle: serializeGasto(existing),
+      },
+    })
+  })
+
+  return { data: { id }, status: 200 }
+}
+
+export async function getIngresosAdicionales(params: SearchParamsInput) {
+  const anio = numberParam(params, 'anio')
+  const mes = numberParam(params, 'mes')
+  const empresaId = stringParam(params, 'empresaId')
+  const where: Prisma.IngresoAdicionalWhereInput = {
+    ...(anio ? { anio } : {}),
+    ...(mes ? { mes } : {}),
+    ...(empresaId ? { empresaId } : {}),
+  }
+
+  const [rows, empresas] = await Promise.all([
+    prisma.ingresoAdicional.findMany({
+      where,
+      orderBy: [{ anio: 'desc' }, { mes: 'desc' }, { creadoEn: 'desc' }],
+      include: { empresa: true },
+    }),
+    prisma.empresa.findMany({ where: { activa: true }, orderBy: { nombre: 'asc' }, select: { id: true, nombre: true } }),
+  ])
+
+  return {
+    rows: rows.map(serializeIngreso),
+    empresas,
+  }
+}
+
+export async function createIngresoAdicional(body: Record<string, unknown>) {
+  const parsed = parseIngresoBody(body)
+  if ('error' in parsed) return parsed
+
+  const closed = await assertOpenPeriod(parsed.data.anio, parsed.data.mes)
+  if (closed) return { error: closed, status: 409 }
+
+  const ingreso = await prisma.$transaction(async (tx) => {
+    const created = await tx.ingresoAdicional.create({ data: parsed.data, include: { empresa: true } })
+    await tx.auditoria.create({
+      data: {
+        entidad: 'IngresoAdicional',
+        entidadId: created.id,
+        accion: 'CREAR_INGRESO_ADICIONAL',
+        detalle: serializeIngreso(created),
+      },
+    })
+    return created
+  })
+
+  return { data: serializeIngreso(ingreso), status: 201 }
+}
+
+export async function updateIngresoAdicional(id: string, body: Record<string, unknown>) {
+  const parsed = parseIngresoBody(body)
+  if ('error' in parsed) return parsed
+
+  const closed = await assertOpenPeriod(parsed.data.anio, parsed.data.mes)
+  if (closed) return { error: closed, status: 409 }
+
+  const ingreso = await prisma.$transaction(async (tx) => {
+    const updated = await tx.ingresoAdicional.update({ where: { id }, data: parsed.data, include: { empresa: true } })
+    await tx.auditoria.create({
+      data: {
+        entidad: 'IngresoAdicional',
+        entidadId: id,
+        accion: 'EDITAR_INGRESO_ADICIONAL',
+        detalle: serializeIngreso(updated),
+      },
+    })
+    return updated
+  })
+
+  return { data: serializeIngreso(ingreso), status: 200 }
+}
+
+export async function deleteIngresoAdicional(id: string) {
+  const existing = await prisma.ingresoAdicional.findUnique({ where: { id }, include: { empresa: true } })
+  if (!existing) return { error: { error: 'INGRESO_ADICIONAL_NO_ENCONTRADO' }, status: 404 }
+
+  const closed = await assertOpenPeriod(existing.anio, existing.mes)
+  if (closed) return { error: closed, status: 409 }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.ingresoAdicional.delete({ where: { id } })
+    await tx.auditoria.create({
+      data: {
+        entidad: 'IngresoAdicional',
+        entidadId: id,
+        accion: 'ELIMINAR_INGRESO_ADICIONAL',
+        detalle: serializeIngreso(existing),
+      },
+    })
+  })
+
+  return { data: { id }, status: 200 }
+}
+
+function parseGastoBody(body: Record<string, unknown>) {
+  const conceptoId = requiredString(body, 'conceptoId')
+  const anio = requiredInt(body, 'anio')
+  const mes = requiredInt(body, 'mes')
+  const fecha = requiredDate(body, 'fecha')
+  const importe = requiredDecimal(body, 'importe')
+  const observaciones = optionalString(body, 'observaciones')
+
+  if (!conceptoId || !anio || !mes || mes < 1 || mes > 12 || !fecha || !importe) {
+    return { error: { error: 'GASTO_INVALIDO', message: 'Datos de gasto invalidos.' }, status: 422 }
+  }
+
+  return { data: { conceptoId, anio, mes, fecha, importe, observaciones } }
+}
+
+function parseIngresoBody(body: Record<string, unknown>) {
+  const concepto = requiredString(body, 'concepto')
+  const empresaId = optionalString(body, 'empresaId')
+  const anio = requiredInt(body, 'anio')
+  const mes = requiredInt(body, 'mes')
+  const montoSinIva = requiredDecimal(body, 'montoSinIva')
+  const porcentajeIva = requiredDecimal(body, 'porcentajeIva')
+  const observaciones = optionalString(body, 'observaciones')
+
+  if (!concepto || !anio || !mes || mes < 1 || mes > 12 || !montoSinIva || !porcentajeIva) {
+    return { error: { error: 'INGRESO_ADICIONAL_INVALIDO', message: 'Datos de ingreso adicional invalidos.' }, status: 422 }
+  }
+
+  const iva = montoSinIva.mul(porcentajeIva).toDecimalPlaces(2)
+  const montoConIva = montoSinIva.add(iva).toDecimalPlaces(2)
+
+  return { data: { concepto, empresaId, anio, mes, montoSinIva, porcentajeIva, iva, montoConIva, observaciones } }
+}
+
+function serializeConcepto(row: { id: string; nombre: string; tipo: string; activo: boolean }) {
+  return {
+    id: row.id,
+    nombre: row.nombre,
+    tipo: row.tipo,
+    activo: row.activo,
+  }
+}
+
+function serializeGasto(row: Prisma.GastoMensualGetPayload<{ include: { concepto: true } }>) {
+  return {
+    id: row.id,
+    conceptoId: row.conceptoId,
+    concepto: row.concepto.nombre,
+    tipo: row.concepto.tipo,
+    anio: row.anio,
+    mes: row.mes,
+    fecha: iso(row.fecha),
+    importe: money(row.importe),
+    observaciones: row.observaciones,
+  }
+}
+
+function serializeIngreso(row: Prisma.IngresoAdicionalGetPayload<{ include: { empresa: true } }>) {
+  return {
+    id: row.id,
+    concepto: row.concepto,
+    empresaId: row.empresaId,
+    empresa: row.empresa?.nombre ?? null,
+    anio: row.anio,
+    mes: row.mes,
+    montoSinIva: money(row.montoSinIva),
+    porcentajeIva: rate(row.porcentajeIva),
+    iva: money(row.iva),
+    montoConIva: money(row.montoConIva),
+    observaciones: row.observaciones,
+    creadoEn: iso(row.creadoEn),
+  }
+}

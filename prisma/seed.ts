@@ -35,7 +35,7 @@ async function main() {
     })
   }
 
-  for (const nombre of [
+  const conceptosGasto = [
     'Estudio contable',
     'IRAE',
     'AWS',
@@ -43,11 +43,13 @@ async function main() {
     'Certificado AMENSG',
     'Facturación electrónica',
     'Otros',
-  ]) {
+  ].map((nombre) => [nombre, ['Estudio contable', 'AWS', 'Certificado AMENSG'].includes(nombre) ? 'FIJO' : 'VARIABLE'] as const)
+
+  for (const [nombre, tipo] of conceptosGasto) {
     await prisma.gastoConcepto.upsert({
       where: { nombre },
-      update: {},
-      create: { nombre },
+      update: { tipo },
+      create: { nombre, tipo },
     })
   }
 

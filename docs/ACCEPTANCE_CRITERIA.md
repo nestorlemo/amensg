@@ -45,6 +45,11 @@
 - Paid collection states require `fechaCobro`.
 - Collection status changes write audit entries.
 - `/cobros` lists collection rows and pending collection summaries.
+- Expense concepts can be listed, created, edited, and deactivated.
+- Monthly expenses can be listed, filtered, created, edited, and deleted while the period is open.
+- Additional income can be listed, filtered, created, edited, and deleted while the period is open.
+- Additional income IVA and total with IVA are calculated with Decimal-safe calculations.
+- Expense, expense concept, and additional income mutations write audit entries.
 - Import cancellation is not implemented.
 - Full authentication is not implemented.
 - Business workflows are not implemented.

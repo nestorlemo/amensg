@@ -44,6 +44,18 @@
 - `CierreMensual.snapshot` stores the monthly close snapshot.
 - `CierreSocio.snapshot` stores the partner close snapshot.
 
+## Expenses and Additional Income Fields
+
+- `GastoConcepto.tipo` classifies concepts as `FIJO` or `VARIABLE`.
+- `GastoMensual.fecha` stores the expense date.
+- `GastoMensual.importe` stores the expense amount.
+- `GastoMensual.observaciones` stores optional notes.
+- `IngresoAdicional.concepto` stores the income concept.
+- `IngresoAdicional.empresaId` optionally associates income with an `Empresa`.
+- `IngresoAdicional.montoSinIva`, `iva`, and `montoConIva` store Decimal monetary values.
+- `IngresoAdicional.porcentajeIva` stores the IVA rate snapshot used for the calculation.
+- `IngresoAdicional.observaciones` stores optional notes.
+
 ## Importation Lifecycle
 
 `ImportacionActivacion` rows represent import events and must remain auditable. If a future workflow cancels an importation, it must mark lifecycle fields such as `estado` and `anuladaEn` instead of deleting the row.

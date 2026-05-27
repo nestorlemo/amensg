@@ -57,6 +57,20 @@
 - `ANULADO` billings are not considered active for collection summaries.
 - Collection status management must not alter imported activations, CSV parsing, import confirmation, or billing amount calculations.
 
+## Expenses and Additional Income Rules
+
+- Expenses reduce the monthly distributable result in future liquidation workflows.
+- Additional income increases monthly income in future liquidation workflows.
+- Expense and additional income monetary values must use Decimal-safe calculations.
+- Additional income IVA is calculated as `montoSinIva * porcentajeIva`.
+- Additional income `montoConIva` is calculated as `montoSinIva + iva`.
+- Expense concepts can be created, edited, and deactivated.
+- Monthly expenses and additional income can be created, edited, and deleted while the period is open.
+- A period is considered closed when a `CierreMensual` exists for the same `anio + mes`; in that case expense and additional income changes are blocked.
+- Every create, edit, delete, or deactivate action for expenses, expense concepts, and additional income must write an `Auditoria` entry.
+- Expense and additional income management must not alter CSV preview, import confirmation, MID/chip rules, or billing amount calculations.
+- Liquidation closure is not implemented in this phase.
+
 ## Seed Rules
 
 The foundation seed must create:

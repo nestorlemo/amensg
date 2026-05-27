@@ -115,3 +115,52 @@ Read endpoints:
 
 - `GET /api/cobros`
 - `GET /api/cobros/resumen`
+
+## Expenses
+
+- `GET /api/gastos/conceptos`
+- `POST /api/gastos/conceptos`
+- `PUT /api/gastos/conceptos/:id`
+- `POST /api/gastos/conceptos/:id/desactivar`
+- `GET /api/gastos`
+- `POST /api/gastos`
+- `PUT /api/gastos/:id`
+- `DELETE /api/gastos/:id`
+
+Expense fields:
+
+```json
+{
+  "conceptoId": "uuid",
+  "anio": 2026,
+  "mes": 5,
+  "fecha": "2026-05-27",
+  "importe": "100.00",
+  "observaciones": "optional"
+}
+```
+
+Expense changes are blocked when `CierreMensual` already exists for the same `anio + mes`.
+
+## Additional Income
+
+- `GET /api/ingresos-adicionales`
+- `POST /api/ingresos-adicionales`
+- `PUT /api/ingresos-adicionales/:id`
+- `DELETE /api/ingresos-adicionales/:id`
+
+Additional income fields:
+
+```json
+{
+  "concepto": "Ajuste comercial",
+  "empresaId": "uuid optional",
+  "anio": 2026,
+  "mes": 5,
+  "montoSinIva": "100.00",
+  "porcentajeIva": "0.22",
+  "observaciones": "optional"
+}
+```
+
+The API calculates `iva` and `montoConIva` with Decimal-safe calculations.

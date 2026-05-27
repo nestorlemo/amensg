@@ -47,3 +47,13 @@ The current UI is a placeholder shell only.
 - `/cobros` supports filters by year, month, company, and status.
 - `/cobros` shows summary cards for pending totals, companies with debt, and pending periods.
 - Collection screens must not implement deletion, expenses, liquidations, or billing amount recalculation.
+
+## Expenses and Additional Income UI
+
+- `/gastos` manages expense concepts and monthly expenses.
+- `/gastos` filters expenses by year, month, concept, and type.
+- `/gastos` shows summary cards for total expenses, fixed expenses, variable expenses, and quantity.
+- `/ingresos-adicionales` manages additional income entries.
+- `/ingresos-adicionales` filters by year, month, and company.
+- Expense and additional income screens allow create, edit, and delete actions only while the period is open.
+- These screens do not implement liquidation closure.
