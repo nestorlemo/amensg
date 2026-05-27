@@ -48,6 +48,15 @@
 - `CierreMensual` and `CierreSocio` must store snapshots.
 - Importations must not be physically deleted.
 
+## Collection Status Rules
+
+- `FacturacionMensual` records must not be physically deleted when collection status changes.
+- Every collection status change must write an `Auditoria` entry.
+- `PAGADO`, `CONTADO`, and `CHEQUE` require `fechaCobro`.
+- `PENDIENTE` and `ENVIADO` may have `fechaCobro` as null.
+- `ANULADO` billings are not considered active for collection summaries.
+- Collection status management must not alter imported activations, CSV parsing, import confirmation, or billing amount calculations.
+
 ## Seed Rules
 
 The foundation seed must create:

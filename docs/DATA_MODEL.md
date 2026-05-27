@@ -39,6 +39,8 @@
 - `FacturacionMensual.porcentajeIva` stores the IVA percentage snapshot used for that billing period.
 - `ImportacionActivacion.hashArchivo` stores the confirmed file hash and prevents duplicate confirmation.
 - `FacturacionMensual.estadoCobro` starts as `PENDIENTE`.
+- `FacturacionMensual.fechaCobro` stores the collection date when the billing is paid by cash, check, or payment.
+- `FacturacionMensual.observaciones` stores optional collection notes.
 - `CierreMensual.snapshot` stores the monthly close snapshot.
 - `CierreSocio.snapshot` stores the partner close snapshot.
 

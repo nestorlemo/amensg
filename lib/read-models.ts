@@ -73,6 +73,29 @@ function rawString(value: Prisma.JsonValue, keys: string[]) {
   return ''
 }
 
+function getBillingFilters(params: SearchParamsInput) {
+  const anio = numberParam(params, 'anio')
+  const mes = numberParam(params, 'mes')
+  const empresaId = stringParam(params, 'empresaId')
+  const importacionId = stringParam(params, 'importacionId')
+  const estadoCobro = stringParam(params, 'estadoCobro') ?? stringParam(params, 'estado')
+
+  return {
+    anio,
+    mes,
+    empresaId,
+    importacionId,
+    estadoCobro,
+    where: {
+      ...(anio ? { anio } : {}),
+      ...(mes ? { mes } : {}),
+      ...(empresaId ? { empresaId } : {}),
+      ...(importacionId ? { importacionId } : {}),
+      ...(estadoCobro ? { estadoCobro: { codigo: estadoCobro } } : {}),
+    } satisfies Prisma.FacturacionMensualWhereInput,
+  }
+}
+
 export async function getImportaciones(params: SearchParamsInput) {
   const anio = numberParam(params, 'anio')
   const mes = numberParam(params, 'mes')
@@ -144,6 +167,7 @@ export async function getImportacionDetail(id: string) {
           },
           estadoCobro: {
             select: {
+              id: true,
               codigo: true,
               nombre: true,
             },
@@ -294,18 +318,7 @@ export async function getActivaciones(params: SearchParamsInput) {
 }
 
 export async function getFacturacion(params: SearchParamsInput) {
-  const anio = numberParam(params, 'anio')
-  const mes = numberParam(params, 'mes')
-  const empresaId = stringParam(params, 'empresaId')
-  const importacionId = stringParam(params, 'importacionId')
-  const estadoCobro = stringParam(params, 'estadoCobro')
-  const where: Prisma.FacturacionMensualWhereInput = {
-    ...(anio ? { anio } : {}),
-    ...(mes ? { mes } : {}),
-    ...(empresaId ? { empresaId } : {}),
-    ...(importacionId ? { importacionId } : {}),
-    ...(estadoCobro ? { estadoCobro: { codigo: estadoCobro } } : {}),
-  }
+  const { where } = getBillingFilters(params)
 
   const [rows, empresas, estadosCobro] = await Promise.all([
     prisma.facturacionMensual.findMany({
@@ -320,6 +333,7 @@ export async function getFacturacion(params: SearchParamsInput) {
         },
         estadoCobro: {
           select: {
+            id: true,
             codigo: true,
             nombre: true,
           },
@@ -337,6 +351,7 @@ export async function getFacturacion(params: SearchParamsInput) {
     prisma.estadoCobro.findMany({
       orderBy: { codigo: 'asc' },
       select: {
+        id: true,
         codigo: true,
         nombre: true,
       },
@@ -349,6 +364,62 @@ export async function getFacturacion(params: SearchParamsInput) {
       empresas,
       estadosCobro,
     },
+  }
+}
+
+export async function getCobros(params: SearchParamsInput) {
+  const { where } = getBillingFilters(params)
+  const [facturacion, resumen] = await Promise.all([getFacturacion(params), getCobrosResumenForWhere(where)])
+
+  return {
+    ...facturacion,
+    resumen,
+  }
+}
+
+export async function getCobrosResumen(params: SearchParamsInput) {
+  const { where } = getBillingFilters(params)
+  return getCobrosResumenForWhere(where)
+}
+
+async function getCobrosResumenForWhere(where: Prisma.FacturacionMensualWhereInput) {
+  const pendingWhere: Prisma.FacturacionMensualWhereInput = {
+    AND: [
+      where,
+      {
+        estadoCobro: {
+          codigo: {
+            in: ['PENDIENTE', 'ENVIADO'],
+          },
+        },
+      },
+    ],
+  }
+  const pendingRows = await prisma.facturacionMensual.findMany({
+    where: pendingWhere,
+    select: {
+      empresaId: true,
+      anio: true,
+      mes: true,
+      totalSinIva: true,
+      totalConIva: true,
+    },
+  })
+
+  const totalPendienteSinIva = pendingRows.reduce(
+    (total, row) => total.add(row.totalSinIva),
+    new Prisma.Decimal(0),
+  )
+  const totalPendienteConIva = pendingRows.reduce(
+    (total, row) => total.add(row.totalConIva),
+    new Prisma.Decimal(0),
+  )
+
+  return {
+    totalPendienteSinIva: money(totalPendienteSinIva),
+    totalPendienteConIva: money(totalPendienteConIva),
+    empresasConDeuda: new Set(pendingRows.map((row) => row.empresaId)).size,
+    periodosPendientes: new Set(pendingRows.map((row) => `${row.anio}-${row.mes}`)).size,
   }
 }
 
@@ -385,7 +456,7 @@ export async function getFacturacionActivaciones(id: string, params: SearchParam
 type FacturacionWithRelations = Prisma.FacturacionMensualGetPayload<{
   include: {
     empresa: { select: { id: true; nombre: true } }
-    estadoCobro: { select: { codigo: true; nombre: true } }
+    estadoCobro: { select: { id: true; codigo: true; nombre: true } }
   }
 }>
 
@@ -403,8 +474,11 @@ function serializeFacturacion(facturacion: FacturacionWithRelations) {
     subtotal: money(facturacion.totalSinIva),
     iva: money(facturacion.iva),
     total: money(facturacion.totalConIva),
+    estadoCobroId: facturacion.estadoCobroId,
     estadoCobro: facturacion.estadoCobro.codigo,
-    fechaCobro: null,
+    estadoCobroNombre: facturacion.estadoCobro.nombre,
+    fechaCobro: iso(facturacion.fechaCobro),
+    observaciones: facturacion.observaciones,
     creadaEn: iso(facturacion.creadaEn),
   }
 }

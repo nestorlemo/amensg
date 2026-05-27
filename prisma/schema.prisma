@@ -103,6 +103,8 @@ model FacturacionMensual {
   totalSinIva    Decimal  @db.Decimal(18, 2)
   iva            Decimal  @db.Decimal(18, 2)
   totalConIva    Decimal  @db.Decimal(18, 2)
+  fechaCobro     DateTime?
+  observaciones  String?
   snapshot       Json?
   creadaEn       DateTime @default(now())
   importacion    ImportacionActivacion @relation(fields: [importacionId], references: [id])

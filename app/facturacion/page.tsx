@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 
+import { ChangeEstadoCobroForm } from '@/components/change-estado-cobro-form'
 import { getFacturacion } from '@/lib/read-models'
 
 type PageProps = {
@@ -76,6 +77,7 @@ export default async function FacturacionPage({ searchParams }: PageProps) {
               <Th>Total</Th>
               <Th>Estado cobro</Th>
               <Th>Fecha cobro</Th>
+              <Th>Cambiar estado</Th>
               <Th>Acciones</Th>
             </tr>
           </thead>
@@ -92,6 +94,15 @@ export default async function FacturacionPage({ searchParams }: PageProps) {
                 <Td>{row.estadoCobro}</Td>
                 <Td>{row.fechaCobro ? formatDate(row.fechaCobro) : 'Sin registrar'}</Td>
                 <Td>
+                  <ChangeEstadoCobroForm
+                    estadoCobroId={row.estadoCobroId}
+                    estadosCobro={filters.estadosCobro}
+                    facturacionId={row.id}
+                    fechaCobro={row.fechaCobro}
+                    observaciones={row.observaciones}
+                  />
+                </Td>
+                <Td>
                   <Link
                     className="font-semibold text-slate-950 underline"
                     href={`/activaciones?importacionId=${row.importacionId}&empresaId=${row.empresaId}`}
@@ -103,7 +114,7 @@ export default async function FacturacionPage({ searchParams }: PageProps) {
             ))}
             {rows.length === 0 ? (
               <tr>
-                <Td colSpan={10}>No hay facturaciones para los filtros seleccionados.</Td>
+                <Td colSpan={11}>No hay facturaciones para los filtros seleccionados.</Td>
               </tr>
             ) : null}
           </tbody>

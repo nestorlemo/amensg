@@ -39,3 +39,11 @@ The current UI is a placeholder shell only.
 - If companies are missing in `Empresa`, the UI shows the missing company names and blocks confirmation.
 - If confirmation succeeds, the UI shows `importacionId` and generated facturaciones.
 - The UI provides a link back to importaciones after confirmation.
+
+## Collection UI
+
+- `/facturacion` shows billing collection status, collection date, and a simple action to change status.
+- `/cobros` lists billing rows for collection follow-up.
+- `/cobros` supports filters by year, month, company, and status.
+- `/cobros` shows summary cards for pending totals, companies with debt, and pending periods.
+- Collection screens must not implement deletion, expenses, liquidations, or billing amount recalculation.

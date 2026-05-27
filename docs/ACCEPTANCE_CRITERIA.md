@@ -40,6 +40,11 @@
 - MVP blocks more than one confirmed importation per period.
 - Confirmation is transactional and rolls back on failure.
 - Confirmation writes basic audit entries.
+- `FacturacionMensual` supports `fechaCobro` and `observaciones`.
+- Billing collection status can be changed through `POST /api/facturacion/:id/cambiar-estado-cobro`.
+- Paid collection states require `fechaCobro`.
+- Collection status changes write audit entries.
+- `/cobros` lists collection rows and pending collection summaries.
 - Import cancellation is not implemented.
 - Full authentication is not implemented.
 - Business workflows are not implemented.

@@ -91,3 +91,27 @@ Success response shape:
   ]
 }
 ```
+
+## Billing Collection Status
+
+- `POST /api/facturacion/:id/cambiar-estado-cobro`
+- Updates only `estadoCobro`, `fechaCobro`, and `observaciones`.
+- Writes an `Auditoria` entry for every status change.
+- Does not delete `FacturacionMensual` records.
+- `PAGADO`, `CONTADO`, and `CHEQUE` require `fechaCobro`.
+- `PENDIENTE`, `ENVIADO`, and `ANULADO` allow `fechaCobro` to be null.
+
+Request:
+
+```json
+{
+  "estadoCobroId": "uuid",
+  "fechaCobro": "2026-05-26",
+  "observaciones": "optional"
+}
+```
+
+Read endpoints:
+
+- `GET /api/cobros`
+- `GET /api/cobros/resumen`
