@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 
+import { closedPeriodError, isPeriodClosed } from '@/lib/periods'
 import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
@@ -55,6 +56,13 @@ export async function POST(request: Request, context: RouteContext) {
 
   if (!facturacion) {
     return NextResponse.json({ error: 'FACTURACION_NO_ENCONTRADA' }, { status: 404 })
+  }
+
+  if (await isPeriodClosed(facturacion.anio, facturacion.mes)) {
+    return NextResponse.json(
+      closedPeriodError('El período ya está cerrado. No se puede modificar el estado de cobro.'),
+      { status: 409 },
+    )
   }
 
   const nextEstado = await prisma.estadoCobro.findUnique({

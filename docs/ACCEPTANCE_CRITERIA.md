@@ -59,6 +59,8 @@
 - `GET /api/liquidaciones/preview` returns ingresos, gastos, resultado, socios, validaciones, and `puedeCerrar`.
 - Monthly close creates `CierreMensual` and `CierreSocio` snapshot rows.
 - Monthly close writes an audit entry and blocks duplicate closes for the same period.
+- Closed periods block import confirmation, billing collection status changes, expense changes, and additional income changes with `PERIODO_CERRADO`.
+- `/gastos`, `/ingresos-adicionales`, and `/facturacion` disable mutation actions for closed periods.
 - `/cierres` lists monthly closures and `/cierres/:id` shows frozen snapshot values.
 - Import cancellation is not implemented.
 - Full authentication is not implemented.

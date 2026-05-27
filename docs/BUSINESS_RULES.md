@@ -94,6 +94,8 @@
 - A month can be closed only once.
 - Monthly closures must create immutable `CierreMensual` and `CierreSocio` snapshots.
 - Closed monthly closures must not be recalculated automatically.
+- Once a monthly period is closed with `CierreMensual.estado = CERRADO`, data that affects that period result must not be modified unless the period is reopened.
+- Closed periods block import confirmation, billing collection status changes, monthly expense changes, and additional income changes.
 - Reopening closures is not implemented in this phase.
 - Payment-based liquidation is not implemented in this phase.
 

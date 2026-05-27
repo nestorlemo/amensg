@@ -28,7 +28,7 @@ type Ingreso = {
   observaciones: string | null
 }
 
-export function IngresoAdicionalForm({ empresas }: { empresas: Empresa[] }) {
+export function IngresoAdicionalForm({ disabled = false, empresas }: { disabled?: boolean; empresas: Empresa[] }) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const today = new Date().toISOString().slice(0, 10)
@@ -55,13 +55,13 @@ export function IngresoAdicionalForm({ empresas }: { empresas: Empresa[] }) {
           <Input label="Anio" name="anio" required />
           <Input label="Mes" name="mes" required />
         </div>
-        <IngresoCurrencyFields defaultFechaFacturacion={today} defaultMoneda="UYU" defaultPorcentajeIva="0.22" />
+        <IngresoCurrencyFields defaultFechaFacturacion={today} defaultMoneda="UYU" defaultPorcentajeIva="0.22" disabled={disabled} />
         <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-4">
           <div className="min-w-0 md:col-span-1 xl:col-span-3">
             <Input label="Observaciones" name="observaciones" />
           </div>
           <div className="flex min-w-0 items-end">
-            <button className="h-10 w-full rounded-md bg-slate-950 px-4 text-sm font-semibold text-white" type="submit">
+            <button className="h-10 w-full rounded-md bg-slate-950 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={disabled} type="submit">
               Crear ingreso
             </button>
           </div>
@@ -72,7 +72,7 @@ export function IngresoAdicionalForm({ empresas }: { empresas: Empresa[] }) {
   )
 }
 
-export function IngresoRowActions({ empresas, ingreso }: { empresas: Empresa[]; ingreso: Ingreso }) {
+export function IngresoRowActions({ disabled = false, empresas, ingreso }: { disabled?: boolean; empresas: Empresa[]; ingreso: Ingreso }) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
 
@@ -97,10 +97,10 @@ export function IngresoRowActions({ empresas, ingreso }: { empresas: Empresa[]; 
 
   return (
     <form className="grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-3" onSubmit={update}>
-      <input className="h-9 rounded-md border border-slate-300 px-2 text-sm" defaultValue={ingreso.concepto} name="concepto" />
-      <EmpresaSelect compact defaultValue={ingreso.empresaId ?? ''} empresas={empresas} />
-      <input className="h-9 rounded-md border border-slate-300 px-2 text-sm" defaultValue={ingreso.anio} name="anio" />
-      <input className="h-9 rounded-md border border-slate-300 px-2 text-sm" defaultValue={ingreso.mes} name="mes" />
+      <input className="h-9 rounded-md border border-slate-300 px-2 text-sm disabled:bg-slate-100" defaultValue={ingreso.concepto} disabled={disabled} name="concepto" />
+      <EmpresaSelect compact defaultValue={ingreso.empresaId ?? ''} disabled={disabled} empresas={empresas} />
+      <input className="h-9 rounded-md border border-slate-300 px-2 text-sm disabled:bg-slate-100" defaultValue={ingreso.anio} disabled={disabled} name="anio" />
+      <input className="h-9 rounded-md border border-slate-300 px-2 text-sm disabled:bg-slate-100" defaultValue={ingreso.mes} disabled={disabled} name="mes" />
       <IngresoCurrencyFields
         compact
         defaultFechaFacturacion={dateValue(ingreso.fechaFacturacion)}
@@ -110,10 +110,11 @@ export function IngresoRowActions({ empresas, ingreso }: { empresas: Empresa[]; 
         defaultMontoOrigen={ingreso.montoOrigen}
         defaultPorcentajeIva={ingreso.porcentajeIva}
         defaultTipoCambioAplicado={ingreso.tipoCambioAplicado ?? ''}
+        disabled={disabled}
       />
-      <input className="h-9 rounded-md border border-slate-300 px-2 text-sm" defaultValue={ingreso.observaciones ?? ''} name="observaciones" placeholder="Observaciones" />
-      <button className="rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white" type="submit">Guardar</button>
-      <button className="rounded-md border border-red-300 px-3 py-2 text-sm font-semibold text-red-700" onClick={remove} type="button">Eliminar</button>
+      <input className="h-9 rounded-md border border-slate-300 px-2 text-sm disabled:bg-slate-100" defaultValue={ingreso.observaciones ?? ''} disabled={disabled} name="observaciones" placeholder="Observaciones" />
+      <button className="rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={disabled} type="submit">Guardar</button>
+      <button className="rounded-md border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 disabled:cursor-not-allowed disabled:opacity-60" disabled={disabled} onClick={remove} type="button">Eliminar</button>
       {error ? <p className="md:col-span-3 text-sm font-medium text-red-700">{error}</p> : null}
     </form>
   )
@@ -145,6 +146,7 @@ function IngresoCurrencyFields({
   defaultMontoOrigen,
   defaultPorcentajeIva,
   defaultTipoCambioAplicado,
+  disabled = false,
 }: {
   compact?: boolean
   defaultFechaFacturacion: string
@@ -154,6 +156,7 @@ function IngresoCurrencyFields({
   defaultMontoOrigen?: string
   defaultPorcentajeIva?: string
   defaultTipoCambioAplicado?: string
+  disabled?: boolean
 }) {
   const [moneda, setMoneda] = useState(defaultMoneda)
   const [montoOrigen, setMontoOrigen] = useState(defaultMontoOrigen ?? '')
@@ -188,12 +191,13 @@ function IngresoCurrencyFields({
   if (compact) {
     return (
       <>
-        <select className={inputClass} name="moneda" onChange={(event) => setMoneda(event.currentTarget.value)} value={moneda}>
+        <select className={inputClass} disabled={disabled} name="moneda" onChange={(event) => setMoneda(event.currentTarget.value)} value={moneda}>
           <option value="UYU">UYU</option>
           <option value="USD">USD</option>
         </select>
         <input
           className={inputClass}
+          disabled={disabled}
           name="montoOrigen"
           onChange={(event) => setMontoOrigen(event.currentTarget.value)}
           placeholder="Monto origen"
@@ -202,6 +206,7 @@ function IngresoCurrencyFields({
         />
         <input
           className={inputClass}
+          disabled={disabled}
           name="fechaFacturacion"
           onChange={(event) => setFechaFacturacion(event.currentTarget.value)}
           required
@@ -212,6 +217,7 @@ function IngresoCurrencyFields({
           <>
             <input
               className={inputClass}
+              disabled={disabled}
               name="tipoCambioAplicado"
               onChange={(event) => setTipoCambio(event.currentTarget.value)}
               placeholder="Tipo cambio aplicado"
@@ -220,7 +226,7 @@ function IngresoCurrencyFields({
             />
             <input name="fuenteTipoCambio" type="hidden" value={fuente} />
             <input name="fechaTipoCambio" type="hidden" value={fechaTipoCambio} />
-            <button className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700" onClick={fetchTipoCambio} type="button">
+            <button className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60" disabled={disabled} onClick={fetchTipoCambio} type="button">
               Obtener tipo de cambio
             </button>
             {rateError ? <p className="text-sm font-medium text-red-700">{rateError}</p> : null}
@@ -234,6 +240,7 @@ function IngresoCurrencyFields({
         )}
         <input
           className={inputClass}
+          disabled={disabled}
           name="porcentajeIva"
           onChange={(event) => setPorcentajeIvaPreview(event.currentTarget.value)}
           placeholder="Porcentaje IVA"
@@ -249,7 +256,7 @@ function IngresoCurrencyFields({
       <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-4">
         <label className="min-w-0 space-y-1 text-sm font-medium text-slate-700">
           Moneda
-          <select className={inputClass} name="moneda" onChange={(event) => setMoneda(event.currentTarget.value)} value={moneda}>
+          <select className={inputClass} disabled={disabled} name="moneda" onChange={(event) => setMoneda(event.currentTarget.value)} value={moneda}>
             <option value="UYU">UYU</option>
             <option value="USD">USD</option>
           </select>
@@ -258,6 +265,7 @@ function IngresoCurrencyFields({
           Monto origen
           <input
             className={inputClass}
+            disabled={disabled}
             name="montoOrigen"
             onChange={(event) => setMontoOrigen(event.currentTarget.value)}
             required
@@ -268,6 +276,7 @@ function IngresoCurrencyFields({
           Fecha facturacion
           <input
             className={inputClass}
+            disabled={disabled}
             name="fechaFacturacion"
             onChange={(event) => setFechaFacturacion(event.currentTarget.value)}
             required
@@ -279,6 +288,7 @@ function IngresoCurrencyFields({
           Porcentaje IVA
           <input
             className={inputClass}
+            disabled={disabled}
             name="porcentajeIva"
             onChange={(event) => setPorcentajeIvaPreview(event.currentTarget.value)}
             required
@@ -292,6 +302,7 @@ function IngresoCurrencyFields({
             Tipo cambio aplicado
             <input
               className={inputClass}
+              disabled={disabled}
               name="tipoCambioAplicado"
               onChange={(event) => setTipoCambio(event.currentTarget.value)}
               required
@@ -301,7 +312,7 @@ function IngresoCurrencyFields({
           <input name="fuenteTipoCambio" type="hidden" value={fuente} />
           <input name="fechaTipoCambio" type="hidden" value={fechaTipoCambio} />
           <div className="flex min-w-0 items-end">
-            <button className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700" onClick={fetchTipoCambio} type="button">
+            <button className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60" disabled={disabled} onClick={fetchTipoCambio} type="button">
               Obtener tipo de cambio
             </button>
           </div>
@@ -335,16 +346,18 @@ function SummaryItem({ label, value }: { label: string; value: number }) {
 function EmpresaSelect({
   compact,
   defaultValue,
+  disabled,
   empresas,
 }: {
   compact?: boolean
   defaultValue?: string
+  disabled?: boolean
   empresas: Empresa[]
 }) {
   return (
     <label className={compact ? 'min-w-0' : 'min-w-0 space-y-1 text-sm font-medium text-slate-700'}>
       {compact ? null : 'Empresa'}
-      <select className="h-10 w-full min-w-0 rounded-md border border-slate-300 px-3 text-sm" defaultValue={defaultValue} name="empresaId">
+      <select className="h-10 w-full min-w-0 rounded-md border border-slate-300 px-3 text-sm disabled:bg-slate-100" defaultValue={defaultValue} disabled={disabled} name="empresaId">
         <option value="">Sin empresa</option>
         {empresas.map((empresa) => (
           <option key={empresa.id} value={empresa.id}>

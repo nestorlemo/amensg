@@ -45,6 +45,7 @@
 - `CierreSocio.snapshot` stores the partner close snapshot.
 - `CierreMensual.estado` stores the close status.
 - `CierreMensual.cerradoAt` stores the close timestamp.
+- A period is considered closed for mutation guards when a `CierreMensual` exists for the same `anio + mes` with `estado = CERRADO`.
 - `Socio.porcentajeParticipacion` stores the active partner distribution percentage.
 - `Socio.cuentas` stores optional account metadata to freeze in closing snapshots.
 

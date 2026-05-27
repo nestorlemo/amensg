@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client'
 
 import { prisma } from '@/lib/prisma'
+import { closedPeriodError, isPeriodClosed } from '@/lib/periods'
 import type { SearchParamsInput } from '@/lib/read-models'
 
 const CONCEPTO_TIPOS = new Set(['FIJO', 'VARIABLE'])
@@ -110,21 +111,8 @@ function requiredDate(body: Record<string, unknown>, key: string) {
 }
 
 async function assertOpenPeriod(anio: number, mes: number) {
-  const cierre = await prisma.cierreMensual.findUnique({
-    where: {
-      anio_mes: {
-        anio,
-        mes,
-      },
-    },
-    select: { id: true },
-  })
-
-  if (cierre) {
-    return {
-      error: 'PERIODO_CERRADO',
-      message: 'El periodo ya tiene cierre mensual y no permite cambios.',
-    }
+  if (await isPeriodClosed(anio, mes)) {
+    return closedPeriodError('El período ya está cerrado. No se pueden modificar datos del período.')
   }
 
   return null
@@ -253,9 +241,12 @@ export async function getGastos(params: SearchParamsInput) {
     .filter((row) => row.concepto.tipo === 'VARIABLE')
     .reduce((acc, row) => acc.add(row.importe), new Prisma.Decimal(0))
 
+  const periodoCerrado = anio && mes ? await isPeriodClosed(anio, mes) : false
+
   return {
     rows: rows.map(serializeGasto),
     conceptos: conceptos.map(serializeConcepto),
+    periodoCerrado,
     resumen: {
       totalGastosMes: money(total),
       totalGastosFijos: money(totalFijos),
@@ -270,7 +261,7 @@ export async function createGasto(body: Record<string, unknown>) {
   if ('error' in parsed) return parsed
 
   const closed = await assertOpenPeriod(parsed.data.anio, parsed.data.mes)
-  if (closed) return { error: closed, status: 409 }
+  if (closed) return { error: closedPeriodError('El período ya está cerrado. No se pueden modificar gastos.'), status: 409 }
 
   const gasto = await prisma.$transaction(async (tx) => {
     const created = await tx.gastoMensual.create({ data: parsed.data, include: { concepto: true } })
@@ -293,7 +284,7 @@ export async function updateGasto(id: string, body: Record<string, unknown>) {
   if ('error' in parsed) return parsed
 
   const closed = await assertOpenPeriod(parsed.data.anio, parsed.data.mes)
-  if (closed) return { error: closed, status: 409 }
+  if (closed) return { error: closedPeriodError('El período ya está cerrado. No se pueden modificar gastos.'), status: 409 }
 
   const gasto = await prisma.$transaction(async (tx) => {
     const updated = await tx.gastoMensual.update({ where: { id }, data: parsed.data, include: { concepto: true } })
@@ -316,7 +307,7 @@ export async function deleteGasto(id: string) {
   if (!existing) return { error: { error: 'GASTO_NO_ENCONTRADO' }, status: 404 }
 
   const closed = await assertOpenPeriod(existing.anio, existing.mes)
-  if (closed) return { error: closed, status: 409 }
+  if (closed) return { error: closedPeriodError('El período ya está cerrado. No se pueden modificar gastos.'), status: 409 }
 
   await prisma.$transaction(async (tx) => {
     await tx.gastoMensual.delete({ where: { id } })
@@ -352,9 +343,12 @@ export async function getIngresosAdicionales(params: SearchParamsInput) {
     prisma.empresa.findMany({ where: { activa: true }, orderBy: { nombre: 'asc' }, select: { id: true, nombre: true } }),
   ])
 
+  const periodoCerrado = anio && mes ? await isPeriodClosed(anio, mes) : false
+
   return {
     rows: rows.map(serializeIngreso),
     empresas,
+    periodoCerrado,
   }
 }
 
@@ -363,7 +357,7 @@ export async function createIngresoAdicional(body: Record<string, unknown>) {
   if ('error' in parsed) return parsed
 
   const closed = await assertOpenPeriod(parsed.data.anio, parsed.data.mes)
-  if (closed) return { error: closed, status: 409 }
+  if (closed) return { error: closedPeriodError('El período ya está cerrado. No se pueden modificar ingresos adicionales.'), status: 409 }
 
   const ingreso = await prisma.$transaction(async (tx) => {
     const created = await tx.ingresoAdicional.create({
@@ -389,7 +383,7 @@ export async function updateIngresoAdicional(id: string, body: Record<string, un
   if ('error' in parsed) return parsed
 
   const closed = await assertOpenPeriod(parsed.data.anio, parsed.data.mes)
-  if (closed) return { error: closed, status: 409 }
+  if (closed) return { error: closedPeriodError('El período ya está cerrado. No se pueden modificar ingresos adicionales.'), status: 409 }
 
   const ingreso = await prisma.$transaction(async (tx) => {
     const updated = await tx.ingresoAdicional.update({
@@ -416,7 +410,7 @@ export async function deleteIngresoAdicional(id: string) {
   if (!existing) return { error: { error: 'INGRESO_ADICIONAL_NO_ENCONTRADO' }, status: 404 }
 
   const closed = await assertOpenPeriod(existing.anio, existing.mes)
-  if (closed) return { error: closed, status: 409 }
+  if (closed) return { error: closedPeriodError('El período ya está cerrado. No se pueden modificar ingresos adicionales.'), status: 409 }
 
   await prisma.$transaction(async (tx) => {
     await tx.ingresoAdicional.delete({ where: { id } })

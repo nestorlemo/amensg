@@ -69,6 +69,7 @@ Response shape:
 - If a company from the CSV does not exist in `Empresa`, the endpoint returns `409` with `missingCompanies`.
 - The endpoint blocks duplicate file confirmation by `hashArchivo`.
 - The endpoint blocks a second confirmed importation for the same period in the MVP.
+- The endpoint blocks confirmation when the detected period already has `CierreMensual.estado = CERRADO` and returns `PERIODO_CERRADO`.
 - The endpoint persists `ImportacionActivacion`, all `ActivacionImportada` rows, one `FacturacionMensual` per company, and basic `Auditoria` entries in one transaction.
 
 Success response shape:
@@ -98,6 +99,7 @@ Success response shape:
 - Updates only `estadoCobro`, `fechaCobro`, and `observaciones`.
 - Writes an `Auditoria` entry for every status change.
 - Does not delete `FacturacionMensual` records.
+- Blocks changes when the billing period already has `CierreMensual.estado = CERRADO` and returns `PERIODO_CERRADO`.
 - `PAGADO`, `CONTADO`, and `CHEQUE` require `fechaCobro`.
 - `PENDIENTE`, `ENVIADO`, and `ANULADO` allow `fechaCobro` to be null.
 
@@ -140,7 +142,7 @@ Expense fields:
 }
 ```
 
-Expense changes are blocked when `CierreMensual` already exists for the same `anio + mes`.
+Expense changes are blocked when `CierreMensual.estado = CERRADO` already exists for the same `anio + mes`.
 
 ## Additional Income
 
@@ -169,6 +171,8 @@ Additional income fields:
 ```
 
 `moneda` accepts `UYU` or `USD`. The API always stores `montoSinIva`, `iva`, and `montoConIva` in UYU with Decimal-safe calculations. If `moneda = USD`, `tipoCambioAplicado` is required, must be greater than 0, and must correspond to `fechaFacturacion`. The applied exchange rate is stored as a historical snapshot and old records are not recalculated automatically if rates change later.
+
+Additional income changes are blocked when `CierreMensual.estado = CERRADO` already exists for the same `anio + mes` and return `PERIODO_CERRADO`.
 
 Exchange rate lookup:
 

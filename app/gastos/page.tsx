@@ -10,7 +10,7 @@ type PageProps = {
 
 export default async function GastosPage({ searchParams }: PageProps) {
   const params = (await searchParams) ?? {}
-  const { rows, conceptos, resumen } = await getGastos(params)
+  const { rows, conceptos, periodoCerrado, resumen } = await getGastos(params)
 
   return (
     <div className="space-y-6">
@@ -53,8 +53,14 @@ export default async function GastosPage({ searchParams }: PageProps) {
         <Metric label="Cantidad de gastos" value={resumen.cantidadGastos} />
       </section>
 
+      {periodoCerrado ? (
+        <section className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-950">
+          Este período está cerrado. Para modificar gastos debe reabrirse el cierre.
+        </section>
+      ) : null}
+
       <ConceptoForm conceptos={conceptos} />
-      <GastoForm conceptos={conceptos} />
+      <GastoForm conceptos={conceptos} disabled={periodoCerrado} />
 
       <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
         <table className="min-w-full text-sm">
@@ -78,7 +84,7 @@ export default async function GastosPage({ searchParams }: PageProps) {
                 <Td>{formatDate(row.fecha)}</Td>
                 <Td>{row.importe}</Td>
                 <Td>{row.observaciones ?? 'Sin observaciones'}</Td>
-                <Td><GastoRowActions conceptos={conceptos} gasto={row} /></Td>
+                <Td><GastoRowActions conceptos={conceptos} disabled={periodoCerrado} gasto={row} /></Td>
               </tr>
             ))}
             {rows.length === 0 ? (

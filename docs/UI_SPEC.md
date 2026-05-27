@@ -43,6 +43,7 @@ The current UI is a placeholder shell only.
 ## Collection UI
 
 - `/facturacion` shows billing collection status, collection date, and a simple action to change status.
+- `/facturacion` disables collection status changes for rows whose period is closed.
 - `/cobros` lists billing rows for collection follow-up.
 - `/cobros` supports filters by year, month, company, and status.
 - `/cobros` shows summary cards for pending totals, companies with debt, and pending periods.
@@ -59,6 +60,7 @@ The current UI is a placeholder shell only.
 - For USD additional income, the UI shows `tipoCambioAplicado` and an action to obtain the exchange rate for `fechaFacturacion`.
 - The UI shows calculated UYU values for `montoSinIva`, `iva`, and `montoConIva`.
 - Expense and additional income screens allow create, edit, and delete actions only while the period is open.
+- `/gastos` and `/ingresos-adicionales` show a closed-period warning and disable mutation actions when the selected `anio + mes` is closed.
 - These screens do not implement liquidation closure.
 
 ## Liquidation and Closing UI

@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client'
 
 import { prisma } from '@/lib/prisma'
+import { getClosedPeriodKeys, periodKey } from '@/lib/periods'
 
 const DEFAULT_PAGE_SIZE = 50
 const MAX_PAGE_SIZE = 100
@@ -358,8 +359,13 @@ export async function getFacturacion(params: SearchParamsInput) {
     }),
   ])
 
+  const closedPeriods = await getClosedPeriodKeys(rows.map((row) => ({ anio: row.anio, mes: row.mes })))
+
   return {
-    rows: rows.map((row) => serializeFacturacion(row)),
+    rows: rows.map((row) => ({
+      ...serializeFacturacion(row),
+      periodoCerrado: closedPeriods.has(periodKey(row.anio, row.mes)),
+    })),
     filters: {
       empresas,
       estadosCobro,

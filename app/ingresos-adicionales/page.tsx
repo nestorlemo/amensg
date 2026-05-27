@@ -10,7 +10,7 @@ type PageProps = {
 
 export default async function IngresosAdicionalesPage({ searchParams }: PageProps) {
   const params = (await searchParams) ?? {}
-  const { rows, empresas } = await getIngresosAdicionales(params)
+  const { rows, empresas, periodoCerrado } = await getIngresosAdicionales(params)
 
   return (
     <div className="min-w-0 max-w-full space-y-6">
@@ -38,7 +38,13 @@ export default async function IngresosAdicionalesPage({ searchParams }: PageProp
         </div>
       </form>
 
-      <IngresoAdicionalForm empresas={empresas} />
+      {periodoCerrado ? (
+        <section className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-950">
+          Este período está cerrado. Para modificar ingresos adicionales debe reabrirse el cierre.
+        </section>
+      ) : null}
+
+      <IngresoAdicionalForm disabled={periodoCerrado} empresas={empresas} />
 
       <div className="max-w-full overflow-x-auto rounded-md border border-slate-200 bg-white">
         <table className="min-w-full text-sm">
@@ -74,7 +80,7 @@ export default async function IngresosAdicionalesPage({ searchParams }: PageProp
                 <Td>{row.iva}</Td>
                 <Td>{row.montoConIva}</Td>
                 <Td>{row.observaciones ?? 'Sin observaciones'}</Td>
-                <Td><IngresoRowActions empresas={empresas} ingreso={row} /></Td>
+                <Td><IngresoRowActions disabled={periodoCerrado} empresas={empresas} ingreso={row} /></Td>
               </tr>
             ))}
             {rows.length === 0 ? (

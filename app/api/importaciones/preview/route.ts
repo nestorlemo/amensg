@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 
 import { buildImportPreview } from '@/lib/import-preview/preview'
 import type { ImportPreviewParameters, ValidationIssue } from '@/lib/import-preview/types'
+import { isPeriodClosed } from '@/lib/periods'
 import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
@@ -39,6 +40,14 @@ export async function POST(request: Request) {
     parameters,
     parameterWarnings: warnings,
   })
+
+  if (preview.detectedPeriod && (await isPeriodClosed(preview.detectedPeriod.anio, preview.detectedPeriod.mes))) {
+    preview.validation.hasBlockingErrors = true
+    preview.validation.errors.push({
+      code: 'PERIODO_CERRADO',
+      message: 'El período ya está cerrado. No se puede confirmar una nueva importación.',
+    })
+  }
 
   return NextResponse.json(preview)
 }

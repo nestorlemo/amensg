@@ -16,6 +16,7 @@ type ChangeEstadoCobroFormProps = {
   fechaCobro: string | null
   observaciones: string | null
   estadosCobro: EstadoCobroOption[]
+  disabled?: boolean
 }
 
 const STATES_REQUIRING_PAYMENT_DATE = new Set(['PAGADO', 'CONTADO', 'CHEQUE'])
@@ -26,6 +27,7 @@ export function ChangeEstadoCobroForm({
   fechaCobro,
   observaciones,
   estadosCobro,
+  disabled = false,
 }: ChangeEstadoCobroFormProps) {
   const router = useRouter()
   const [selectedEstadoId, setSelectedEstadoId] = useState(estadoCobroId)
@@ -39,6 +41,11 @@ export function ChangeEstadoCobroForm({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
+
+    if (disabled) {
+      setError('El período ya está cerrado. No se puede modificar el estado de cobro.')
+      return
+    }
 
     if (requiresDate && !selectedFechaCobro) {
       setError('La fecha de cobro es requerida para este estado.')
@@ -78,6 +85,7 @@ export function ChangeEstadoCobroForm({
     <form className="flex min-w-72 flex-col gap-2" onSubmit={handleSubmit}>
       <select
         className="h-9 rounded-md border border-slate-300 px-2 text-sm"
+        disabled={disabled}
         onChange={(event) => setSelectedEstadoId(event.target.value)}
         value={selectedEstadoId}
       >
@@ -89,24 +97,27 @@ export function ChangeEstadoCobroForm({
       </select>
       <input
         className="h-9 rounded-md border border-slate-300 px-2 text-sm"
+        disabled={disabled}
         onChange={(event) => setSelectedFechaCobro(event.target.value)}
         type="date"
         value={selectedFechaCobro}
       />
       <input
         className="h-9 rounded-md border border-slate-300 px-2 text-sm"
+        disabled={disabled}
         onChange={(event) => setSelectedObservaciones(event.target.value)}
         placeholder="Observaciones"
         value={selectedObservaciones}
       />
       <button
         className="h-9 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-        disabled={isSaving}
+        disabled={disabled || isSaving}
         type="submit"
       >
         {isSaving ? 'Guardando...' : 'Cambiar estado'}
       </button>
       {error ? <p className="max-w-72 text-xs font-medium text-red-700">{error}</p> : null}
+      {disabled ? <p className="text-xs font-medium text-amber-700">El período ya está cerrado. No se puede modificar el estado de cobro.</p> : null}
       {requiresDate ? <p className="text-xs text-slate-500">Este estado requiere fecha de cobro.</p> : null}
     </form>
   )

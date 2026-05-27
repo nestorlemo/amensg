@@ -93,7 +93,7 @@ export function ImportPreviewForm() {
       const payload = await response.json()
 
       if (!response.ok) {
-        setConfirmError(payload.error ?? 'No se pudo confirmar la importación.')
+        setConfirmError(payload.message ?? payload.error ?? 'No se pudo confirmar la importación.')
         setMissingCompanies(payload.missingCompanies ?? [])
         return
       }

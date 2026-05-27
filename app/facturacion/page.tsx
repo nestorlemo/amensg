@@ -75,6 +75,11 @@ export default async function FacturacionPage({ searchParams }: PageProps) {
                 {selectedFacturacion.empresa} - {formatPeriod(selectedFacturacion.anio, selectedFacturacion.mes)}
               </h2>
               <p className="mt-1 text-sm text-slate-600">Total: {selectedFacturacion.total}</p>
+              {selectedFacturacion.periodoCerrado ? (
+                <p className="mt-2 text-sm font-medium text-amber-700">
+                  El período ya está cerrado. No se puede modificar el estado de cobro.
+                </p>
+              ) : null}
             </div>
             <Link className="text-sm font-semibold text-slate-600 underline" href={`/facturacion?${withoutParam(params, 'editarCobro')}`}>
               Cerrar
@@ -87,6 +92,7 @@ export default async function FacturacionPage({ searchParams }: PageProps) {
               facturacionId={selectedFacturacion.id}
               fechaCobro={selectedFacturacion.fechaCobro}
               observaciones={selectedFacturacion.observaciones}
+              disabled={selectedFacturacion.periodoCerrado}
             />
           </div>
         </section>
@@ -126,9 +132,15 @@ export default async function FacturacionPage({ searchParams }: PageProps) {
                 <Td>{row.fechaCobro ? formatDate(row.fechaCobro) : 'Sin registrar'}</Td>
                 <Td>
                   <div className="flex items-center gap-3">
-                    <Link className="font-semibold text-slate-950 underline" href={`/facturacion?${withParam(params, 'editarCobro', row.id)}`}>
-                      Cambiar
-                    </Link>
+                    {row.periodoCerrado ? (
+                      <span className="font-medium text-slate-400" title="El período ya está cerrado. No se puede modificar el estado de cobro.">
+                        Cambiar
+                      </span>
+                    ) : (
+                      <Link className="font-semibold text-slate-950 underline" href={`/facturacion?${withParam(params, 'editarCobro', row.id)}`}>
+                        Cambiar
+                      </Link>
+                    )}
                     <Link
                       className="font-semibold text-slate-950 underline"
                       href={`/activaciones?importacionId=${row.importacionId}&empresaId=${row.empresaId}`}

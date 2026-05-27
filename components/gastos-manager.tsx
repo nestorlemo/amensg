@@ -129,7 +129,7 @@ function ConceptoRow({ concepto }: { concepto: Concepto }) {
   )
 }
 
-export function GastoForm({ conceptos }: { conceptos: Concepto[] }) {
+export function GastoForm({ conceptos, disabled = false }: { conceptos: Concepto[]; disabled?: boolean }) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
 
@@ -156,7 +156,7 @@ export function GastoForm({ conceptos }: { conceptos: Concepto[] }) {
         <Input label="Importe" name="importe" required />
         <Input label="Observaciones" name="observaciones" />
         <div className="flex items-end">
-          <button className="h-10 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white" type="submit">
+          <button className="h-10 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={disabled} type="submit">
             Crear gasto
           </button>
         </div>
@@ -166,7 +166,7 @@ export function GastoForm({ conceptos }: { conceptos: Concepto[] }) {
   )
 }
 
-export function GastoRowActions({ conceptos, gasto }: { conceptos: Concepto[]; gasto: Gasto }) {
+export function GastoRowActions({ conceptos, disabled = false, gasto }: { conceptos: Concepto[]; disabled?: boolean; gasto: Gasto }) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
 
@@ -191,14 +191,14 @@ export function GastoRowActions({ conceptos, gasto }: { conceptos: Concepto[]; g
 
   return (
     <form className="grid min-w-96 gap-2 md:grid-cols-3" onSubmit={update}>
-      <ConceptSelect conceptos={conceptos} defaultValue={gasto.conceptoId} compact />
-      <input className="h-9 rounded-md border border-slate-300 px-2 text-sm" defaultValue={gasto.anio} name="anio" />
-      <input className="h-9 rounded-md border border-slate-300 px-2 text-sm" defaultValue={gasto.mes} name="mes" />
-      <input className="h-9 rounded-md border border-slate-300 px-2 text-sm" defaultValue={gasto.fecha?.slice(0, 10)} name="fecha" type="date" />
-      <input className="h-9 rounded-md border border-slate-300 px-2 text-sm" defaultValue={gasto.importe} name="importe" />
-      <input className="h-9 rounded-md border border-slate-300 px-2 text-sm" defaultValue={gasto.observaciones ?? ''} name="observaciones" placeholder="Observaciones" />
-      <button className="rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white" type="submit">Guardar</button>
-      <button className="rounded-md border border-red-300 px-3 py-2 text-sm font-semibold text-red-700" onClick={remove} type="button">Eliminar</button>
+      <ConceptSelect conceptos={conceptos} defaultValue={gasto.conceptoId} disabled={disabled} compact />
+      <input className="h-9 rounded-md border border-slate-300 px-2 text-sm disabled:bg-slate-100" defaultValue={gasto.anio} disabled={disabled} name="anio" />
+      <input className="h-9 rounded-md border border-slate-300 px-2 text-sm disabled:bg-slate-100" defaultValue={gasto.mes} disabled={disabled} name="mes" />
+      <input className="h-9 rounded-md border border-slate-300 px-2 text-sm disabled:bg-slate-100" defaultValue={gasto.fecha?.slice(0, 10)} disabled={disabled} name="fecha" type="date" />
+      <input className="h-9 rounded-md border border-slate-300 px-2 text-sm disabled:bg-slate-100" defaultValue={gasto.importe} disabled={disabled} name="importe" />
+      <input className="h-9 rounded-md border border-slate-300 px-2 text-sm disabled:bg-slate-100" defaultValue={gasto.observaciones ?? ''} disabled={disabled} name="observaciones" placeholder="Observaciones" />
+      <button className="rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={disabled} type="submit">Guardar</button>
+      <button className="rounded-md border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 disabled:cursor-not-allowed disabled:opacity-60" disabled={disabled} onClick={remove} type="button">Eliminar</button>
       {error ? <p className="md:col-span-3 text-sm font-medium text-red-700">{error}</p> : null}
     </form>
   )
@@ -215,11 +215,11 @@ function formPayload(form: FormData) {
   }
 }
 
-function ConceptSelect({ conceptos, defaultValue, compact }: { conceptos: Concepto[]; defaultValue?: string; compact?: boolean }) {
+function ConceptSelect({ conceptos, defaultValue, disabled, compact }: { conceptos: Concepto[]; defaultValue?: string; disabled?: boolean; compact?: boolean }) {
   return (
     <label className={compact ? '' : 'space-y-1 text-sm font-medium text-slate-700'}>
       {compact ? null : 'Concepto'}
-      <select className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm" defaultValue={defaultValue} name="conceptoId">
+      <select className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm disabled:bg-slate-100" defaultValue={defaultValue} disabled={disabled} name="conceptoId">
         {conceptos.map((concepto) => (
           <option key={concepto.id} value={concepto.id}>
             {concepto.nombre}

@@ -12,6 +12,7 @@ import {
   parseDatePeriod,
 } from '@/lib/import-preview/preview'
 import type { ImportPreviewParameters } from '@/lib/import-preview/types'
+import { closedPeriodError, isPeriodClosed } from '@/lib/periods'
 import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
@@ -84,6 +85,13 @@ export async function POST(request: Request) {
   }
 
   const detectedPeriod = preview.detectedPeriod
+  if (await isPeriodClosed(detectedPeriod.anio, detectedPeriod.mes)) {
+    return NextResponse.json(
+      closedPeriodError('El período ya está cerrado. No se puede confirmar una nueva importación.'),
+      { status: 409 },
+    )
+  }
+
   const rows = parseConfirmableRows(csvText)
   const companyNames = [...new Set(rows.map((row) => row.empresaNombreArchivo))]
   const empresas = await prisma.empresa.findMany({
