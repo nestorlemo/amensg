@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma'
 import type { SearchParamsInput } from '@/lib/read-models'
 
 const CONCEPTO_TIPOS = new Set(['FIJO', 'VARIABLE'])
+const INGRESO_MONEDAS = new Set(['UYU', 'USD'])
+const FUENTES_TIPO_CAMBIO = new Set(['MANUAL', 'BCU', 'PARAMETRO'])
 
 function param(params: SearchParamsInput, key: string) {
   if (params instanceof URLSearchParams) {
@@ -67,6 +69,24 @@ function requiredDecimal(body: Record<string, unknown>, key: string) {
   try {
     const decimal = new Prisma.Decimal(value)
     return decimal.greaterThanOrEqualTo(0) ? decimal : null
+  } catch {
+    return null
+  }
+}
+
+function optionalDecimal(body: Record<string, unknown>, key: string) {
+  const value = body[key]
+
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+
+  if (typeof value !== 'string' && typeof value !== 'number') {
+    return null
+  }
+
+  try {
+    return new Prisma.Decimal(value)
   } catch {
     return null
   }
@@ -346,7 +366,10 @@ export async function createIngresoAdicional(body: Record<string, unknown>) {
   if (closed) return { error: closed, status: 409 }
 
   const ingreso = await prisma.$transaction(async (tx) => {
-    const created = await tx.ingresoAdicional.create({ data: parsed.data, include: { empresa: true } })
+    const created = await tx.ingresoAdicional.create({
+      data: parsed.data as unknown as Prisma.IngresoAdicionalUncheckedCreateInput,
+      include: { empresa: true },
+    })
     await tx.auditoria.create({
       data: {
         entidad: 'IngresoAdicional',
@@ -369,7 +392,11 @@ export async function updateIngresoAdicional(id: string, body: Record<string, un
   if (closed) return { error: closed, status: 409 }
 
   const ingreso = await prisma.$transaction(async (tx) => {
-    const updated = await tx.ingresoAdicional.update({ where: { id }, data: parsed.data, include: { empresa: true } })
+    const updated = await tx.ingresoAdicional.update({
+      where: { id },
+      data: parsed.data as unknown as Prisma.IngresoAdicionalUncheckedUpdateInput,
+      include: { empresa: true },
+    })
     await tx.auditoria.create({
       data: {
         entidad: 'IngresoAdicional',
@@ -426,18 +453,70 @@ function parseIngresoBody(body: Record<string, unknown>) {
   const empresaId = optionalString(body, 'empresaId')
   const anio = requiredInt(body, 'anio')
   const mes = requiredInt(body, 'mes')
-  const montoSinIva = requiredDecimal(body, 'montoSinIva')
+  const moneda = requiredString(body, 'moneda') ?? 'UYU'
+  const montoOrigen = requiredDecimal(body, 'montoOrigen') ?? requiredDecimal(body, 'montoSinIva')
+  const fechaFacturacion = requiredDate(body, 'fechaFacturacion')
+  const tipoCambioAplicado = optionalDecimal(body, 'tipoCambioAplicado')
+  const fuenteTipoCambio = optionalString(body, 'fuenteTipoCambio')
+  const fechaTipoCambio = requiredDate(body, 'fechaTipoCambio')
   const porcentajeIva = requiredDecimal(body, 'porcentajeIva')
   const observaciones = optionalString(body, 'observaciones')
 
-  if (!concepto || !anio || !mes || mes < 1 || mes > 12 || !montoSinIva || !porcentajeIva) {
+  if (
+    !concepto ||
+    !anio ||
+    !mes ||
+    mes < 1 ||
+    mes > 12 ||
+    !INGRESO_MONEDAS.has(moneda) ||
+    !montoOrigen ||
+    !fechaFacturacion ||
+    !porcentajeIva
+  ) {
     return { error: { error: 'INGRESO_ADICIONAL_INVALIDO', message: 'Datos de ingreso adicional invalidos.' }, status: 422 }
   }
 
+  if (fuenteTipoCambio && !FUENTES_TIPO_CAMBIO.has(fuenteTipoCambio)) {
+    return { error: { error: 'FUENTE_TIPO_CAMBIO_INVALIDA', message: 'La fuente de tipo de cambio no es valida.' }, status: 422 }
+  }
+
+  if (moneda === 'USD' && (!tipoCambioAplicado || tipoCambioAplicado.lessThanOrEqualTo(0))) {
+    return {
+      error: {
+        error: 'TIPO_CAMBIO_REQUERIDO',
+        message: 'Los ingresos en USD requieren un tipo de cambio aplicado mayor a 0 para la fecha de facturacion.',
+      },
+      status: 422,
+    }
+  }
+
+  const montoSinIva =
+    moneda === 'USD' ? montoOrigen.mul(tipoCambioAplicado as Prisma.Decimal).toDecimalPlaces(2) : montoOrigen.toDecimalPlaces(2)
   const iva = montoSinIva.mul(porcentajeIva).toDecimalPlaces(2)
   const montoConIva = montoSinIva.add(iva).toDecimalPlaces(2)
+  const normalizedTipoCambio = moneda === 'USD' ? tipoCambioAplicado : tipoCambioAplicado ?? new Prisma.Decimal(1)
+  const normalizedFuente = moneda === 'USD' ? fuenteTipoCambio ?? 'MANUAL' : fuenteTipoCambio
+  const normalizedFechaTipoCambio = moneda === 'USD' ? fechaTipoCambio ?? fechaFacturacion : fechaTipoCambio
 
-  return { data: { concepto, empresaId, anio, mes, montoSinIva, porcentajeIva, iva, montoConIva, observaciones } }
+  return {
+    data: {
+      concepto,
+      empresaId,
+      anio,
+      mes,
+      moneda,
+      montoOrigen: montoOrigen.toDecimalPlaces(2),
+      fechaFacturacion,
+      tipoCambioAplicado: normalizedTipoCambio,
+      fuenteTipoCambio: normalizedFuente,
+      fechaTipoCambio: normalizedFechaTipoCambio,
+      montoSinIva,
+      porcentajeIva,
+      iva,
+      montoConIva,
+      observaciones,
+    },
+  }
 }
 
 function serializeConcepto(row: { id: string; nombre: string; tipo: string; activo: boolean }) {
@@ -464,6 +543,15 @@ function serializeGasto(row: Prisma.GastoMensualGetPayload<{ include: { concepto
 }
 
 function serializeIngreso(row: Prisma.IngresoAdicionalGetPayload<{ include: { empresa: true } }>) {
+  const ingreso = row as unknown as {
+    moneda?: string
+    montoOrigen?: Prisma.Decimal
+    fechaFacturacion?: Date
+    tipoCambioAplicado?: Prisma.Decimal | null
+    fuenteTipoCambio?: string | null
+    fechaTipoCambio?: Date | null
+  }
+
   return {
     id: row.id,
     concepto: row.concepto,
@@ -471,6 +559,12 @@ function serializeIngreso(row: Prisma.IngresoAdicionalGetPayload<{ include: { em
     empresa: row.empresa?.nombre ?? null,
     anio: row.anio,
     mes: row.mes,
+    moneda: ingreso.moneda ?? 'UYU',
+    montoOrigen: ingreso.montoOrigen ? money(ingreso.montoOrigen) : money(row.montoSinIva),
+    fechaFacturacion: iso(ingreso.fechaFacturacion ?? row.creadoEn),
+    tipoCambioAplicado: ingreso.tipoCambioAplicado ? rate(ingreso.tipoCambioAplicado) : null,
+    fuenteTipoCambio: ingreso.fuenteTipoCambio ?? null,
+    fechaTipoCambio: iso(ingreso.fechaTipoCambio),
     montoSinIva: money(row.montoSinIva),
     porcentajeIva: rate(row.porcentajeIva),
     iva: money(row.iva),

@@ -26,6 +26,7 @@
 - Preview detects period from `Fecha de importación` only.
 - Preview validates that the file contains only one month/year.
 - Preview detects companies, states, lots, technical activation dates, completed activations, rows without real activation date, and duplicates within Empresa + año + mes.
+- Preview and confirmation normalize Chip by trimming whitespace and removing a leading Excel apostrophe while preserving text and leading zeros.
 - Preview calculates uploaded file hash.
 - Preview includes economic totals using current parameters with Decimal-safe calculations.
 - Preview does not persist `ActivacionImportada` rows.
@@ -50,6 +51,15 @@
 - Additional income can be listed, filtered, created, edited, and deleted while the period is open.
 - Additional income IVA and total with IVA are calculated with Decimal-safe calculations.
 - Expense, expense concept, and additional income mutations write audit entries.
+- Additional income can be entered in UYU or USD.
+- USD additional income is converted to UYU using the exchange rate corresponding to `fechaFacturacion`.
+- Additional income stores `tipoCambioAplicado` as a snapshot and historical records are not recalculated automatically when exchange rates change.
+- `GET /api/tipo-cambio/usd?fecha=YYYY-MM-DD` returns an exchange rate for the invoice date using BCU when available, or the configured parameter fallback.
+- `/liquidaciones` shows monthly liquidation preview by year and month.
+- `GET /api/liquidaciones/preview` returns ingresos, gastos, resultado, socios, validaciones, and `puedeCerrar`.
+- Monthly close creates `CierreMensual` and `CierreSocio` snapshot rows.
+- Monthly close writes an audit entry and blocks duplicate closes for the same period.
+- `/cierres` lists monthly closures and `/cierres/:id` shows frozen snapshot values.
 - Import cancellation is not implemented.
 - Full authentication is not implemented.
 - Business workflows are not implemented.

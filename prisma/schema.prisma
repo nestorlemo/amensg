@@ -31,6 +31,8 @@ model Empresa {
 model Socio {
   id           String         @id @default(uuid()) @db.Uuid
   nombre       String
+  porcentajeParticipacion Decimal @default(0) @db.Decimal(9, 6)
+  cuentas      Json?
   activo       Boolean        @default(true)
   creadoEn     DateTime       @default(now())
   cierresSocio CierreSocio[]
@@ -145,6 +147,12 @@ model IngresoAdicional {
   empresaId   String?  @db.Uuid
   anio        Int
   mes         Int
+  moneda      String   @default("UYU")
+  montoOrigen Decimal  @db.Decimal(18, 2)
+  fechaFacturacion DateTime
+  tipoCambioAplicado Decimal? @db.Decimal(18, 6)
+  fuenteTipoCambio String?
+  fechaTipoCambio DateTime?
   montoSinIva Decimal  @db.Decimal(18, 2)
   porcentajeIva Decimal @db.Decimal(18, 6)
   iva         Decimal  @db.Decimal(18, 2)
@@ -161,6 +169,8 @@ model CierreMensual {
   id            String        @id @default(uuid()) @db.Uuid
   anio          Int
   mes           Int
+  estado        String        @default("CERRADO")
+  cerradoAt     DateTime?
   snapshot      Json
   creadoEn      DateTime      @default(now())
   cierresSocio  CierreSocio[]

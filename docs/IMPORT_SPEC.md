@@ -18,6 +18,10 @@ This phase implements CSV import preview and confirmation.
 - All structurally valid rows are facturable.
 - MID and chip uniqueness is scoped to `empresaId + anio + mes`.
 - MID and chip may repeat across different months.
+- Chip values are treated as text strings.
+- Chip values may include a leading apostrophe from Excel/text formatting.
+- The import process trims surrounding whitespace and removes one leading apostrophe from Chip before validation, duplicate detection, and persistence.
+- The original CSV row values remain preserved in `rawRowJson` for traceability.
 - Preview calculates a SHA-256 hash of the uploaded file.
 - Preview must not write `ActivacionImportada` rows to the database.
 

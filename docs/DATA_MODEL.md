@@ -43,6 +43,10 @@
 - `FacturacionMensual.observaciones` stores optional collection notes.
 - `CierreMensual.snapshot` stores the monthly close snapshot.
 - `CierreSocio.snapshot` stores the partner close snapshot.
+- `CierreMensual.estado` stores the close status.
+- `CierreMensual.cerradoAt` stores the close timestamp.
+- `Socio.porcentajeParticipacion` stores the active partner distribution percentage.
+- `Socio.cuentas` stores optional account metadata to freeze in closing snapshots.
 
 ## Expenses and Additional Income Fields
 
@@ -52,6 +56,10 @@
 - `GastoMensual.observaciones` stores optional notes.
 - `IngresoAdicional.concepto` stores the income concept.
 - `IngresoAdicional.empresaId` optionally associates income with an `Empresa`.
+- `IngresoAdicional.moneda` stores the origin currency: `UYU` or `USD`.
+- `IngresoAdicional.montoOrigen` stores the original amount in `moneda`.
+- `IngresoAdicional.fechaFacturacion` stores the invoice date used to select the applicable exchange rate.
+- `IngresoAdicional.tipoCambioAplicado`, `fuenteTipoCambio`, and `fechaTipoCambio` store the exchange-rate snapshot when the origin currency is USD.
 - `IngresoAdicional.montoSinIva`, `iva`, and `montoConIva` store Decimal monetary values.
 - `IngresoAdicional.porcentajeIva` stores the IVA rate snapshot used for the calculation.
 - `IngresoAdicional.observaciones` stores optional notes.

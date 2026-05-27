@@ -15,6 +15,12 @@ type Ingreso = {
   empresaId: string | null
   anio: number
   mes: number
+  moneda: string
+  montoOrigen: string
+  fechaFacturacion: string | null
+  tipoCambioAplicado: string | null
+  fuenteTipoCambio: string | null
+  fechaTipoCambio: string | null
   montoSinIva: string
   porcentajeIva: string
   iva: string
@@ -25,6 +31,7 @@ type Ingreso = {
 export function IngresoAdicionalForm({ empresas }: { empresas: Empresa[] }) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
+  const today = new Date().toISOString().slice(0, 10)
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -39,20 +46,25 @@ export function IngresoAdicionalForm({ empresas }: { empresas: Empresa[] }) {
   }
 
   return (
-    <section className="space-y-3 rounded-md border border-slate-200 bg-white p-4">
+    <section className="min-w-0 space-y-4 rounded-md border border-slate-200 bg-white p-4">
       <h2 className="text-lg font-semibold text-slate-950">Nuevo ingreso adicional</h2>
-      <form className="grid gap-3 md:grid-cols-4" onSubmit={submit}>
-        <Input label="Concepto" name="concepto" required />
-        <EmpresaSelect empresas={empresas} />
-        <Input label="Anio" name="anio" required />
-        <Input label="Mes" name="mes" required />
-        <Input label="Monto sin IVA" name="montoSinIva" required />
-        <Input label="Porcentaje IVA" name="porcentajeIva" required defaultValue="0.22" />
-        <Input label="Observaciones" name="observaciones" />
-        <div className="flex items-end">
-          <button className="h-10 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white" type="submit">
-            Crear ingreso
-          </button>
+      <form className="space-y-4" onSubmit={submit}>
+        <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <Input label="Concepto" name="concepto" required />
+          <EmpresaSelect empresas={empresas} />
+          <Input label="Anio" name="anio" required />
+          <Input label="Mes" name="mes" required />
+        </div>
+        <IngresoCurrencyFields defaultFechaFacturacion={today} defaultMoneda="UYU" defaultPorcentajeIva="0.22" />
+        <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="min-w-0 md:col-span-1 xl:col-span-3">
+            <Input label="Observaciones" name="observaciones" />
+          </div>
+          <div className="flex min-w-0 items-end">
+            <button className="h-10 w-full rounded-md bg-slate-950 px-4 text-sm font-semibold text-white" type="submit">
+              Crear ingreso
+            </button>
+          </div>
         </div>
       </form>
       {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
@@ -84,13 +96,21 @@ export function IngresoRowActions({ empresas, ingreso }: { empresas: Empresa[]; 
   }
 
   return (
-    <form className="grid min-w-96 gap-2 md:grid-cols-3" onSubmit={update}>
+    <form className="grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-3" onSubmit={update}>
       <input className="h-9 rounded-md border border-slate-300 px-2 text-sm" defaultValue={ingreso.concepto} name="concepto" />
       <EmpresaSelect compact defaultValue={ingreso.empresaId ?? ''} empresas={empresas} />
       <input className="h-9 rounded-md border border-slate-300 px-2 text-sm" defaultValue={ingreso.anio} name="anio" />
       <input className="h-9 rounded-md border border-slate-300 px-2 text-sm" defaultValue={ingreso.mes} name="mes" />
-      <input className="h-9 rounded-md border border-slate-300 px-2 text-sm" defaultValue={ingreso.montoSinIva} name="montoSinIva" />
-      <input className="h-9 rounded-md border border-slate-300 px-2 text-sm" defaultValue={ingreso.porcentajeIva} name="porcentajeIva" />
+      <IngresoCurrencyFields
+        compact
+        defaultFechaFacturacion={dateValue(ingreso.fechaFacturacion)}
+        defaultFechaTipoCambio={dateValue(ingreso.fechaTipoCambio)}
+        defaultFuenteTipoCambio={ingreso.fuenteTipoCambio ?? ''}
+        defaultMoneda={ingreso.moneda}
+        defaultMontoOrigen={ingreso.montoOrigen}
+        defaultPorcentajeIva={ingreso.porcentajeIva}
+        defaultTipoCambioAplicado={ingreso.tipoCambioAplicado ?? ''}
+      />
       <input className="h-9 rounded-md border border-slate-300 px-2 text-sm" defaultValue={ingreso.observaciones ?? ''} name="observaciones" placeholder="Observaciones" />
       <button className="rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white" type="submit">Guardar</button>
       <button className="rounded-md border border-red-300 px-3 py-2 text-sm font-semibold text-red-700" onClick={remove} type="button">Eliminar</button>
@@ -105,10 +125,211 @@ function payload(form: FormData) {
     empresaId: form.get('empresaId'),
     anio: form.get('anio'),
     mes: form.get('mes'),
-    montoSinIva: form.get('montoSinIva'),
+    moneda: form.get('moneda'),
+    montoOrigen: form.get('montoOrigen'),
+    fechaFacturacion: form.get('fechaFacturacion'),
+    tipoCambioAplicado: form.get('tipoCambioAplicado'),
+    fuenteTipoCambio: form.get('fuenteTipoCambio'),
+    fechaTipoCambio: form.get('fechaTipoCambio'),
     porcentajeIva: form.get('porcentajeIva'),
     observaciones: form.get('observaciones'),
   }
+}
+
+function IngresoCurrencyFields({
+  compact,
+  defaultFechaFacturacion,
+  defaultFechaTipoCambio,
+  defaultFuenteTipoCambio,
+  defaultMoneda,
+  defaultMontoOrigen,
+  defaultPorcentajeIva,
+  defaultTipoCambioAplicado,
+}: {
+  compact?: boolean
+  defaultFechaFacturacion: string
+  defaultFechaTipoCambio?: string
+  defaultFuenteTipoCambio?: string
+  defaultMoneda: string
+  defaultMontoOrigen?: string
+  defaultPorcentajeIva?: string
+  defaultTipoCambioAplicado?: string
+}) {
+  const [moneda, setMoneda] = useState(defaultMoneda)
+  const [montoOrigen, setMontoOrigen] = useState(defaultMontoOrigen ?? '')
+  const [fechaFacturacion, setFechaFacturacion] = useState(defaultFechaFacturacion)
+  const [tipoCambio, setTipoCambio] = useState(defaultTipoCambioAplicado ?? '')
+  const [fuente, setFuente] = useState(defaultFuenteTipoCambio ?? '')
+  const [fechaTipoCambio, setFechaTipoCambio] = useState(defaultFechaTipoCambio ?? '')
+  const [porcentajeIvaPreview, setPorcentajeIvaPreview] = useState(defaultPorcentajeIva ?? '0.22')
+  const [rateError, setRateError] = useState<string | null>(null)
+  const montoSinIva = calculateMontoSinIva(moneda, montoOrigen, tipoCambio)
+  const iva = montoSinIva * (Number(porcentajeIvaPreview) || 0)
+  const montoConIva = montoSinIva + iva
+  const inputClass = compact
+    ? 'h-9 min-w-0 rounded-md border border-slate-300 px-2 text-sm'
+    : 'h-10 w-full min-w-0 rounded-md border border-slate-300 px-3 text-sm'
+
+  async function fetchTipoCambio() {
+    setRateError(null)
+    const response = await fetch(`/api/tipo-cambio/usd?fecha=${encodeURIComponent(fechaFacturacion)}`)
+    const payload = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+      setRateError(payload.message ?? payload.error ?? 'No se pudo obtener el tipo de cambio.')
+      return
+    }
+
+    setTipoCambio(payload.valor)
+    setFuente(payload.fuente)
+    setFechaTipoCambio(payload.fechaTipoCambio)
+  }
+
+  if (compact) {
+    return (
+      <>
+        <select className={inputClass} name="moneda" onChange={(event) => setMoneda(event.currentTarget.value)} value={moneda}>
+          <option value="UYU">UYU</option>
+          <option value="USD">USD</option>
+        </select>
+        <input
+          className={inputClass}
+          name="montoOrigen"
+          onChange={(event) => setMontoOrigen(event.currentTarget.value)}
+          placeholder="Monto origen"
+          required
+          value={montoOrigen}
+        />
+        <input
+          className={inputClass}
+          name="fechaFacturacion"
+          onChange={(event) => setFechaFacturacion(event.currentTarget.value)}
+          required
+          type="date"
+          value={fechaFacturacion}
+        />
+        {moneda === 'USD' ? (
+          <>
+            <input
+              className={inputClass}
+              name="tipoCambioAplicado"
+              onChange={(event) => setTipoCambio(event.currentTarget.value)}
+              placeholder="Tipo cambio aplicado"
+              required
+              value={tipoCambio}
+            />
+            <input name="fuenteTipoCambio" type="hidden" value={fuente} />
+            <input name="fechaTipoCambio" type="hidden" value={fechaTipoCambio} />
+            <button className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700" onClick={fetchTipoCambio} type="button">
+              Obtener tipo de cambio
+            </button>
+            {rateError ? <p className="text-sm font-medium text-red-700">{rateError}</p> : null}
+          </>
+        ) : (
+          <>
+            <input name="tipoCambioAplicado" type="hidden" value={tipoCambio || '1'} />
+            <input name="fuenteTipoCambio" type="hidden" value={fuente} />
+            <input name="fechaTipoCambio" type="hidden" value={fechaTipoCambio} />
+          </>
+        )}
+        <input
+          className={inputClass}
+          name="porcentajeIva"
+          onChange={(event) => setPorcentajeIvaPreview(event.currentTarget.value)}
+          placeholder="Porcentaje IVA"
+          required
+          value={porcentajeIvaPreview}
+        />
+      </>
+    )
+  }
+
+  return (
+    <>
+      <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <label className="min-w-0 space-y-1 text-sm font-medium text-slate-700">
+          Moneda
+          <select className={inputClass} name="moneda" onChange={(event) => setMoneda(event.currentTarget.value)} value={moneda}>
+            <option value="UYU">UYU</option>
+            <option value="USD">USD</option>
+          </select>
+        </label>
+        <label className="min-w-0 space-y-1 text-sm font-medium text-slate-700">
+          Monto origen
+          <input
+            className={inputClass}
+            name="montoOrigen"
+            onChange={(event) => setMontoOrigen(event.currentTarget.value)}
+            required
+            value={montoOrigen}
+          />
+        </label>
+        <label className="min-w-0 space-y-1 text-sm font-medium text-slate-700">
+          Fecha facturacion
+          <input
+            className={inputClass}
+            name="fechaFacturacion"
+            onChange={(event) => setFechaFacturacion(event.currentTarget.value)}
+            required
+            type="date"
+            value={fechaFacturacion}
+          />
+        </label>
+        <label className="min-w-0 space-y-1 text-sm font-medium text-slate-700">
+          Porcentaje IVA
+          <input
+            className={inputClass}
+            name="porcentajeIva"
+            onChange={(event) => setPorcentajeIvaPreview(event.currentTarget.value)}
+            required
+            value={porcentajeIvaPreview}
+          />
+        </label>
+      </div>
+      {moneda === 'USD' ? (
+        <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <label className="min-w-0 space-y-1 text-sm font-medium text-slate-700">
+            Tipo cambio aplicado
+            <input
+              className={inputClass}
+              name="tipoCambioAplicado"
+              onChange={(event) => setTipoCambio(event.currentTarget.value)}
+              required
+              value={tipoCambio}
+            />
+          </label>
+          <input name="fuenteTipoCambio" type="hidden" value={fuente} />
+          <input name="fechaTipoCambio" type="hidden" value={fechaTipoCambio} />
+          <div className="flex min-w-0 items-end">
+            <button className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700" onClick={fetchTipoCambio} type="button">
+              Obtener tipo de cambio
+            </button>
+          </div>
+          {rateError ? <p className="self-end text-sm font-medium text-red-700 md:col-span-2">{rateError}</p> : null}
+        </div>
+      ) : (
+        <>
+          <input name="tipoCambioAplicado" type="hidden" value={tipoCambio || '1'} />
+          <input name="fuenteTipoCambio" type="hidden" value={fuente} />
+          <input name="fechaTipoCambio" type="hidden" value={fechaTipoCambio} />
+        </>
+      )}
+      <div className="grid min-w-0 gap-3 rounded-md bg-slate-50 p-3 text-sm md:grid-cols-3">
+        <SummaryItem label="Monto sin IVA UYU" value={montoSinIva} />
+        <SummaryItem label="IVA UYU" value={iva} />
+        <SummaryItem label="Monto con IVA UYU" value={montoConIva} />
+      </div>
+    </>
+  )
+}
+
+function SummaryItem({ label, value }: { label: string; value: number }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold uppercase text-slate-500">{label}</p>
+      <p className="mt-1 font-semibold tabular-nums text-slate-950">{formatMoney(value)}</p>
+    </div>
+  )
 }
 
 function EmpresaSelect({
@@ -121,9 +342,9 @@ function EmpresaSelect({
   empresas: Empresa[]
 }) {
   return (
-    <label className={compact ? '' : 'space-y-1 text-sm font-medium text-slate-700'}>
+    <label className={compact ? 'min-w-0' : 'min-w-0 space-y-1 text-sm font-medium text-slate-700'}>
       {compact ? null : 'Empresa'}
-      <select className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm" defaultValue={defaultValue} name="empresaId">
+      <select className="h-10 w-full min-w-0 rounded-md border border-slate-300 px-3 text-sm" defaultValue={defaultValue} name="empresaId">
         <option value="">Sin empresa</option>
         {empresas.map((empresa) => (
           <option key={empresa.id} value={empresa.id}>
@@ -147,9 +368,9 @@ function Input({
   required?: boolean
 }) {
   return (
-    <label className="space-y-1 text-sm font-medium text-slate-700">
+    <label className="min-w-0 space-y-1 text-sm font-medium text-slate-700">
       {label}
-      <input className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm" defaultValue={defaultValue} name={name} required={required} />
+      <input className="h-10 w-full min-w-0 rounded-md border border-slate-300 px-3 text-sm" defaultValue={defaultValue} name={name} required={required} />
     </label>
   )
 }
@@ -166,4 +387,21 @@ async function request(url: string, method: string, body: Record<string, unknown
     ok: response.ok,
     error: responsePayload.message ?? responsePayload.error ?? 'No se pudo completar la operacion.',
   }
+}
+
+function calculateMontoSinIva(moneda: string, montoOrigen: string, tipoCambio: string) {
+  const monto = Number(montoOrigen) || 0
+  const cambio = Number(tipoCambio) || 0
+  return moneda === 'USD' ? monto * cambio : monto
+}
+
+function formatMoney(value: number) {
+  return new Intl.NumberFormat('es-UY', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value)
+}
+
+function dateValue(value: string | null | undefined) {
+  return value ? value.slice(0, 10) : new Date().toISOString().slice(0, 10)
 }

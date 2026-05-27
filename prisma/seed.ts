@@ -22,9 +22,8 @@ async function main() {
   }
 
   const parametros: Array<[string, Prisma.Decimal]> = [
-    ['precio_unitario_activacion', new Prisma.Decimal(4)],
-    ['porcentaje_iva', new Prisma.Decimal(0.22)],
-    ['tipo_cambio_usd', new Prisma.Decimal(1)],
+    ['precio_unitario_activacion', new Prisma.Decimal('4.00')],
+    ['porcentaje_iva', new Prisma.Decimal('0.22')],
   ]
 
   for (const [clave, valor] of parametros) {
@@ -33,6 +32,32 @@ async function main() {
       update: { valor },
       create: { clave, valor },
     })
+  }
+
+  await ensurePositiveParametro('tipo_cambio_usd', new Prisma.Decimal('40.00'))
+
+  const socios: Array<[string, Prisma.Decimal]> = [
+    ['Socio 1', new Prisma.Decimal('0.1200')],
+    ['Socio 2', new Prisma.Decimal('0.4400')],
+    ['Socio 3', new Prisma.Decimal('0.4400')],
+  ]
+
+  for (const [nombre, porcentajeParticipacion] of socios) {
+    const existingSocio = await prisma.socio.findFirst({
+      where: { nombre },
+      select: { id: true },
+    })
+
+    if (existingSocio) {
+      await prisma.socio.update({
+        where: { id: existingSocio.id },
+        data: { porcentajeParticipacion, activo: true },
+      })
+    } else {
+      await prisma.socio.create({
+        data: { nombre, porcentajeParticipacion, activo: true },
+      })
+    }
   }
 
   const conceptosGasto = [
@@ -64,6 +89,27 @@ async function main() {
         data: { nombre },
       })
     }
+  }
+}
+
+async function ensurePositiveParametro(clave: string, fallback: Prisma.Decimal) {
+  const existing = await prisma.parametro.findUnique({
+    where: { clave },
+    select: { valor: true },
+  })
+
+  if (!existing) {
+    await prisma.parametro.create({
+      data: { clave, valor: fallback },
+    })
+    return
+  }
+
+  if (existing.valor.lessThanOrEqualTo(0) || existing.valor.equals(1)) {
+    await prisma.parametro.update({
+      where: { clave },
+      data: { valor: fallback },
+    })
   }
 }
 

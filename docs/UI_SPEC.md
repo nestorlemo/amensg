@@ -55,5 +55,17 @@ The current UI is a placeholder shell only.
 - `/gastos` shows summary cards for total expenses, fixed expenses, variable expenses, and quantity.
 - `/ingresos-adicionales` manages additional income entries.
 - `/ingresos-adicionales` filters by year, month, and company.
+- Additional income forms allow selecting `UYU` or `USD`, entering `montoOrigen`, and setting `fechaFacturacion`.
+- For USD additional income, the UI shows `tipoCambioAplicado` and an action to obtain the exchange rate for `fechaFacturacion`.
+- The UI shows calculated UYU values for `montoSinIva`, `iva`, and `montoConIva`.
 - Expense and additional income screens allow create, edit, and delete actions only while the period is open.
 - These screens do not implement liquidation closure.
+
+## Liquidation and Closing UI
+
+- `/liquidaciones` allows selecting year and month.
+- `/liquidaciones` shows liquidation preview values, validation messages, active partners, and partner distribution.
+- `/liquidaciones` allows closing only when validations pass.
+- `/cierres` lists monthly closures.
+- `/cierres/:id` shows frozen snapshot values and must not recalculate the close.
+- Reopening closures is not implemented.

@@ -13,40 +13,44 @@ export default async function IngresosAdicionalesPage({ searchParams }: PageProp
   const { rows, empresas } = await getIngresosAdicionales(params)
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 max-w-full space-y-6">
       <header className="border-b border-slate-200 pb-5">
         <p className="text-sm font-medium uppercase text-slate-500">Ingresos adicionales</p>
         <h1 className="mt-2 text-3xl font-semibold text-slate-950">Ingresos adicionales</h1>
         <p className="mt-2 text-sm text-slate-600">Ingresos no provenientes de activaciones, con IVA calculado.</p>
       </header>
 
-      <form className="grid gap-3 rounded-md border border-slate-200 bg-white p-4 md:grid-cols-4" method="get">
+      <form className="grid min-w-0 gap-3 rounded-md border border-slate-200 bg-white p-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" method="get">
         <FilterInput label="Anio" name="anio" value={stringValue(params.anio)} placeholder="2026" />
         <FilterInput label="Mes" name="mes" value={stringValue(params.mes)} placeholder="5" />
-        <label className="space-y-1 text-sm font-medium text-slate-700">
+        <label className="min-w-0 space-y-1 text-sm font-medium text-slate-700">
           Empresa
-          <select className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm" defaultValue={stringValue(params.empresaId)} name="empresaId">
+          <select className="h-10 w-full min-w-0 rounded-md border border-slate-300 px-3 text-sm" defaultValue={stringValue(params.empresaId)} name="empresaId">
             <option value="">Todas</option>
             {empresas.map((empresa) => (
               <option key={empresa.id} value={empresa.id}>{empresa.nombre}</option>
             ))}
           </select>
         </label>
-        <div className="flex items-end gap-2">
-          <button className="h-10 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white" type="submit">Filtrar</button>
-          <Link className="inline-flex h-10 items-center rounded-md px-3 text-sm font-medium text-slate-600" href="/ingresos-adicionales">Limpiar</Link>
+        <div className="flex min-w-0 items-end gap-2">
+          <button className="h-10 min-w-0 flex-1 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white sm:flex-none" type="submit">Filtrar</button>
+          <Link className="inline-flex h-10 min-w-0 flex-1 items-center justify-center rounded-md px-3 text-sm font-medium text-slate-600 sm:flex-none" href="/ingresos-adicionales">Limpiar</Link>
         </div>
       </form>
 
       <IngresoAdicionalForm empresas={empresas} />
 
-      <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
+      <div className="max-w-full overflow-x-auto rounded-md border border-slate-200 bg-white">
         <table className="min-w-full text-sm">
           <thead className="bg-slate-100 text-left text-xs uppercase text-slate-600">
             <tr>
               <Th>Concepto</Th>
               <Th>Empresa</Th>
               <Th>Periodo</Th>
+              <Th>Fecha facturacion</Th>
+              <Th>Moneda</Th>
+              <Th>Monto origen</Th>
+              <Th>Tipo cambio</Th>
               <Th>Monto sin IVA</Th>
               <Th>IVA %</Th>
               <Th>IVA</Th>
@@ -61,6 +65,10 @@ export default async function IngresosAdicionalesPage({ searchParams }: PageProp
                 <Td>{row.concepto}</Td>
                 <Td>{row.empresa ?? 'Sin empresa'}</Td>
                 <Td>{formatPeriod(row.anio, row.mes)}</Td>
+                <Td>{formatDate(row.fechaFacturacion)}</Td>
+                <Td>{row.moneda}</Td>
+                <Td>{row.montoOrigen}</Td>
+                <Td>{row.tipoCambioAplicado ?? 'No aplica'}</Td>
                 <Td>{row.montoSinIva}</Td>
                 <Td>{row.porcentajeIva}</Td>
                 <Td>{row.iva}</Td>
@@ -70,7 +78,7 @@ export default async function IngresosAdicionalesPage({ searchParams }: PageProp
               </tr>
             ))}
             {rows.length === 0 ? (
-              <tr><Td colSpan={9}>No hay ingresos adicionales para los filtros seleccionados.</Td></tr>
+              <tr><Td colSpan={13}>No hay ingresos adicionales para los filtros seleccionados.</Td></tr>
             ) : null}
           </tbody>
         </table>
@@ -81,9 +89,9 @@ export default async function IngresosAdicionalesPage({ searchParams }: PageProp
 
 function FilterInput({ label, name, placeholder, value }: { label: string; name: string; placeholder?: string; value: string }) {
   return (
-    <label className="space-y-1 text-sm font-medium text-slate-700">
+    <label className="min-w-0 space-y-1 text-sm font-medium text-slate-700">
       {label}
-      <input className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm" defaultValue={value} name={name} placeholder={placeholder} />
+      <input className="h-10 w-full min-w-0 rounded-md border border-slate-300 px-3 text-sm" defaultValue={value} name={name} placeholder={placeholder} />
     </label>
   )
 }
@@ -102,4 +110,8 @@ function stringValue(value: string | string[] | undefined) {
 
 function formatPeriod(anio: number, mes: number) {
   return `${String(mes).padStart(2, '0')}/${anio}`
+}
+
+function formatDate(value: string | null | undefined) {
+  return value ? value.slice(0, 10) : 'Sin fecha'
 }

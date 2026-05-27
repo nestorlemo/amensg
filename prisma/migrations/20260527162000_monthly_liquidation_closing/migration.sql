@@ -1,0 +1,5 @@
+ALTER TABLE "Socio" ADD COLUMN "porcentajeParticipacion" DECIMAL(9,6) NOT NULL DEFAULT 0;
+ALTER TABLE "Socio" ADD COLUMN "cuentas" JSONB;
+
+ALTER TABLE "CierreMensual" ADD COLUMN "estado" TEXT NOT NULL DEFAULT 'CERRADO';
+ALTER TABLE "CierreMensual" ADD COLUMN "cerradoAt" TIMESTAMP(3);

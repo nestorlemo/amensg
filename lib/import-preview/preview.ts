@@ -65,7 +65,7 @@ export function buildImportPreview(input: BuildImportPreviewInput): ImportPrevie
     const estadoActivacion = row['Estado de activación'] ?? ''
     const lote = row.Lote ?? ''
     const mid = row.MID ?? ''
-    const chip = row.Chip ?? ''
+    const chip = normalizeChip(row.Chip ?? '')
     const fechaActivacion = row['Fecha de activación'] ?? ''
     const period = parseDatePeriod(fechaImportacion)
 
@@ -314,6 +314,11 @@ export function hasRealActivationDate(value: string) {
 
 export function isTechnicalActivationDate(value: string) {
   return TECHNICAL_ACTIVATION_DATES.has(value.trim())
+}
+
+export function normalizeChip(value: string) {
+  const trimmed = value.trim()
+  return trimmed.startsWith("'") ? trimmed.slice(1) : trimmed
 }
 
 function normalizeSummaryName(value: string, fallback: string) {

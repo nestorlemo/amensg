@@ -157,10 +157,51 @@ Additional income fields:
   "empresaId": "uuid optional",
   "anio": 2026,
   "mes": 5,
-  "montoSinIva": "100.00",
+  "moneda": "USD",
+  "montoOrigen": "100.00",
+  "fechaFacturacion": "2026-05-10",
+  "tipoCambioAplicado": "40.00",
+  "fuenteTipoCambio": "PARAMETRO",
+  "fechaTipoCambio": "2026-05-10",
   "porcentajeIva": "0.22",
   "observaciones": "optional"
 }
 ```
 
-The API calculates `iva` and `montoConIva` with Decimal-safe calculations.
+`moneda` accepts `UYU` or `USD`. The API always stores `montoSinIva`, `iva`, and `montoConIva` in UYU with Decimal-safe calculations. If `moneda = USD`, `tipoCambioAplicado` is required, must be greater than 0, and must correspond to `fechaFacturacion`. The applied exchange rate is stored as a historical snapshot and old records are not recalculated automatically if rates change later.
+
+Exchange rate lookup:
+
+- `GET /api/tipo-cambio/usd?fecha=YYYY-MM-DD`
+
+The `fecha` parameter is the additional income `fechaFacturacion`. Banco Central del Uruguay is the preferred official source. Until real BCU integration is implemented, the endpoint returns the current `Parametro.tipo_cambio_usd` with `fuente = "PARAMETRO"` so local development does not require internet access.
+
+## Liquidation Preview and Closing
+
+- `GET /api/liquidaciones/preview?anio=2026&mes=4`
+- `POST /api/liquidaciones/cerrar`
+- `GET /api/cierres`
+- `GET /api/cierres/:id`
+
+Close request:
+
+```json
+{
+  "anio": 2026,
+  "mes": 4,
+  "confirmacion": true
+}
+```
+
+Preview response includes:
+
+- `anio`
+- `mes`
+- `ingresos`
+- `gastos`
+- `resultado`
+- `socios`
+- `validaciones`
+- `puedeCerrar`
+
+Closing creates `CierreMensual`, `CierreSocio` rows, and an `Auditoria` entry. Closure detail responses read frozen snapshot values, not recalculated current data.

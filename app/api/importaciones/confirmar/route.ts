@@ -8,6 +8,7 @@ import {
   buildImportPreview,
   hasRealActivationDate,
   isTechnicalActivationDate,
+  normalizeChip,
   parseDatePeriod,
 } from '@/lib/import-preview/preview'
 import type { ImportPreviewParameters } from '@/lib/import-preview/types'
@@ -410,7 +411,7 @@ function parseConfirmableRows(csvText: string): ConfirmableRow[] {
       estadoActivacion: row['Estado de activación'] ?? '',
       lote: row.Lote ?? '',
       mid: row.MID ?? '',
-      chip: row.Chip ?? '',
+      chip: normalizeChip(row.Chip ?? ''),
       fechaImportacion: parseDate(fechaImportacionTexto) as Date,
       fechaActivacion:
         tieneFechaRealActivacion && !isTechnicalActivationDate(fechaActivacionTexto)
