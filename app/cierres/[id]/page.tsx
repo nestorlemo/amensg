@@ -22,6 +22,13 @@ export default async function CierreDetailPage({ params }: PageProps) {
   const ingresos = asRecord(snapshot.ingresos)
   const gastos = asRecord(snapshot.gastos)
   const socios = Array.isArray(snapshot.socios) ? snapshot.socios.map(asRecord) : []
+  const facturaciones = arrayRecords(ingresos.facturaciones)
+  const adicionales = arrayRecords(ingresos.adicionales)
+  const gastosDetalle = arrayRecords(gastos.detalle)
+  const facturacionIva = sumMoney(facturaciones.map((row) => stringValue(row.iva, '0.00')))
+  const facturacionConIva = sumMoney(facturaciones.map((row) => stringValue(row.totalConIva, '0.00')))
+  const adicionalesIva = sumMoney(adicionales.map((row) => stringValue(row.iva, '0.00')))
+  const adicionalesConIva = sumMoney(adicionales.map((row) => stringValue(row.montoConIva, '0.00')))
 
   return (
     <div className="space-y-6">
@@ -46,9 +53,129 @@ export default async function CierreDetailPage({ params }: PageProps) {
         <Metric label="Resultado distribuible" value={displayValue(snapshot.resultadoDistribuible, '0.00')} />
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-2">
-        <SnapshotPanel title="Ingresos" value={ingresos} />
-        <SnapshotPanel title="Gastos" value={gastos} />
+      <section className="rounded-md border border-slate-200 bg-white p-4">
+        <h2 className="text-lg font-semibold text-slate-950">Ingresos</h2>
+        <p className="text-sm text-slate-600">Valores congelados en el cierre mensual.</p>
+        <div className="mt-4 overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="bg-slate-100 text-left text-xs uppercase text-slate-600">
+              <tr>
+                <Th>Concepto</Th>
+                <Th align="right">Sin IVA</Th>
+                <Th align="right">IVA</Th>
+                <Th align="right">Con IVA</Th>
+              </tr>
+            </thead>
+            <tbody>
+              <FinancialRow
+                concept="Facturación"
+                iva={facturacionIva}
+                total={facturacionConIva}
+                withoutIva={stringValue(ingresos.facturacionSinIva, '0.00')}
+              />
+              <FinancialRow
+                concept="Ingresos adicionales"
+                iva={adicionalesIva}
+                total={adicionalesConIva}
+                withoutIva={stringValue(ingresos.ingresosAdicionalesSinIva, '0.00')}
+              />
+              <FinancialRow
+                concept="Total ingresos"
+                emphasis
+                iva={stringValue(ingresos.totalIva, '0.00')}
+                total={stringValue(ingresos.ingresosConIva, '0.00')}
+                withoutIva={stringValue(ingresos.totalIngresosSinIva, '0.00')}
+              />
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="rounded-md border border-slate-200 bg-white p-4">
+        <h2 className="text-lg font-semibold text-slate-950">Detalle de facturación</h2>
+        <div className="mt-4 overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="bg-slate-100 text-left text-xs uppercase text-slate-600">
+              <tr>
+                <Th>Empresa</Th>
+                <Th align="right">Activaciones</Th>
+                <Th align="right">Sin IVA</Th>
+                <Th align="right">IVA</Th>
+                <Th align="right">Total</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {facturaciones.map((row, index) => (
+                <tr className="border-t border-slate-200" key={`${stringValue(row.empresa, 'empresa')}-${index}`}>
+                  <Td>{stringValue(row.empresa, 'Sin empresa')}</Td>
+                  <Td align="right">{numberValue(row.cantidadActivaciones)}</Td>
+                  <Td align="right">{formatMoney(stringValue(row.totalSinIva, '0.00'))}</Td>
+                  <Td align="right">{formatMoney(stringValue(row.iva, '0.00'))}</Td>
+                  <Td align="right">{formatMoney(stringValue(row.totalConIva, '0.00'))}</Td>
+                </tr>
+              ))}
+              {facturaciones.length === 0 ? <EmptyRow colSpan={5} message="No hay facturación en el snapshot." /> : null}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="rounded-md border border-slate-200 bg-white p-4">
+        <h2 className="text-lg font-semibold text-slate-950">Ingresos adicionales</h2>
+        <div className="mt-4 overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="bg-slate-100 text-left text-xs uppercase text-slate-600">
+              <tr>
+                <Th>Concepto</Th>
+                <Th>Empresa</Th>
+                <Th align="right">Sin IVA</Th>
+                <Th align="right">IVA</Th>
+                <Th align="right">Total</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {adicionales.map((row, index) => (
+                <tr className="border-t border-slate-200" key={`${stringValue(row.concepto, 'ingreso')}-${index}`}>
+                  <Td>{stringValue(row.concepto, 'Sin concepto')}</Td>
+                  <Td>{stringValue(row.empresa, 'General')}</Td>
+                  <Td align="right">{formatMoney(stringValue(row.montoSinIva, '0.00'))}</Td>
+                  <Td align="right">{formatMoney(stringValue(row.iva, '0.00'))}</Td>
+                  <Td align="right">{formatMoney(stringValue(row.montoConIva, '0.00'))}</Td>
+                </tr>
+              ))}
+              {adicionales.length === 0 ? <EmptyRow colSpan={5} message="No hay ingresos adicionales en el snapshot." /> : null}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="rounded-md border border-slate-200 bg-white p-4">
+        <h2 className="text-lg font-semibold text-slate-950">Gastos</h2>
+        <div className="mt-4 overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="bg-slate-100 text-left text-xs uppercase text-slate-600">
+              <tr>
+                <Th>Concepto</Th>
+                <Th>Tipo</Th>
+                <Th align="right">Importe</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {gastosDetalle.map((row, index) => (
+                <tr className="border-t border-slate-200" key={`${stringValue(row.concepto, 'gasto')}-${index}`}>
+                  <Td>{stringValue(row.concepto, 'Sin concepto')}</Td>
+                  <Td>{stringValue(row.tipo, 'Sin tipo')}</Td>
+                  <Td align="right">{formatMoney(stringValue(row.importe, '0.00'))}</Td>
+                </tr>
+              ))}
+              {gastosDetalle.length === 0 ? <EmptyRow colSpan={3} message="No hay gastos en el snapshot." /> : null}
+              <tr className="border-t border-slate-300 bg-slate-50 font-semibold text-slate-950">
+                <Td colSpan={2}>Total gastos</Td>
+                <Td align="right">{formatMoney(stringValue(gastos.totalGastos, '0.00'))}</Td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="rounded-md border border-slate-200 bg-white p-4">
@@ -61,7 +188,6 @@ export default async function CierreDetailPage({ params }: PageProps) {
                 <Th>Porcentaje</Th>
                 <Th>Monto pesos</Th>
                 <Th>Monto USD</Th>
-                <Th>Cuentas</Th>
               </tr>
             </thead>
             <tbody>
@@ -69,11 +195,11 @@ export default async function CierreDetailPage({ params }: PageProps) {
                 <tr className="border-t border-slate-200" key={String(socio.socioId)}>
                   <Td>{String(socio.socioNombre ?? '')}</Td>
                   <Td>{formatPercent(String(socio.socioPorcentaje ?? '0'))}</Td>
-                  <Td>{String(socio.montoPesos ?? '0.00')}</Td>
-                  <Td>{String(socio.montoUsd ?? '0.00')}</Td>
-                  <Td>{socio.socioCuentas ? JSON.stringify(socio.socioCuentas) : 'Sin cuentas'}</Td>
+                  <Td align="right">{formatMoney(String(socio.montoPesos ?? '0.00'))}</Td>
+                  <Td align="right">{formatMoney(String(socio.montoUsd ?? '0.00'))}</Td>
                 </tr>
               ))}
+              {socios.length === 0 ? <EmptyRow colSpan={4} message="No hay socios en el snapshot." /> : null}
             </tbody>
           </table>
         </div>
@@ -91,31 +217,69 @@ function Metric({ label, value }: { label: string; value: string | number }) {
   )
 }
 
-function SnapshotPanel({ title, value }: { title: string; value: Record<string, unknown> }) {
+function FinancialRow({
+  concept,
+  withoutIva,
+  iva,
+  total,
+  emphasis = false,
+}: {
+  concept: string
+  withoutIva: string
+  iva: string
+  total: string
+  emphasis?: boolean
+}) {
   return (
-    <section className="rounded-md border border-slate-200 bg-white p-4">
-      <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
-      <pre className="mt-3 max-h-96 overflow-auto rounded-md bg-slate-950 p-4 text-xs text-white">
-        {JSON.stringify(value, null, 2)}
-      </pre>
-    </section>
+    <tr className={`border-t border-slate-200 ${emphasis ? 'bg-slate-50 font-semibold text-slate-950' : ''}`}>
+      <Td>{concept}</Td>
+      <Td align="right">{formatMoney(withoutIva)}</Td>
+      <Td align="right">{formatMoney(iva)}</Td>
+      <Td align="right">{formatMoney(total)}</Td>
+    </tr>
   )
 }
 
-function Th({ children }: { children: ReactNode }) {
-  return <th className="whitespace-nowrap px-4 py-3 font-semibold">{children}</th>
+function EmptyRow({ colSpan, message }: { colSpan: number; message: string }) {
+  return (
+    <tr>
+      <td className="px-4 py-6 text-center text-sm text-slate-500" colSpan={colSpan}>
+        {message}
+      </td>
+    </tr>
+  )
 }
 
-function Td({ children }: { children: ReactNode }) {
-  return <td className="whitespace-nowrap px-4 py-3 text-slate-700">{children}</td>
+function Th({ children, align = 'left' }: { children: ReactNode; align?: 'left' | 'right' }) {
+  return <th className={`whitespace-nowrap px-4 py-3 font-semibold ${align === 'right' ? 'text-right' : 'text-left'}`}>{children}</th>
+}
+
+function Td({ children, align = 'left', colSpan }: { children: ReactNode; align?: 'left' | 'right'; colSpan?: number }) {
+  return (
+    <td className={`whitespace-nowrap px-4 py-3 text-slate-700 ${align === 'right' ? 'text-right tabular-nums' : ''}`} colSpan={colSpan}>
+      {children}
+    </td>
+  )
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {}
 }
 
+function arrayRecords(value: unknown) {
+  return Array.isArray(value) ? value.map(asRecord) : []
+}
+
 function displayValue(value: unknown, fallback: string) {
   return typeof value === 'string' || typeof value === 'number' ? value : fallback
+}
+
+function stringValue(value: unknown, fallback: string) {
+  return typeof value === 'string' || typeof value === 'number' ? String(value) : fallback
+}
+
+function numberValue(value: unknown) {
+  return typeof value === 'number' ? value : Number(stringValue(value, '0'))
 }
 
 function formatPeriod(anio: number, mes: number) {
@@ -128,4 +292,20 @@ function formatDate(value: string | null) {
 
 function formatPercent(value: string) {
   return `${new Intl.NumberFormat('es-UY', { maximumFractionDigits: 2 }).format(Number(value) * 100)}%`
+}
+
+function formatMoney(value: string) {
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue)) {
+    return value
+  }
+
+  return new Intl.NumberFormat('es-UY', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(numericValue)
+}
+
+function sumMoney(values: string[]) {
+  return values.reduce((total, value) => total + Number(value), 0).toFixed(2)
 }
