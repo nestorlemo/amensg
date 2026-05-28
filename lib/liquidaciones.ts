@@ -35,12 +35,18 @@ export function periodFromUrl(params: URLSearchParams) {
 }
 
 export async function buildLiquidacionPreview(period: PeriodInput) {
-  const [facturaciones, ingresosAdicionales, gastos, socios, tipoCambioParametro, cierreExistente] =
+  const [facturaciones, ingresosAdicionales, gastos, socios, tipoCambioParametro, cierrePeriodo] =
     await Promise.all([
       prisma.facturacionMensual.findMany({
         where: {
           anio: period.anio,
           mes: period.mes,
+          importacion: {
+            estado: {
+              in: ['ACTIVA', 'CONFIRMADA'],
+            },
+            anuladaEn: null,
+          },
           estadoCobro: {
             codigo: {
               not: 'ANULADO',
@@ -69,9 +75,12 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
       }),
       prisma.cierreMensual.findUnique({
         where: { anio_mes: { anio: period.anio, mes: period.mes } },
-        select: { id: true, snapshot: true },
+        select: { id: true, estado: true, snapshot: true },
       }),
     ])
+  const cierreEstado = normalizeEstado(cierrePeriodo?.estado)
+  const cierreCerrado = cierreEstado === 'CERRADO'
+  const cierreReabierto = cierreEstado === 'REABIERTO'
 
   const facturacionSinIva = sumDecimal(facturaciones.map((row) => row.totalSinIva))
   const facturacionIva = sumDecimal(facturaciones.map((row) => row.iva))
@@ -84,13 +93,15 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
   const totalIngresosConIva = facturacionConIva.add(ingresosAdicionalesConIva)
   const totalGastos = sumDecimal(gastos.map((row) => row.importe))
   const resultadoDistribuible = totalIngresosSinIva.sub(totalGastos)
-  const tipoCambioSnapshot = cierreExistente ? decimalSnapshot(safeSnapshot(cierreExistente.snapshot), 'tipoCambioUsd') : null
+  const tipoCambioSnapshot =
+    cierreCerrado && cierrePeriodo ? decimalSnapshot(safeSnapshot(cierrePeriodo.snapshot), 'tipoCambioUsd') : null
   const tipoCambioUsd = resolveTipoCambioUsd({
-    cierreExistente: Boolean(cierreExistente),
+    cierreCerrado,
     snapshot: tipoCambioSnapshot,
     parametro: tipoCambioParametro?.valor ?? null,
   })
   const validaciones: Array<{ codigo: string; mensaje: string }> = []
+  const avisos: Array<{ codigo: string; mensaje: string }> = []
 
   if (!tipoCambioUsd || tipoCambioUsd.lessThanOrEqualTo(0)) {
     validaciones.push({
@@ -99,10 +110,24 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
     })
   }
 
-  if (cierreExistente) {
+  if (cierreCerrado) {
     validaciones.push({
       codigo: 'CIERRE_MENSUAL_EXISTENTE',
       mensaje: 'Este período ya fue cerrado y no puede volver a cerrarse.',
+    })
+  }
+
+  if (facturaciones.length === 0) {
+    validaciones.push({
+      codigo: 'FACTURACION_CONFIRMADA_REQUERIDA',
+      mensaje: 'No existe importación/facturación confirmada para este período. No se puede cerrar.',
+    })
+  }
+
+  if (cierreReabierto) {
+    avisos.push({
+      codigo: 'CIERRE_MENSUAL_REABIERTO',
+      mensaje: 'Este perÃ­odo fue reabierto. Puede volver a cerrarse.',
     })
   }
 
@@ -175,6 +200,7 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
     },
     socios: sociosPreview,
     validaciones,
+    avisos,
     puedeCerrar: validaciones.length === 0,
   }
 }
@@ -196,16 +222,50 @@ export async function cerrarLiquidacion(period: PeriodInput, confirmacion: boole
   }
 
   const now = new Date()
-  const cierre = await prisma.$transaction(async (tx) => {
-    const cierreMensual = await tx.cierreMensual.create({
-      data: {
-        anio: period.anio,
-        mes: period.mes,
-        estado: 'CERRADO',
-        cerradoAt: now,
-        snapshot: buildCierreSnapshot(preview),
-      },
+  const cierre = await prisma
+    .$transaction(async (tx) => {
+    const cierreExistente = await tx.cierreMensual.findUnique({
+      where: { anio_mes: { anio: period.anio, mes: period.mes } },
+      select: { id: true, estado: true },
     })
+    const snapshot = buildCierreSnapshot(preview)
+
+    if (normalizeEstado(cierreExistente?.estado) === 'CERRADO') {
+      throw new LiquidacionError({
+        error: 'LIQUIDACION_INVALIDA',
+        validaciones: [
+          {
+            codigo: 'CIERRE_MENSUAL_EXISTENTE',
+            mensaje: 'Este perÃ­odo ya fue cerrado y no puede volver a cerrarse.',
+          },
+        ],
+      })
+    }
+
+    const cierreMensual = cierreExistente
+      ? await tx.cierreMensual.update({
+          where: { id: cierreExistente.id },
+          data: {
+            estado: 'CERRADO',
+            cerradoAt: now,
+            snapshot,
+          },
+        })
+      : await tx.cierreMensual.create({
+          data: {
+            anio: period.anio,
+            mes: period.mes,
+            estado: 'CERRADO',
+            cerradoAt: now,
+            snapshot,
+          },
+        })
+
+    if (cierreExistente) {
+      await tx.cierreSocio.deleteMany({
+        where: { cierreMensualId: cierreMensual.id },
+      })
+    }
 
     await tx.cierreSocio.createMany({
       data: preview.socios.map((socio) => ({
@@ -225,13 +285,27 @@ export async function cerrarLiquidacion(period: PeriodInput, confirmacion: boole
       data: {
         entidad: 'CierreMensual',
         entidadId: cierreMensual.id,
-        accion: 'CERRAR_LIQUIDACION_MENSUAL',
-        detalle: buildCierreSnapshot(preview),
+        accion: cierreExistente ? 'RECERRAR_LIQUIDACION_MENSUAL' : 'CERRAR_LIQUIDACION_MENSUAL',
+        detalle: snapshot,
       },
     })
 
-    return cierreMensual
-  })
+      return cierreMensual
+    })
+    .catch((error: unknown) => {
+      if (error instanceof LiquidacionError) {
+        return error
+      }
+
+      throw error
+    })
+
+  if (cierre instanceof LiquidacionError) {
+    return {
+      error: cierre.payload,
+      status: 422,
+    }
+  }
 
   return {
     data: {
@@ -314,6 +388,8 @@ function serializeCierreListItem(cierre: {
   mes: number
   estado: string
   cerradoAt: Date | null
+  reabiertoAt?: Date | null
+  motivoReapertura?: string | null
   creadoEn: Date
   snapshot: Prisma.JsonValue
 }) {
@@ -328,6 +404,8 @@ function serializeCierreListItem(cierre: {
     totalGastos: stringSnapshot(snapshot, 'totalGastos'),
     resultadoDistribuible: stringSnapshot(snapshot, 'resultadoDistribuible'),
     cerradoAt: iso(cierre.cerradoAt ?? cierre.creadoEn),
+    reabiertoAt: iso(cierre.reabiertoAt),
+    motivoReapertura: cierre.motivoReapertura ?? null,
   }
 }
 
@@ -361,15 +439,15 @@ function decimalSnapshot(snapshot: Record<string, Prisma.JsonValue>, key: string
 }
 
 function resolveTipoCambioUsd({
-  cierreExistente,
+  cierreCerrado,
   parametro,
   snapshot,
 }: {
-  cierreExistente: boolean
+  cierreCerrado: boolean
   parametro: Prisma.Decimal | null
   snapshot: Prisma.Decimal | null
 }) {
-  if (cierreExistente) {
+  if (cierreCerrado) {
     return snapshot && snapshot.greaterThan(0) && !snapshot.equals(1) ? snapshot : null
   }
 
@@ -382,4 +460,17 @@ function resolveTipoCambioUsd({
 
 function sumDecimal(values: Prisma.Decimal[]) {
   return values.reduce((total, value) => total.add(value), new Prisma.Decimal(0))
+}
+
+function normalizeEstado(value: string | null | undefined) {
+  return value?.trim().toUpperCase() ?? null
+}
+
+class LiquidacionError extends Error {
+  payload: { error: string; validaciones: Array<{ codigo: string; mensaje: string }> }
+
+  constructor(payload: { error: string; validaciones: Array<{ codigo: string; mensaje: string }> }) {
+    super(payload.error)
+    this.payload = payload
+  }
 }

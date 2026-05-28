@@ -186,6 +186,7 @@ The `fecha` parameter is the additional income `fechaFacturacion`. Banco Central
 - `POST /api/liquidaciones/cerrar`
 - `GET /api/cierres`
 - `GET /api/cierres/:id`
+- `POST /api/cierres/:id/reabrir`
 
 Close request:
 
@@ -208,4 +209,16 @@ Preview response includes:
 - `validaciones`
 - `puedeCerrar`
 
-Closing creates `CierreMensual`, `CierreSocio` rows, and an `Auditoria` entry. Closure detail responses read frozen snapshot values, not recalculated current data.
+Closing creates `CierreMensual`, `CierreSocio` rows, and an `Auditoria` entry. If the period has an existing `REABIERTO` closure, closing updates that same closure back to `CERRADO`, refreshes the snapshot and related `CierreSocio` rows, and writes a re-closing audit entry. Closure detail responses read frozen snapshot values, not recalculated current data.
+
+The preview and close endpoint block periods without confirmed monthly billing/facturation. The period must have at least one `FacturacionMensual` linked to an active/confirmed, non-annulled `ImportacionActivacion`, and the billing row must not have collection status `ANULADO`. Empty periods, or periods with only expenses/additional income, cannot be closed in the MVP.
+
+Reopen request:
+
+```json
+{
+  "motivo": "Corrección de gastos del período"
+}
+```
+
+Reopening requires `motivo`. If the closure is `CERRADO`, the endpoint updates it to `REABIERTO`, stores `reabiertoAt` and `motivoReapertura`, and writes an `Auditoria` entry. If the closure does not exist, it returns `NOT_FOUND`. If it is already `REABIERTO`, it returns a validation error. Reopening does not delete the historical snapshot. A `REABIERTO` period is editable and can be closed again.

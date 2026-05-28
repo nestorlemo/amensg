@@ -59,9 +59,15 @@
 - `GET /api/liquidaciones/preview` returns ingresos, gastos, resultado, socios, validaciones, and `puedeCerrar`.
 - Monthly close creates `CierreMensual` and `CierreSocio` snapshot rows.
 - Monthly close writes an audit entry and blocks duplicate closes for the same period.
+- Monthly close is blocked when the period has no confirmed monthly billing/facturation.
+- Empty periods and periods with only expenses or additional income cannot be closed in the MVP.
 - Closed periods block import confirmation, billing collection status changes, expense changes, and additional income changes with `PERIODO_CERRADO`.
 - `/gastos`, `/ingresos-adicionales`, and `/facturacion` disable mutation actions for closed periods.
 - `/cierres` lists monthly closures and `/cierres/:id` shows frozen snapshot values.
+- `POST /api/cierres/:id/reabrir` reopens a `CERRADO` closure only when a required reason is provided.
+- Reopening a closure stores reopening metadata, writes an audit entry, keeps the historical snapshot visible, and makes the period editable again because only `CERRADO` periods are blocked.
+- A `REABIERTO` period can be closed again; re-closing updates the same monthly closure row back to `CERRADO`, refreshes its snapshot, replaces related partner snapshot rows, and writes an audit entry.
+- `/cierres` and `/cierres/:id` show the reopen action for `CERRADO` closures and hide it for `REABIERTO` closures.
 - Import cancellation is not implemented.
 - Full authentication is not implemented.
 - Business workflows are not implemented.

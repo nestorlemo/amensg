@@ -70,4 +70,7 @@ The current UI is a placeholder shell only.
 - `/liquidaciones` allows closing only when validations pass.
 - `/cierres` lists monthly closures.
 - `/cierres/:id` shows frozen snapshot values and must not recalculate the close.
-- Reopening closures is not implemented.
+- `/cierres` and `/cierres/:id` show a `Reabrir` action only for closures with `estado = CERRADO`.
+- Reopening requires a mandatory reason, refreshes the view after success, and leaves the historical snapshot visible.
+- Reopened closures show reopening metadata and do not show the reopen action again.
+- `/liquidaciones` treats `REABIERTO` periods as open and may show an informational message that the period can be closed again.

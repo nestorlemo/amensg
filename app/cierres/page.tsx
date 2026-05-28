@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 
+import { ReabrirCierreForm } from '@/components/reabrir-cierre-form'
 import { getCierres } from '@/lib/liquidaciones'
 
 export const dynamic = 'force-dynamic'
@@ -13,7 +14,9 @@ export default async function CierresPage() {
       <header className="border-b border-slate-200 pb-5">
         <p className="text-sm font-medium uppercase text-slate-500">Cierres</p>
         <h1 className="mt-2 text-3xl font-semibold text-slate-950">Cierres mensuales</h1>
-        <p className="mt-2 text-sm text-slate-600">Historial de snapshots cerrados. No se recalculan automaticamente.</p>
+        <p className="mt-2 text-sm text-slate-600">
+          Desde esta pantalla se consultan cierres históricos y se pueden reabrir períodos cerrados.
+        </p>
       </header>
 
       <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
@@ -41,9 +44,12 @@ export default async function CierresPage() {
                 <Td>{row.resultadoDistribuible}</Td>
                 <Td>{formatDate(row.cerradoAt)}</Td>
                 <Td>
-                  <Link className="font-semibold text-slate-950 underline" href={`/cierres/${row.id}`}>
-                    Ver detalle
-                  </Link>
+                  <div className="flex min-w-0 flex-wrap items-start gap-3">
+                    <Link className="py-2 font-semibold text-slate-950 underline" href={`/cierres/${row.id}`}>
+                      Ver detalle
+                    </Link>
+                    {isCerrado(row.estado) ? <ReabrirCierreForm cierreId={row.id} /> : null}
+                  </div>
                 </Td>
               </tr>
             ))}
@@ -77,4 +83,8 @@ function formatPeriod(anio: number, mes: number) {
 
 function formatDate(value: string | null) {
   return value ? new Intl.DateTimeFormat('es-UY').format(new Date(value)) : 'Sin registrar'
+}
+
+function isCerrado(estado: string) {
+  return estado.trim().toUpperCase() === 'CERRADO'
 }

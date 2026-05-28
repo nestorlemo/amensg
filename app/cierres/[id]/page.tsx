@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { ReactNode } from 'react'
 
+import { ReabrirCierreForm } from '@/components/reabrir-cierre-form'
 import { getCierre } from '@/lib/liquidaciones'
 
 export const dynamic = 'force-dynamic'
@@ -39,6 +40,18 @@ export default async function CierreDetailPage({ params }: PageProps) {
         <p className="mt-4 text-sm font-medium uppercase text-slate-500">Cierre mensual</p>
         <h1 className="mt-2 text-3xl font-semibold text-slate-950">{formatPeriod(cierre.anio, cierre.mes)}</h1>
         <p className="mt-2 text-sm text-slate-600">Snapshot cerrado el {formatDate(cierre.cerradoAt)}.</p>
+        {isCerrado(cierre.estado) ? (
+          <div className="mt-4">
+            <ReabrirCierreForm buttonLabel="Reabrir cierre" cierreId={cierre.id} />
+          </div>
+        ) : null}
+        {isReabierto(cierre.estado) ? (
+          <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+            <p className="font-semibold">Este cierre fue reabierto.</p>
+            <p className="mt-1">Fecha de reapertura: {formatDate(cierre.reabiertoAt)}</p>
+            <p className="mt-1">Motivo: {cierre.motivoReapertura ?? 'Sin motivo registrado'}</p>
+          </div>
+        ) : null}
       </header>
 
       <section className="grid gap-3 md:grid-cols-4">
@@ -288,6 +301,14 @@ function formatPeriod(anio: number, mes: number) {
 
 function formatDate(value: string | null) {
   return value ? new Intl.DateTimeFormat('es-UY').format(new Date(value)) : 'Sin registrar'
+}
+
+function isCerrado(estado: string) {
+  return estado.trim().toUpperCase() === 'CERRADO'
+}
+
+function isReabierto(estado: string) {
+  return estado.trim().toUpperCase() === 'REABIERTO'
 }
 
 function formatPercent(value: string) {

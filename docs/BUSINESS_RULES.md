@@ -69,7 +69,7 @@
 - Additional income `montoConIva` is calculated as `montoSinIva + iva`.
 - Expense concepts can be created, edited, and deactivated.
 - Monthly expenses and additional income can be created, edited, and deleted while the period is open.
-- A period is considered closed when a `CierreMensual` exists for the same `anio + mes`; in that case expense and additional income changes are blocked.
+- A period is considered closed when a `CierreMensual` exists for the same `anio + mes` with `estado = CERRADO`; in that case expense and additional income changes are blocked.
 - Every create, edit, delete, or deactivate action for expenses, expense concepts, and additional income must write an `Auditoria` entry.
 - Expense and additional income management must not alter CSV preview, import confirmation, MID/chip rules, or billing amount calculations.
 - Liquidation closure is not implemented in this phase.
@@ -91,12 +91,19 @@
 - `monto_socio_usd` is `monto_socio_pesos / tipo_cambio_usd`.
 - Active partner percentages must sum 100%.
 - `tipo_cambio_usd` must exist and be greater than 0.
-- A month can be closed only once.
+- A period cannot be closed unless it has confirmed monthly billing/facturation.
+- Empty periods cannot be closed in the MVP.
+- Periods with expenses or additional income but no confirmed monthly billing/facturation cannot be closed in the MVP.
+- A month can have only one `CierreMensual` row in the MVP, but a `REABIERTO` closure can be closed again by updating that same row with a refreshed snapshot.
 - Monthly closures must create immutable `CierreMensual` and `CierreSocio` snapshots.
 - Closed monthly closures must not be recalculated automatically.
 - Once a monthly period is closed with `CierreMensual.estado = CERRADO`, data that affects that period result must not be modified unless the period is reopened.
 - Closed periods block import confirmation, billing collection status changes, monthly expense changes, and additional income changes.
-- Reopening closures is not implemented in this phase.
+- A closed monthly closure can be reopened only with a mandatory reason.
+- Reopening changes `CierreMensual.estado` to `REABIERTO`, stores reopening metadata, and writes an `Auditoria` entry.
+- Reopened periods become editable again because only `estado = CERRADO` blocks period mutations.
+- Reopened periods may be closed again if all liquidation validations pass.
+- Reopening must not delete historical closure snapshots or automatically recalculate them.
 - Payment-based liquidation is not implemented in this phase.
 
 ## Seed Rules

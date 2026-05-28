@@ -48,6 +48,17 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
         </section>
       ) : null}
 
+      {preview.avisos.length > 0 ? (
+        <section className="rounded-md border border-sky-200 bg-sky-50 p-4">
+          <h2 className="text-sm font-semibold text-sky-950">Avisos</h2>
+          <ul className="mt-2 list-inside list-disc text-sm text-sky-900">
+            {preview.avisos.map((aviso) => (
+              <li key={aviso.codigo}>{aviso.mensaje}</li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <section className="grid min-w-0 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <Metric label="Total ingresos sin IVA" value={preview.ingresos.totalIngresosSinIva} />
         <Metric label="IVA total" value={preview.ingresos.totalIva} />

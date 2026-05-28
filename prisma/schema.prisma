@@ -171,6 +171,9 @@ model CierreMensual {
   mes           Int
   estado        String        @default("CERRADO")
   cerradoAt     DateTime?
+  reabiertoAt   DateTime?
+  reabiertoPor  String?
+  motivoReapertura String?
   snapshot      Json
   creadoEn      DateTime      @default(now())
   cierresSocio  CierreSocio[]
