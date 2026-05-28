@@ -180,6 +180,47 @@ Exchange rate lookup:
 
 The `fecha` parameter is the additional income `fechaFacturacion`. Banco Central del Uruguay is the preferred official source. Until real BCU integration is implemented, the endpoint returns the current `Parametro.tipo_cambio_usd` with `fuente = "PARAMETRO"` so local development does not require internet access.
 
+## Parameters
+
+- `GET /api/parametros`
+- `PUT /api/parametros/:id`
+
+Parameter fields:
+
+```json
+{
+  "clave": "tipo_cambio_usd",
+  "valor": "40.00",
+  "tipo": "DECIMAL",
+  "descripcion": "Tipo de cambio USD",
+  "activo": true
+}
+```
+
+Required parameters are `precio_unitario_activacion`, `porcentaje_iva`, and `tipo_cambio_usd`. Updates validate current business bounds and write an `Auditoria` entry. Updates apply to future calculations only and do not recalculate historical billing or closure snapshots.
+
+## Partners
+
+- `GET /api/socios`
+- `POST /api/socios`
+- `PUT /api/socios/:id`
+- `POST /api/socios/:id/desactivar`
+- `GET /api/socios/validar-porcentajes`
+
+Socio fields:
+
+```json
+{
+  "nombre": "Socio 1",
+  "porcentajeParticipacion": "12",
+  "cuentaPesos": "optional",
+  "cuentaUsd": "optional",
+  "activo": true
+}
+```
+
+The API accepts percentages as human percentages such as `12` or decimals such as `0.1200`, and stores `porcentajeParticipacion` as decimal. Active socios must sum 100% for liquidation closure. Create, edit, and deactivate actions write `Auditoria` entries. Deactivation does not delete historical `CierreSocio` snapshots.
+
 ## Liquidation Preview and Closing
 
 - `GET /api/liquidaciones/preview?anio=2026&mes=4`

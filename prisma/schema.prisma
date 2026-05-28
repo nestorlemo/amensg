@@ -42,7 +42,9 @@ model Parametro {
   id          String   @id @default(uuid()) @db.Uuid
   clave       String   @unique
   valor       Decimal  @db.Decimal(18, 6)
+  tipo        String   @default("DECIMAL")
   descripcion String?
+  activo      Boolean  @default(true)
   actualizado DateTime @updatedAt
 }
 

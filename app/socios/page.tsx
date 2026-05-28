@@ -1,10 +1,22 @@
-import { ModulePlaceholder } from '@/components/module-placeholder'
+import { SociosManager } from '@/components/socios-manager'
+import { getSocios } from '@/lib/parametros-socios'
 
-export default function SociosPage() {
+export const dynamic = 'force-dynamic'
+
+export default async function SociosPage() {
+  const { rows, validation } = await getSocios()
+
   return (
-    <ModulePlaceholder
-      title="Socios"
-      description="Placeholder para administracion de socios y datos usados en liquidaciones."
-    />
+    <div className="space-y-6">
+      <header className="border-b border-slate-200 pb-5">
+        <p className="text-sm font-medium uppercase text-slate-500">Socios</p>
+        <h1 className="mt-2 text-3xl font-semibold text-slate-950">Gestión de socios</h1>
+        <p className="mt-2 text-sm text-slate-600">
+          Solo los socios activos participan en liquidaciones. Los porcentajes activos deben sumar 100%.
+        </p>
+      </header>
+
+      <SociosManager socios={rows} validation={validation} />
+    </div>
   )
 }

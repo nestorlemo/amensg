@@ -51,6 +51,11 @@
 - Additional income can be listed, filtered, created, edited, and deleted while the period is open.
 - Additional income IVA and total with IVA are calculated with Decimal-safe calculations.
 - Expense, expense concept, and additional income mutations write audit entries.
+- `/parametros` lists and edits system parameters.
+- Parameter updates validate business bounds, write audit entries, and do not recalculate historical billing or closure snapshots.
+- `/socios` lists active and inactive socios and supports create, edit, and deactivate.
+- Socio changes write audit entries and deactivation does not delete historical closure snapshots.
+- `/socios` shows whether active socios sum 100%.
 - Additional income can be entered in UYU or USD.
 - USD additional income is converted to UYU using the exchange rate corresponding to `fechaFacturacion`.
 - Additional income stores `tipoCambioAplicado` as a snapshot and historical records are not recalculated automatically when exchange rates change.

@@ -21,20 +21,20 @@ async function main() {
     })
   }
 
-  const parametros: Array<[string, Prisma.Decimal]> = [
-    ['precio_unitario_activacion', new Prisma.Decimal('4.00')],
-    ['porcentaje_iva', new Prisma.Decimal('0.22')],
+  const parametros: Array<[string, Prisma.Decimal, string]> = [
+    ['precio_unitario_activacion', new Prisma.Decimal('4.00'), 'Precio unitario de activación usado para futuras importaciones.'],
+    ['porcentaje_iva', new Prisma.Decimal('0.22'), 'Porcentaje de IVA aplicado a futuras facturaciones.'],
   ]
 
-  for (const [clave, valor] of parametros) {
+  for (const [clave, valor, descripcion] of parametros) {
     await prisma.parametro.upsert({
       where: { clave },
-      update: { valor },
-      create: { clave, valor },
+      update: { valor, tipo: 'DECIMAL', descripcion, activo: true },
+      create: { clave, valor, tipo: 'DECIMAL', descripcion, activo: true },
     })
   }
 
-  await ensurePositiveParametro('tipo_cambio_usd', new Prisma.Decimal('40.00'))
+  await ensurePositiveParametro('tipo_cambio_usd', new Prisma.Decimal('40.00'), 'Tipo de cambio USD de referencia para futuras liquidaciones.')
 
   const socios: Array<[string, Prisma.Decimal]> = [
     ['Socio 1', new Prisma.Decimal('0.1200')],
@@ -92,7 +92,7 @@ async function main() {
   }
 }
 
-async function ensurePositiveParametro(clave: string, fallback: Prisma.Decimal) {
+async function ensurePositiveParametro(clave: string, fallback: Prisma.Decimal, descripcion: string) {
   const existing = await prisma.parametro.findUnique({
     where: { clave },
     select: { valor: true },
@@ -100,17 +100,20 @@ async function ensurePositiveParametro(clave: string, fallback: Prisma.Decimal) 
 
   if (!existing) {
     await prisma.parametro.create({
-      data: { clave, valor: fallback },
+      data: { clave, valor: fallback, tipo: 'DECIMAL', descripcion, activo: true },
     })
     return
   }
 
-  if (existing.valor.lessThanOrEqualTo(0) || existing.valor.equals(1)) {
-    await prisma.parametro.update({
-      where: { clave },
-      data: { valor: fallback },
-    })
-  }
+  await prisma.parametro.update({
+    where: { clave },
+    data: {
+      valor: existing.valor.lessThanOrEqualTo(0) || existing.valor.equals(1) ? fallback : existing.valor,
+      tipo: 'DECIMAL',
+      descripcion,
+      activo: true,
+    },
+  })
 }
 
 main().finally(async () => prisma.$disconnect())

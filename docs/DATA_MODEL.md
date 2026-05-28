@@ -41,6 +41,8 @@
 - `FacturacionMensual.estadoCobro` starts as `PENDIENTE`.
 - `FacturacionMensual.fechaCobro` stores the collection date when the billing is paid by cash, check, or payment.
 - `FacturacionMensual.observaciones` stores optional collection notes.
+- `Parametro.tipo` stores the parameter value type.
+- `Parametro.activo` marks whether the parameter is active without deleting it.
 - `CierreMensual.snapshot` stores the monthly close snapshot.
 - `CierreSocio.snapshot` stores the partner close snapshot.
 - `CierreMensual.estado` stores the close status.

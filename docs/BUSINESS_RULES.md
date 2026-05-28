@@ -51,6 +51,22 @@
 - `CierreMensual` and `CierreSocio` must store snapshots.
 - Importations must not be physically deleted.
 
+## Parameters and Partners Rules
+
+- Required parameters are `precio_unitario_activacion`, `porcentaje_iva`, and `tipo_cambio_usd`.
+- Parameter changes apply only to future calculations, imports, and closures.
+- Parameter changes must not modify historical billing records or closed snapshots.
+- Parameters must not be physically deleted.
+- `tipo_cambio_usd` must be greater than 0.
+- `precio_unitario_activacion` must be greater than or equal to 0.
+- `porcentaje_iva` must be greater than or equal to 0.
+- Parameter changes must write an `Auditoria` entry.
+- `Socio.porcentajeParticipacion` is stored as a decimal value where 12% is `0.1200`.
+- Only active socios participate in liquidations.
+- Active socios must sum 100%; liquidation closure must not proceed if active socios do not sum 100%.
+- Deactivating a socio must not delete historical `CierreSocio` snapshots.
+- Socio create, edit, and deactivate actions must write an `Auditoria` entry.
+
 ## Collection Status Rules
 
 - `FacturacionMensual` records must not be physically deleted when collection status changes.

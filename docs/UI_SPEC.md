@@ -63,6 +63,16 @@ The current UI is a placeholder shell only.
 - `/gastos` and `/ingresos-adicionales` show a closed-period warning and disable mutation actions when the selected `anio + mes` is closed.
 - These screens do not implement liquidation closure.
 
+## Parameters and Partners UI
+
+- `/parametros` lists system parameters and allows editing `valor`, `tipo`, `descripcion`, and `activo`.
+- `/parametros` highlights critical parameters: `precio_unitario_activacion`, `porcentaje_iva`, and `tipo_cambio_usd`.
+- `/parametros` shows validation errors from the API and explains that updates apply only to future calculations.
+- `/socios` lists active and inactive socios.
+- `/socios` allows creating, editing, and deactivating socios.
+- `/socios` displays and edits `porcentajeParticipacion` as a human percentage while the database stores the decimal value.
+- `/socios` shows the total active percentage and warns when active socios do not sum 100%.
+
 ## Liquidation and Closing UI
 
 - `/liquidaciones` allows selecting year and month.
