@@ -150,7 +150,7 @@ export function buildImportPreview(input: BuildImportPreviewInput): ImportPrevie
   for (const row of rows) {
     if (row.estadoActivacion && row.estadoActivacion.trim().toUpperCase() !== 'OK') {
       warnings.push({
-        code: 'NON_OK_STATE',
+        code: 'ESTADO_NO_OK',
         row: row.rowNumber,
         field: 'Estado de activación',
         message: `La fila ${row.rowNumber} tiene estado "${row.estadoActivacion}". No bloquea ni descuenta.`,
@@ -159,7 +159,7 @@ export function buildImportPreview(input: BuildImportPreviewInput): ImportPrevie
 
     if (isTechnicalActivationDate(row.fechaActivacion)) {
       warnings.push({
-        code: 'TECHNICAL_ACTIVATION_DATE',
+        code: 'FECHA_TECNICA',
         row: row.rowNumber,
         field: 'Fecha de activación',
         message: `La fila ${row.rowNumber} tiene fecha técnica ${row.fechaActivacion}. No bloquea ni descuenta.`,

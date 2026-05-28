@@ -3,7 +3,7 @@
 ## Phase Boundary
 
 - Do not implement full authentication in this phase.
-- Do not implement import cancellation yet.
+- Import cancellation is implemented as annulment, not physical deletion.
 - Do not implement full company reconciliation UI yet.
 - Do not allow editing imported activation rows.
 - Do not change the requested business rules.
@@ -32,6 +32,8 @@
 - Generated facturaciones start with `EstadoCobro=PENDIENTE`.
 - Duplicate file confirmation is blocked by `hashArchivo`.
 - MVP allows one active/confirmed importation per period.
+- If an importation is annulled, a new importation for the same period is allowed while the period remains open.
+- Annulled importations remain auditable but do not participate in operational reports, active billing, collections, or liquidation.
 
 ## Data Integrity Rules
 
@@ -50,6 +52,7 @@
 - `FacturacionMensual.porcentajeIva` must preserve the IVA snapshot for the period.
 - `CierreMensual` and `CierreSocio` must store snapshots.
 - Importations must not be physically deleted.
+- Annulment must not delete imported activation rows or generated billing rows.
 
 ## Parameters and Partners Rules
 
@@ -74,6 +77,7 @@
 - `PAGADO`, `CONTADO`, and `CHEQUE` require `fechaCobro`.
 - `PENDIENTE` and `ENVIADO` may have `fechaCobro` as null.
 - `ANULADO` billings are not considered active for collection summaries.
+- Billing rows associated with annulled importations are marked with collection state `ANULADO`.
 - Collection status management must not alter imported activations, CSV parsing, import confirmation, or billing amount calculations.
 
 ## Expenses and Additional Income Rules

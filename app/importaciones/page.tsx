@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 
+import { AnularImportacionForm } from '@/components/anular-importacion-form'
 import { getImportaciones } from '@/lib/read-models'
 
 type PageProps = {
@@ -91,7 +92,7 @@ export default async function ImportacionesPage({ searchParams }: PageProps) {
                 <Td>{formatPeriod(row.anio, row.mes)}</Td>
                 <Td>{row.nombreArchivo ?? 'Sin nombre'}</Td>
                 <Td>
-                  <span className="rounded bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
+                  <span className={`rounded px-2 py-1 text-xs font-semibold ${estadoClass(row.estado)}`}>
                     {row.estado}
                   </span>
                 </Td>
@@ -101,9 +102,12 @@ export default async function ImportacionesPage({ searchParams }: PageProps) {
                 <Td>{row.withoutRealActivationDate}</Td>
                 <Td>{formatDate(row.creadaEn)}</Td>
                 <Td>
-                  <Link className="font-semibold text-slate-950 underline" href={`/importaciones/${row.id}`}>
-                    Ver detalle
-                  </Link>
+                  <div className="flex min-w-0 flex-wrap items-start gap-3">
+                    <Link className="py-2 font-semibold text-slate-950 underline" href={`/importaciones/${row.id}`}>
+                      Ver detalle
+                    </Link>
+                    {isConfirmada(row.estado) ? <AnularImportacionForm importacionId={row.id} /> : null}
+                  </div>
                 </Td>
               </tr>
             ))}
@@ -165,4 +169,14 @@ function formatPeriod(anio: number, mes: number) {
 
 function formatDate(value: string | null) {
   return value ? new Intl.DateTimeFormat('es-UY').format(new Date(value)) : 'Sin registrar'
+}
+
+function isConfirmada(estado: string) {
+  return estado.trim().toUpperCase() === 'CONFIRMADA'
+}
+
+function estadoClass(estado: string) {
+  return estado.trim().toUpperCase() === 'ANULADA'
+    ? 'bg-red-50 text-red-700'
+    : 'bg-emerald-50 text-emerald-700'
 }

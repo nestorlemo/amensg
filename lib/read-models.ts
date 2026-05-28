@@ -97,6 +97,33 @@ function getBillingFilters(params: SearchParamsInput) {
   }
 }
 
+function activeBillingWhere(where: Prisma.FacturacionMensualWhereInput, params: SearchParamsInput) {
+  const importacionId = stringParam(params, 'importacionId')
+  const estadoCobro = stringParam(params, 'estadoCobro') ?? stringParam(params, 'estado')
+
+  if (importacionId || estadoCobro === 'ANULADO') {
+    return where
+  }
+
+  return {
+    AND: [
+      where,
+      {
+        estadoCobro: {
+          codigo: {
+            not: 'ANULADO',
+          },
+        },
+        importacion: {
+          estado: {
+            not: 'ANULADA',
+          },
+        },
+      },
+    ],
+  } satisfies Prisma.FacturacionMensualWhereInput
+}
+
 export async function getImportaciones(params: SearchParamsInput) {
   const anio = numberParam(params, 'anio')
   const mes = numberParam(params, 'mes')
@@ -137,6 +164,8 @@ export async function getImportaciones(params: SearchParamsInput) {
         mes: importacion.mes,
         nombreArchivo: importacion.nombreArchivo,
         estado: importacion.estado,
+        anuladaEn: iso(importacion.anuladaEn),
+        motivoAnulacion: importacion.motivoAnulacion,
         totalRows,
         companies: new Set(importacion.facturaciones.map((facturacion) => facturacion.empresaId)).size,
         completedActivations,
@@ -227,6 +256,8 @@ export async function getImportacionDetail(id: string) {
     nombreArchivo: importacion.nombreArchivo,
     hashArchivo: importacion.hashArchivo,
     estado: importacion.estado,
+    anuladaEn: iso(importacion.anuladaEn),
+    motivoAnulacion: importacion.motivoAnulacion,
     creadaEn: iso(importacion.creadaEn),
     totalRows: activaciones.length,
     completedActivations: activaciones.filter((activacion) => activacion.tieneFechaRealActivacion).length,
@@ -320,10 +351,11 @@ export async function getActivaciones(params: SearchParamsInput) {
 
 export async function getFacturacion(params: SearchParamsInput) {
   const { where } = getBillingFilters(params)
+  const effectiveWhere = activeBillingWhere(where, params)
 
   const [rows, empresas, estadosCobro] = await Promise.all([
     prisma.facturacionMensual.findMany({
-      where,
+      where: effectiveWhere,
       orderBy: [{ anio: 'desc' }, { mes: 'desc' }, { empresa: { nombre: 'asc' } }],
       include: {
         empresa: {
@@ -337,6 +369,12 @@ export async function getFacturacion(params: SearchParamsInput) {
             id: true,
             codigo: true,
             nombre: true,
+          },
+        },
+        importacion: {
+          select: {
+            estado: true,
+            anuladaEn: true,
           },
         },
       },
@@ -375,7 +413,8 @@ export async function getFacturacion(params: SearchParamsInput) {
 
 export async function getCobros(params: SearchParamsInput) {
   const { where } = getBillingFilters(params)
-  const [facturacion, resumen] = await Promise.all([getFacturacion(params), getCobrosResumenForWhere(where)])
+  const effectiveWhere = activeBillingWhere(where, params)
+  const [facturacion, resumen] = await Promise.all([getFacturacion(params), getCobrosResumenForWhere(effectiveWhere)])
 
   return {
     ...facturacion,
@@ -385,7 +424,7 @@ export async function getCobros(params: SearchParamsInput) {
 
 export async function getCobrosResumen(params: SearchParamsInput) {
   const { where } = getBillingFilters(params)
-  return getCobrosResumenForWhere(where)
+  return getCobrosResumenForWhere(activeBillingWhere(where, params))
 }
 
 async function getCobrosResumenForWhere(where: Prisma.FacturacionMensualWhereInput) {
@@ -459,12 +498,29 @@ export async function getFacturacionActivaciones(id: string, params: SearchParam
   }
 }
 
-type FacturacionWithRelations = Prisma.FacturacionMensualGetPayload<{
-  include: {
-    empresa: { select: { id: true; nombre: true } }
-    estadoCobro: { select: { id: true; codigo: true; nombre: true } }
+type FacturacionWithRelations = {
+  id: string
+  importacionId: string
+  empresaId: string
+  empresa: { nombre: string }
+  anio: number
+  mes: number
+  cantidadActivaciones: number
+  precioUnitario: Prisma.Decimal
+  porcentajeIva: Prisma.Decimal
+  totalSinIva: Prisma.Decimal
+  iva: Prisma.Decimal
+  totalConIva: Prisma.Decimal
+  estadoCobroId: string
+  estadoCobro: { codigo: string; nombre: string }
+  fechaCobro: Date | null
+  observaciones: string | null
+  creadaEn: Date
+  importacion?: {
+    estado: string
+    anuladaEn: Date | null
   }
-}>
+}
 
 function serializeFacturacion(facturacion: FacturacionWithRelations) {
   return {
@@ -486,5 +542,7 @@ function serializeFacturacion(facturacion: FacturacionWithRelations) {
     fechaCobro: iso(facturacion.fechaCobro),
     observaciones: facturacion.observaciones,
     creadaEn: iso(facturacion.creadaEn),
+    importacionEstado: facturacion.importacion?.estado ?? null,
+    importacionAnulada: facturacion.importacion?.estado === 'ANULADA' || Boolean(facturacion.importacion?.anuladaEn),
   }
 }

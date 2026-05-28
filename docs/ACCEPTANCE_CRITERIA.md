@@ -38,9 +38,13 @@
 - Confirmation generates one `FacturacionMensual` per company.
 - Generated facturaciones start with `EstadoCobro=PENDIENTE`.
 - Confirmation stores file hash and blocks duplicate file confirmation.
-- MVP blocks more than one confirmed importation per period.
+- MVP blocks more than one active/confirmed importation per period.
+- A new importation for the same period is allowed after the previous importation is annulled.
 - Confirmation is transactional and rolls back on failure.
 - Confirmation writes basic audit entries.
+- `POST /api/importaciones/:id/anular` annuls an importation with mandatory reason.
+- Annulment does not delete `ImportacionActivacion`, `ActivacionImportada`, or `FacturacionMensual` records.
+- Annulment marks associated billing as `ANULADO`, writes an audit entry, and removes annulled records from operational billing, collections, and liquidation totals.
 - `FacturacionMensual` supports `fechaCobro` and `observaciones`.
 - Billing collection status can be changed through `POST /api/facturacion/:id/cambiar-estado-cobro`.
 - Paid collection states require `fechaCobro`.
@@ -73,6 +77,6 @@
 - Reopening a closure stores reopening metadata, writes an audit entry, keeps the historical snapshot visible, and makes the period editable again because only `CERRADO` periods are blocked.
 - A `REABIERTO` period can be closed again; re-closing updates the same monthly closure row back to `CERRADO`, refreshes its snapshot, replaces related partner snapshot rows, and writes an audit entry.
 - `/cierres` and `/cierres/:id` show the reopen action for `CERRADO` closures and hide it for `REABIERTO` closures.
-- Import cancellation is not implemented.
+- Import cancellation is implemented as audited annulment without physical deletion.
 - Full authentication is not implemented.
 - Business workflows are not implemented.

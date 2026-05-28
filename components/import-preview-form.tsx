@@ -21,6 +21,12 @@ type ConfirmResult = {
   }>
 }
 
+type ApiPayload = {
+  error?: string
+  message?: string
+  missingCompanies?: string[]
+}
+
 export function ImportPreviewForm() {
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<ImportPreviewResult | null>(null)
@@ -57,14 +63,14 @@ export function ImportPreviewForm() {
         body: formData,
       })
 
-      const payload = await response.json()
+      const payload = await parseResponsePayload(response)
 
       if (!response.ok) {
-        setError(payload.error ?? 'No se pudo generar la vista previa.')
+        setError(apiErrorMessage(payload, 'No se pudo generar la vista previa.'))
         return
       }
 
-      setPreview(payload)
+      setPreview(payload as ImportPreviewResult)
     } catch {
       setError('No se pudo conectar con el endpoint de vista previa.')
     } finally {
@@ -90,16 +96,16 @@ export function ImportPreviewForm() {
         method: 'POST',
         body: formData,
       })
-      const payload = await response.json()
+      const payload = (await parseResponsePayload(response)) as ApiPayload & ConfirmResult
 
       if (!response.ok) {
         setConfirmError(payload.message ?? payload.error ?? 'No se pudo confirmar la importación.')
-        setMissingCompanies(payload.missingCompanies ?? [])
+        setMissingCompanies('missingCompanies' in payload && Array.isArray(payload.missingCompanies) ? payload.missingCompanies : [])
         return
       }
 
       setShowConfirmStep(false)
-      setConfirmResult(payload)
+      setConfirmResult(payload as ConfirmResult)
     } catch {
       setConfirmError('No se pudo conectar con el endpoint de confirmación.')
     } finally {
@@ -351,6 +357,10 @@ function IssueList({
       ? 'border-red-200 bg-red-50 text-red-900'
       : 'border-amber-200 bg-amber-50 text-amber-900'
 
+  if (tone === 'warning') {
+    return <WarningList classes={classes} emptyText={emptyText} items={items} title={title} />
+  }
+
   return (
     <div className={`rounded-lg border p-5 ${classes}`}>
       <h2 className="text-lg font-semibold">{title}</h2>
@@ -363,6 +373,60 @@ function IssueList({
             </li>
           ))}
         </ul>
+      ) : (
+        <p className="mt-3 text-sm">{emptyText}</p>
+      )}
+    </div>
+  )
+}
+
+function WarningList({
+  classes,
+  emptyText,
+  items,
+  title,
+}: {
+  classes: string
+  emptyText: string
+  items: ImportPreviewResult['validation']['warnings']
+  title: string
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const grouped = groupWarnings(items)
+
+  return (
+    <div className={`rounded-lg border p-5 ${classes}`}>
+      <h2 className="text-lg font-semibold">{title}</h2>
+      {items.length > 0 ? (
+        <div className="mt-3 space-y-3 text-sm">
+          <p className="font-medium">Total de advertencias: {items.length}</p>
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {grouped.map((item) => (
+              <li className="rounded-md bg-white/60 px-3 py-2" key={item.code}>
+                <span className="font-semibold">{warningLabel(item.code)}:</span> {item.count}
+              </li>
+            ))}
+          </ul>
+          <button
+            className="rounded-md border border-amber-300 bg-white px-3 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-100"
+            type="button"
+            onClick={() => setExpanded((value) => !value)}
+          >
+            {expanded ? 'Ocultar detalle de advertencias' : 'Ver detalle de advertencias'}
+          </button>
+          {expanded ? (
+            <div className="max-h-80 overflow-y-auto rounded-md border border-amber-200 bg-white/70 p-3">
+              <ul className="space-y-2">
+                {items.map((item, index) => (
+                  <li key={`${item.code}-${item.row ?? 'global'}-${index}`}>
+                    {item.row ? `Fila ${item.row}: ` : ''}
+                    {item.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
       ) : (
         <p className="mt-3 text-sm">{emptyText}</p>
       )}
@@ -422,4 +486,53 @@ function Metric({ label, value, wide = false }: { label: string; value: string |
       <p className="mt-1 break-words text-sm font-semibold text-slate-950">{value}</p>
     </div>
   )
+}
+
+async function parseResponsePayload(response: Response): Promise<ApiPayload | ImportPreviewResult | ConfirmResult> {
+  const contentType = response.headers.get('content-type') ?? ''
+
+  if (contentType.includes('application/json')) {
+    return (await response.json()) as ApiPayload | ImportPreviewResult | ConfirmResult
+  }
+
+  const text = await response.text().catch(() => '')
+  return {
+    error: text || `${response.status} ${response.statusText}`,
+  }
+}
+
+function apiErrorMessage(payload: ApiPayload | ImportPreviewResult | ConfirmResult, fallback: string) {
+  if ('message' in payload && payload.message) {
+    return payload.message
+  }
+
+  if ('error' in payload && payload.error) {
+    return payload.error
+  }
+
+  return fallback
+}
+
+function groupWarnings(items: ImportPreviewResult['validation']['warnings']) {
+  const counts = new Map<string, number>()
+
+  for (const item of items) {
+    counts.set(item.code, (counts.get(item.code) ?? 0) + 1)
+  }
+
+  return [...counts.entries()]
+    .map(([code, count]) => ({ code, count }))
+    .sort((left, right) => right.count - left.count || left.code.localeCompare(right.code))
+}
+
+function warningLabel(code: string) {
+  const labels: Record<string, string> = {
+    FECHA_TECNICA: 'Fechas técnicas',
+    ESTADO_NO_OK: 'Estados no OK',
+    TECHNICAL_ACTIVATION_DATE: 'Fechas técnicas',
+    NON_OK_STATE: 'Estados no OK',
+    PARAMETERS_UNAVAILABLE: 'Parámetros no disponibles',
+  }
+
+  return labels[code] ?? code
 }

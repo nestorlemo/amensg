@@ -39,11 +39,16 @@ The current UI is a placeholder shell only.
 - If companies are missing in `Empresa`, the UI shows the missing company names and blocks confirmation.
 - If confirmation succeeds, the UI shows `importacionId` and generated facturaciones.
 - The UI provides a link back to importaciones after confirmation.
+- `/importaciones` shows `ANULADA` status clearly.
+- `/importaciones` and `/importaciones/:id` show an annul action only for confirmed importations.
+- Annulment requires a mandatory reason and refreshes the view after success.
+- Annulled importation detail shows annulment timestamp and reason.
 
 ## Collection UI
 
 - `/facturacion` shows billing collection status, collection date, and a simple action to change status.
 - `/facturacion` disables collection status changes for rows whose period is closed.
+- `/facturacion` excludes annulled billing from the default operational view, while direct filtered views can show `ANULADO` rows clearly.
 - `/cobros` lists billing rows for collection follow-up.
 - `/cobros` supports filters by year, month, company, and status.
 - `/cobros` shows summary cards for pending totals, companies with debt, and pending periods.

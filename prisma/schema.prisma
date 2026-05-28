@@ -63,11 +63,11 @@ model ImportacionActivacion {
   hashArchivo          String                 @unique
   estado               String                 @default("ACTIVA")
   anuladaEn            DateTime?
+  motivoAnulacion      String?
   creadaEn             DateTime               @default(now())
   activaciones         ActivacionImportada[]
   facturaciones        FacturacionMensual[]
-
-  @@unique([anio, mes])
+  @@index([anio, mes])
 }
 
 model ActivacionImportada {
@@ -90,8 +90,8 @@ model ActivacionImportada {
   importacion          ImportacionActivacion  @relation(fields: [importacionId], references: [id])
   empresa              Empresa                @relation(fields: [empresaId], references: [id])
 
-  @@unique([empresaId, anio, mes, mid])
-  @@unique([empresaId, anio, mes, chip])
+  @@index([empresaId, anio, mes, mid])
+  @@index([empresaId, anio, mes, chip])
   @@index([importacionId])
 }
 
@@ -116,7 +116,7 @@ model FacturacionMensual {
   empresa        Empresa  @relation(fields: [empresaId], references: [id])
   estadoCobro    EstadoCobro @relation(fields: [estadoCobroId], references: [id])
 
-  @@unique([empresaId, anio, mes])
+  @@index([empresaId, anio, mes])
   @@index([importacionId])
   @@index([estadoCobroId])
 }

@@ -38,6 +38,8 @@
 - `FacturacionMensual.precioUnitario` stores the unit price snapshot used for that billing period.
 - `FacturacionMensual.porcentajeIva` stores the IVA percentage snapshot used for that billing period.
 - `ImportacionActivacion.hashArchivo` stores the confirmed file hash and prevents duplicate confirmation.
+- `ImportacionActivacion.estado` stores the importation lifecycle state, including `CONFIRMADA` and `ANULADA`.
+- `ImportacionActivacion.anuladaEn` and `motivoAnulacion` store the annulment timestamp and reason.
 - `FacturacionMensual.estadoCobro` starts as `PENDIENTE`.
 - `FacturacionMensual.fechaCobro` stores the collection date when the billing is paid by cash, check, or payment.
 - `FacturacionMensual.observaciones` stores optional collection notes.
@@ -69,4 +71,4 @@
 
 ## Importation Lifecycle
 
-`ImportacionActivacion` rows represent import events and must remain auditable. If a future workflow cancels an importation, it must mark lifecycle fields such as `estado` and `anuladaEn` instead of deleting the row.
+`ImportacionActivacion` rows represent import events and must remain auditable. Annulment marks lifecycle fields such as `estado`, `anuladaEn`, and `motivoAnulacion` instead of deleting the row. Annulled importations do not participate in operational reports, active billing, collections, or liquidation.

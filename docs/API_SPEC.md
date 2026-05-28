@@ -64,11 +64,13 @@ Response shape:
 ## Import Confirmation
 
 - `POST /api/importaciones/confirmar`
+- `POST /api/importaciones/:id/anular`
 - Request: `multipart/form-data` with a CSV file in field `file`.
 - The endpoint re-runs preview validation before writing.
 - If a company from the CSV does not exist in `Empresa`, the endpoint returns `409` with `missingCompanies`.
 - The endpoint blocks duplicate file confirmation by `hashArchivo`.
-- The endpoint blocks a second confirmed importation for the same period in the MVP.
+- The endpoint blocks a second active/confirmed importation for the same period in the MVP.
+- The endpoint allows a new importation for the same period when previous importations for that period are `ANULADA`.
 - The endpoint blocks confirmation when the detected period already has `CierreMensual.estado = CERRADO` and returns `PERIODO_CERRADO`.
 - The endpoint persists `ImportacionActivacion`, all `ActivacionImportada` rows, one `FacturacionMensual` per company, and basic `Auditoria` entries in one transaction.
 
@@ -92,6 +94,16 @@ Success response shape:
   ]
 }
 ```
+
+Annul request:
+
+```json
+{
+  "motivo": "Archivo confirmado por error"
+}
+```
+
+Annulment requires `motivo`. If the importation does not exist, the endpoint returns `NOT_FOUND`. If it is already `ANULADA`, it returns a validation error. If the period is closed, it returns `PERIODO_CERRADO`. Annulment sets `ImportacionActivacion.estado = ANULADA`, stores the annulment timestamp and reason, marks associated `FacturacionMensual` rows with `EstadoCobro = ANULADO`, and writes an `Auditoria` entry. It does not delete imported activation rows or billing rows.
 
 ## Billing Collection Status
 
@@ -252,7 +264,7 @@ Preview response includes:
 
 Closing creates `CierreMensual`, `CierreSocio` rows, and an `Auditoria` entry. If the period has an existing `REABIERTO` closure, closing updates that same closure back to `CERRADO`, refreshes the snapshot and related `CierreSocio` rows, and writes a re-closing audit entry. Closure detail responses read frozen snapshot values, not recalculated current data.
 
-The preview and close endpoint block periods without confirmed monthly billing/facturation. The period must have at least one `FacturacionMensual` linked to an active/confirmed, non-annulled `ImportacionActivacion`, and the billing row must not have collection status `ANULADO`. Empty periods, or periods with only expenses/additional income, cannot be closed in the MVP.
+The preview and close endpoint block periods without confirmed monthly billing/facturation. The period must have at least one `FacturacionMensual` linked to an active/confirmed, non-annulled `ImportacionActivacion`, and the billing row must not have collection status `ANULADO`. Empty periods, periods with only expenses/additional income, and periods with only annulled importations cannot be closed in the MVP.
 
 Reopen request:
 

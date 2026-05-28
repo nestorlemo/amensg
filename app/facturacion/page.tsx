@@ -80,6 +80,11 @@ export default async function FacturacionPage({ searchParams }: PageProps) {
                   El período ya está cerrado. No se puede modificar el estado de cobro.
                 </p>
               ) : null}
+              {selectedFacturacion.importacionAnulada ? (
+                <p className="mt-2 text-sm font-medium text-red-700">
+                  La importación asociada está anulada. Esta facturación no participa en la operación.
+                </p>
+              ) : null}
             </div>
             <Link className="text-sm font-semibold text-slate-600 underline" href={`/facturacion?${withoutParam(params, 'editarCobro')}`}>
               Cerrar
@@ -92,7 +97,7 @@ export default async function FacturacionPage({ searchParams }: PageProps) {
               facturacionId={selectedFacturacion.id}
               fechaCobro={selectedFacturacion.fechaCobro}
               observaciones={selectedFacturacion.observaciones}
-              disabled={selectedFacturacion.periodoCerrado}
+              disabled={selectedFacturacion.periodoCerrado || selectedFacturacion.importacionAnulada}
             />
           </div>
         </section>
@@ -125,14 +130,15 @@ export default async function FacturacionPage({ searchParams }: PageProps) {
                 <Td align="right">{row.iva}</Td>
                 <Td align="right">{row.total}</Td>
                 <Td>
-                  <span className="rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
+                  <span className={`rounded px-2 py-1 text-xs font-semibold ${row.importacionAnulada ? 'bg-red-50 text-red-700' : 'bg-slate-100 text-slate-700'}`}>
                     {row.estadoCobro}
                   </span>
+                  {row.importacionAnulada ? <div className="mt-1 text-xs font-medium text-red-700">Importación anulada</div> : null}
                 </Td>
                 <Td>{row.fechaCobro ? formatDate(row.fechaCobro) : 'Sin registrar'}</Td>
                 <Td>
                   <div className="flex items-center gap-3">
-                    {row.periodoCerrado ? (
+                    {row.periodoCerrado || row.importacionAnulada ? (
                       <span className="font-medium text-slate-400" title="El período ya está cerrado. No se puede modificar el estado de cobro.">
                         Cambiar
                       </span>

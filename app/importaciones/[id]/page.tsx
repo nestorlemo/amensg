@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { ReactNode } from 'react'
 
+import { AnularImportacionForm } from '@/components/anular-importacion-form'
 import { getImportacionDetail } from '@/lib/read-models'
 
 type PageProps = {
@@ -25,6 +26,18 @@ export default async function ImportacionDetailPage({ params }: PageProps) {
         <p className="mt-4 text-sm font-medium uppercase text-slate-500">Importacion</p>
         <h1 className="mt-2 text-3xl font-semibold text-slate-950">{formatPeriod(importacion.anio, importacion.mes)}</h1>
         <p className="mt-2 text-sm text-slate-600">{importacion.nombreArchivo ?? 'Sin nombre de archivo'}</p>
+        {isConfirmada(importacion.estado) ? (
+          <div className="mt-4">
+            <AnularImportacionForm buttonLabel="Anular importación" importacionId={importacion.id} />
+          </div>
+        ) : null}
+        {isAnulada(importacion.estado) ? (
+          <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-950">
+            <p className="font-semibold">Esta importación fue anulada.</p>
+            <p className="mt-1">Fecha de anulación: {formatDate(importacion.anuladaEn)}</p>
+            <p className="mt-1">Motivo: {importacion.motivoAnulacion ?? 'Sin motivo registrado'}</p>
+          </div>
+        ) : null}
       </header>
 
       <section className="grid gap-3 md:grid-cols-4">
@@ -138,4 +151,16 @@ function Td({ children }: { children: ReactNode }) {
 
 function formatPeriod(anio: number, mes: number) {
   return `${String(mes).padStart(2, '0')}/${anio}`
+}
+
+function formatDate(value: string | null) {
+  return value ? new Intl.DateTimeFormat('es-UY').format(new Date(value)) : 'Sin registrar'
+}
+
+function isConfirmada(estado: string) {
+  return estado.trim().toUpperCase() === 'CONFIRMADA'
+}
+
+function isAnulada(estado: string) {
+  return estado.trim().toUpperCase() === 'ANULADA'
 }

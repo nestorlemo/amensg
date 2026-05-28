@@ -42,6 +42,6 @@ Confirmation rules:
 - MVP allows one confirmed importation per period.
 - Confirmation is transactional and must rollback all writes if any step fails.
 - Confirmation writes basic `Auditoria` entries for the import and generated facturaciones.
-- Import cancellation is not implemented yet.
+- Import cancellation is implemented as annulment. Annulled importations remain auditable and are not physically deleted.
 - Full company reconciliation UI is not implemented yet.
 - Imported activation row editing is not implemented.

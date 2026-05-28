@@ -134,11 +134,12 @@ export async function POST(request: Request) {
     )
   }
 
-  const existingPeriod = await prisma.importacionActivacion.findUnique({
+  const existingPeriod = await prisma.importacionActivacion.findFirst({
     where: {
-      anio_mes: {
-        anio: detectedPeriod.anio,
-        mes: detectedPeriod.mes,
+      anio: detectedPeriod.anio,
+      mes: detectedPeriod.mes,
+      estado: {
+        not: 'ANULADA',
       },
     },
     select: { id: true },
