@@ -54,6 +54,15 @@
 - Importations must not be physically deleted.
 - Annulment must not delete imported activation rows or generated billing rows.
 
+## Audit and Traceability Rules
+
+- Critical operations must write `Auditoria` entries.
+- Audited operations include parameter edits, socio create/edit/deactivate, import confirmation, import annulment, billing collection status changes, expense create/edit/delete, additional income create/edit/delete, monthly close, and closure reopening.
+- Parameter edits must include old and new values.
+- Import annulment and closure reopening must include the mandatory reason.
+- Audit records are historical and must not be edited from the UI.
+- Business users must see readable audit summaries and details, not raw JSON dumps.
+
 ## Parameters and Partners Rules
 
 - Required parameters are `precio_unitario_activacion`, `porcentaje_iva`, and `tipo_cambio_usd`.

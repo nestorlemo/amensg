@@ -275,3 +275,19 @@ Reopen request:
 ```
 
 Reopening requires `motivo`. If the closure is `CERRADO`, the endpoint updates it to `REABIERTO`, stores `reabiertoAt` and `motivoReapertura`, and writes an `Auditoria` entry. If the closure does not exist, it returns `NOT_FOUND`. If it is already `REABIERTO`, it returns a validation error. Reopening does not delete the historical snapshot. A `REABIERTO` period is editable and can be closed again.
+
+## Audit
+
+- `GET /api/auditoria`
+
+Query params:
+
+- `fechaDesde`
+- `fechaHasta`
+- `entidad`
+- `accion`
+- `usuario`
+- `q`
+- `limit`
+
+The response returns newest audit records first with id, timestamp, user, action, entity, entity id, summary, and readable detail key/value rows. Stored JSON metadata is transformed into readable fields for the UI instead of raw JSON blocks.

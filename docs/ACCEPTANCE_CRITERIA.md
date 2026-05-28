@@ -78,5 +78,8 @@
 - A `REABIERTO` period can be closed again; re-closing updates the same monthly closure row back to `CERRADO`, refreshes its snapshot, replaces related partner snapshot rows, and writes an audit entry.
 - `/cierres` and `/cierres/:id` show the reopen action for `CERRADO` closures and hide it for `REABIERTO` closures.
 - Import cancellation is implemented as audited annulment without physical deletion.
+- `/auditoria` lists audit records newest first with filters by date range, entity, action, user, free text, and limit.
+- `/auditoria` shows readable summaries and expandable key/value details without raw JSON blocks.
+- Audit records are not editable from the UI.
 - Full authentication is not implemented.
 - Business workflows are not implemented.

@@ -283,6 +283,9 @@ export async function updateGasto(id: string, body: Record<string, unknown>) {
   const parsed = parseGastoBody(body)
   if ('error' in parsed) return parsed
 
+  const existing = await prisma.gastoMensual.findUnique({ where: { id }, include: { concepto: true } })
+  if (!existing) return { error: { error: 'GASTO_NO_ENCONTRADO' }, status: 404 }
+
   const closed = await assertOpenPeriod(parsed.data.anio, parsed.data.mes)
   if (closed) return { error: closedPeriodError('El período ya está cerrado. No se pueden modificar gastos.'), status: 409 }
 
@@ -293,7 +296,10 @@ export async function updateGasto(id: string, body: Record<string, unknown>) {
         entidad: 'GastoMensual',
         entidadId: id,
         accion: 'EDITAR_GASTO',
-        detalle: serializeGasto(updated),
+        detalle: {
+          anterior: serializeGasto(existing),
+          nuevo: serializeGasto(updated),
+        },
       },
     })
     return updated
@@ -382,6 +388,9 @@ export async function updateIngresoAdicional(id: string, body: Record<string, un
   const parsed = parseIngresoBody(body)
   if ('error' in parsed) return parsed
 
+  const existing = await prisma.ingresoAdicional.findUnique({ where: { id }, include: { empresa: true } })
+  if (!existing) return { error: { error: 'INGRESO_ADICIONAL_NO_ENCONTRADO' }, status: 404 }
+
   const closed = await assertOpenPeriod(parsed.data.anio, parsed.data.mes)
   if (closed) return { error: closedPeriodError('El período ya está cerrado. No se pueden modificar ingresos adicionales.'), status: 409 }
 
@@ -396,7 +405,10 @@ export async function updateIngresoAdicional(id: string, body: Record<string, un
         entidad: 'IngresoAdicional',
         entidadId: id,
         accion: 'EDITAR_INGRESO_ADICIONAL',
-        detalle: serializeIngreso(updated),
+        detalle: {
+          anterior: serializeIngreso(existing),
+          nuevo: serializeIngreso(updated),
+        },
       },
     })
     return updated

@@ -1,10 +1,170 @@
-import { ModulePlaceholder } from '@/components/module-placeholder'
+import type { ReactNode } from 'react'
 
-export default function AuditoriaPage() {
+import { getAuditoria } from '@/lib/auditoria'
+
+export const dynamic = 'force-dynamic'
+
+type PageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
+}
+
+export default async function AuditoriaPage({ searchParams }: PageProps) {
+  const params = (await searchParams) ?? {}
+  const { rows } = await getAuditoria(params)
+
   return (
-    <ModulePlaceholder
-      title="Auditoria"
-      description="Placeholder para trazabilidad de acciones relevantes del sistema."
-    />
+    <div className="min-w-0 max-w-full space-y-6">
+      <header className="border-b border-slate-200 pb-5">
+        <p className="text-sm font-medium uppercase text-slate-500">Auditoria</p>
+        <h1 className="mt-2 text-3xl font-semibold text-slate-950">Trazabilidad operativa</h1>
+        <p className="mt-2 max-w-3xl text-sm text-slate-600">
+          Consulta de acciones relevantes del sistema. Los registros son historicos y no se editan desde esta pantalla.
+        </p>
+      </header>
+
+      <form className="grid min-w-0 gap-3 rounded-md border border-slate-200 bg-white p-4 md:grid-cols-2 xl:grid-cols-6" method="get">
+        <FilterInput label="Fecha desde" name="fechaDesde" type="date" value={stringValue(params.fechaDesde)} />
+        <FilterInput label="Fecha hasta" name="fechaHasta" type="date" value={stringValue(params.fechaHasta)} />
+        <FilterInput label="Entidad" name="entidad" placeholder="Parametro" value={stringValue(params.entidad)} />
+        <FilterInput label="Accion" name="accion" placeholder="ACTUALIZAR" value={stringValue(params.accion)} />
+        <FilterInput label="Usuario" name="usuario" placeholder="Sistema" value={stringValue(params.usuario)} />
+        <FilterInput label="Buscar" name="q" placeholder="motivo, ID, texto" value={stringValue(params.q)} />
+        <label className="min-w-0 space-y-1 text-sm font-medium text-slate-700">
+          Limite
+          <input
+            className="h-10 w-full min-w-0 rounded-md border border-slate-300 px-3 text-sm"
+            defaultValue={stringValue(params.limit) || '100'}
+            max={500}
+            min={1}
+            name="limit"
+            type="number"
+          />
+        </label>
+        <div className="flex min-w-0 items-end gap-2 xl:col-span-5">
+          <button className="h-10 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white" type="submit">
+            Filtrar
+          </button>
+          <a className="inline-flex h-10 items-center rounded-md px-3 text-sm font-medium text-slate-600" href="/auditoria">
+            Limpiar
+          </a>
+        </div>
+      </form>
+
+      <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
+        <table className="min-w-[980px] text-sm">
+          <thead className="bg-slate-100 text-left text-xs uppercase text-slate-600">
+            <tr>
+              <Th>Fecha/hora</Th>
+              <Th>Usuario</Th>
+              <Th>Accion</Th>
+              <Th>Entidad</Th>
+              <Th>Resumen</Th>
+              <Th>Detalle / Ver</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr className="border-t border-slate-200 align-top" key={row.id}>
+                <Td>{formatDateTime(row.fechaHora)}</Td>
+                <Td>{row.usuario}</Td>
+                <Td>
+                  <span className="rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">{row.accion}</span>
+                </Td>
+                <Td>
+                  <div className="font-medium text-slate-800">{row.entidad}</div>
+                  <div className="mt-1 max-w-48 truncate text-xs text-slate-500" title={row.entidadId}>
+                    {row.entidadId}
+                  </div>
+                </Td>
+                <Td>{row.resumen}</Td>
+                <Td>
+                  <details className="group">
+                    <summary className="cursor-pointer text-sm font-semibold text-slate-950 underline">Ver detalle</summary>
+                    <dl className="mt-3 grid max-w-xl gap-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+                      <Detail label="Accion" value={row.accion} />
+                      <Detail label="Entidad" value={row.entidad} />
+                      <Detail label="Entidad ID" value={row.entidadId} />
+                      <Detail label="Usuario" value={row.usuario} />
+                      <Detail label="Timestamp" value={formatDateTime(row.fechaHora)} />
+                      {row.detalle.map((item) => (
+                        <Detail key={`${row.id}-${item.label}`} label={readableLabel(item.label)} value={item.value} />
+                      ))}
+                    </dl>
+                  </details>
+                </Td>
+              </tr>
+            ))}
+            {rows.length === 0 ? (
+              <tr>
+                <Td colSpan={6}>No hay registros de auditoria para los filtros seleccionados.</Td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+    </div>
   )
+}
+
+function FilterInput({
+  label,
+  name,
+  value,
+  placeholder,
+  type = 'text',
+}: {
+  label: string
+  name: string
+  value: string
+  placeholder?: string
+  type?: string
+}) {
+  return (
+    <label className="min-w-0 space-y-1 text-sm font-medium text-slate-700">
+      {label}
+      <input
+        className="h-10 w-full min-w-0 rounded-md border border-slate-300 px-3 text-sm"
+        defaultValue={value}
+        name={name}
+        placeholder={placeholder}
+        type={type}
+      />
+    </label>
+  )
+}
+
+function Th({ children }: { children: ReactNode }) {
+  return <th className="whitespace-nowrap px-4 py-3 font-semibold">{children}</th>
+}
+
+function Td({ children, colSpan }: { children: ReactNode; colSpan?: number }) {
+  return (
+    <td className="px-4 py-3 text-slate-700" colSpan={colSpan}>
+      {children}
+    </td>
+  )
+}
+
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid gap-1 md:grid-cols-[180px_1fr]">
+      <dt className="text-xs font-semibold uppercase text-slate-500">{label}</dt>
+      <dd className="break-words text-sm text-slate-800">{value}</dd>
+    </div>
+  )
+}
+
+function stringValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] ?? '' : value ?? ''
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat('es-UY', {
+    dateStyle: 'short',
+    timeStyle: 'medium',
+  }).format(new Date(value))
+}
+
+function readableLabel(value: string) {
+  return value.replace(/\./g, ' / ').replace(/([a-z])([A-Z])/g, '$1 $2')
 }

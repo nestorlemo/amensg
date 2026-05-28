@@ -179,6 +179,7 @@ After closing April 2026:
 - [ ] Warning details are collapsed by default in import preview.
 - [ ] `/ingresos-adicionales` has no horizontal overflow on desktop.
 - [ ] `/facturacion` remains compact and readable.
+- [ ] `/auditoria` shows readable audit rows and expandable details without raw JSON.
 - [ ] Closed periods cannot be modified unless reopened.
 - [ ] Reopened periods can be closed again.
 - [ ] Empty periods or periods without confirmed billing cannot be closed.

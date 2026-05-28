@@ -89,3 +89,11 @@ The current UI is a placeholder shell only.
 - Reopening requires a mandatory reason, refreshes the view after success, and leaves the historical snapshot visible.
 - Reopened closures show reopening metadata and do not show the reopen action again.
 - `/liquidaciones` treats `REABIERTO` periods as open and may show an informational message that the period can be closed again.
+
+## Audit UI
+
+- `/auditoria` lists relevant system actions newest first.
+- `/auditoria` supports filters by date range, entity, action, user, free text, and result limit.
+- Audit rows show date/time, user, action, entity, summary, and expandable readable details.
+- Audit details are shown as business-readable key/value rows, not raw JSON blocks.
+- Audit records are read-only from the UI.
