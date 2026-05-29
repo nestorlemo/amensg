@@ -4,6 +4,8 @@ import { apiError } from '@/lib/api-errors'
 import { requireApiAuth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+export const runtime = 'nodejs'
+
 type Params = { params: Promise<{ id: string }> }
 
 const SELECT = {

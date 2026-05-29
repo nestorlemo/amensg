@@ -4,6 +4,8 @@ import { apiError } from '@/lib/api-errors'
 import { requireApiAuth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+export const runtime = 'nodejs'
+
 const SELECT = {
   id: true, nombre: true, razonSocial: true, rut: true,
   direccion: true, contacto: true, mail: true, telefono: true,
