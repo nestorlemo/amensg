@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { NextResponse } from 'next/server'
 
+import { canViewRouteForRole, isAdminRole } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
 
 export const SESSION_COOKIE = 'amensg_session'
@@ -18,13 +19,11 @@ export type CurrentUser = {
 }
 
 export function isAdmin(user: CurrentUser | null | undefined) {
-  return user?.rol === 'ADMIN'
+  return isAdminRole(user?.rol)
 }
 
 export function canViewRoute(user: CurrentUser | null, path: string) {
-  if (!user) return false
-  if (user.rol === 'ADMIN') return true
-  return !['/parametros', '/socios', '/usuarios', '/auditoria'].some((prefix) => path.startsWith(prefix))
+  return canViewRouteForRole(user?.rol, path)
 }
 
 export async function createSessionCookie(userId: string) {

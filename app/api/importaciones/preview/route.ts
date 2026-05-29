@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 
 import { NextResponse } from 'next/server'
 
+import { requireApiAuth } from '@/lib/auth'
 import { buildImportPreview } from '@/lib/import-preview/preview'
 import type { ImportPreviewParameters, ValidationIssue } from '@/lib/import-preview/types'
 import { isPeriodClosed } from '@/lib/periods'
@@ -15,6 +16,8 @@ const DEFAULT_PARAMETERS: ImportPreviewParameters = {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireApiAuth()
+  if ('error' in auth) return auth.error
   const formData = await request.formData()
   const uploadedFile = formData.get('file')
 

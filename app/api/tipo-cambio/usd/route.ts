@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server'
 
+import { requireApiAuth } from '@/lib/auth'
 import { getTipoCambioUsd } from '@/lib/tipo-cambio'
 
 export const runtime = 'nodejs'
 
 export async function GET(request: Request) {
+  const auth = await requireApiAuth()
+  if ('error' in auth) return auth.error
   const fecha = new URL(request.url).searchParams.get('fecha')
 
   if (!fecha) {

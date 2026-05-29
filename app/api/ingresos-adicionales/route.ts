@@ -6,6 +6,8 @@ import { createIngresoAdicional, getIngresosAdicionales } from '@/lib/gastos-ing
 export const runtime = 'nodejs'
 
 export async function GET(request: Request) {
+  const auth = await requireApiAuth()
+  if ('error' in auth) return auth.error
   return NextResponse.json(await getIngresosAdicionales(new URL(request.url).searchParams))
 }
 

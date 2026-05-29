@@ -86,6 +86,7 @@
 - Sidebar shows current user and hides admin-only menu items for `OPERADOR`.
 - `/usuarios` allows `ADMIN` users to create, edit, reset password, and deactivate users.
 - APIs enforce admin-only permissions server-side and return `403 FORBIDDEN` when unauthorized.
+- Manual API permission validation: log in as `OPERADOR`, call an ADMIN-only endpoint such as `PUT /api/parametros/:id` or `POST /api/liquidaciones/cerrar`, and confirm `403 FORBIDDEN`; log in as `ADMIN` and confirm the same endpoint proceeds when the request is otherwise valid.
 - The last active `ADMIN` cannot be deactivated or changed to `OPERADOR`.
 - Full authentication is not implemented.
 - Business workflows are not implemented.

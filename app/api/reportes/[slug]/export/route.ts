@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 
+import { requireApiAuth } from '@/lib/auth'
 import { getReportCsv, type ReportSlug } from '@/lib/reportes'
 
 export const runtime = 'nodejs'
@@ -19,6 +20,8 @@ type RouteContext = {
 }
 
 export async function GET(request: Request, context: RouteContext) {
+  const auth = await requireApiAuth()
+  if ('error' in auth) return auth.error
   const { slug } = await context.params
   if (!reportSlugs.has(slug as ReportSlug)) {
     return NextResponse.json({ error: 'REPORTE_NO_ENCONTRADO' }, { status: 404 })

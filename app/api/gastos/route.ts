@@ -6,6 +6,8 @@ import { createGasto, getGastos } from '@/lib/gastos-ingresos'
 export const runtime = 'nodejs'
 
 export async function GET(request: Request) {
+  const auth = await requireApiAuth()
+  if ('error' in auth) return auth.error
   return NextResponse.json(await getGastos(new URL(request.url).searchParams))
 }
 
