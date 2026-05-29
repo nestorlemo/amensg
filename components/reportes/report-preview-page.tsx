@@ -1,7 +1,7 @@
-import type { ReactNode } from 'react'
 import Link from 'next/link'
 
 import type { ReportPreview } from '@/lib/reportes'
+import { StatCard, TableTh, TableTd, FilterTextInput } from '@/components/ui/primitives'
 
 export function ReportPreviewPage({ preview }: { preview: ReportPreview }) {
   return (
@@ -30,7 +30,7 @@ export function ReportPreviewPage({ preview }: { preview: ReportPreview }) {
       {preview.metrics.length > 0 ? (
         <section className="grid gap-3 md:grid-cols-4">
           {preview.metrics.map((metric) => (
-            <Metric key={metric.label} label={metric.label} value={metric.value} />
+            <StatCard key={metric.label} label={metric.label} value={metric.value} />
           ))}
         </section>
       ) : null}
@@ -42,15 +42,15 @@ export function ReportPreviewPage({ preview }: { preview: ReportPreview }) {
           <thead className="bg-slate-100 text-left text-xs uppercase text-slate-600">
             <tr>
               {preview.columns.map((column) => (
-                <Th key={column}>{column}</Th>
+                <TableTh key={column}>{column}</TableTh>
               ))}
             </tr>
           </thead>
           <tbody>
             {preview.rows.map((row, rowIndex) => (
-              <tr className="border-t border-slate-200" key={rowIndex}>
+              <tr className="border-t border-slate-200 hover:bg-slate-50 transition-colors" key={rowIndex}>
                 {row.map((cell, cellIndex) => (
-                  <Td key={`${rowIndex}-${cellIndex}`}>{cell ?? ''}</Td>
+                  <TableTd key={`${rowIndex}-${cellIndex}`}>{cell ?? ''}</TableTd>
                 ))}
               </tr>
             ))}
@@ -71,13 +71,13 @@ export function ReportPreviewPage({ preview }: { preview: ReportPreview }) {
 function ReportFilters({ preview }: { preview: ReportPreview }) {
   return (
     <form className="grid gap-3 rounded-md border border-slate-200 bg-white p-4 md:grid-cols-5" method="get">
-      {preview.enabledFilters.includes('anio') ? <FilterInput label="Anio" name="anio" placeholder="2026" value={preview.filters.anio ?? ''} /> : null}
-      {preview.enabledFilters.includes('mes') ? <FilterInput label="Mes" name="mes" placeholder="4" value={preview.filters.mes ?? ''} /> : null}
+      {preview.enabledFilters.includes('anio') ? <FilterTextInput label="Anio" name="anio" placeholder="2026" value={preview.filters.anio ?? ''} /> : null}
+      {preview.enabledFilters.includes('mes') ? <FilterTextInput label="Mes" name="mes" placeholder="4" value={preview.filters.mes ?? ''} /> : null}
       {preview.enabledFilters.includes('empresaId') ? (
         <label className="space-y-1 text-sm font-medium text-slate-700">
           Empresa
           <select
-            className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
+            className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
             defaultValue={preview.filters.empresaId ?? ''}
             name="empresaId"
           >
@@ -94,7 +94,7 @@ function ReportFilters({ preview }: { preview: ReportPreview }) {
         <label className="space-y-1 text-sm font-medium text-slate-700">
           Estado cobro
           <select
-            className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
+            className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
             defaultValue={preview.filters.estado ?? ''}
             name="estado"
           >
@@ -108,7 +108,7 @@ function ReportFilters({ preview }: { preview: ReportPreview }) {
         </label>
       ) : null}
       <div className="flex items-end gap-2">
-        <button className="h-10 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white" type="submit">
+        <button className="h-10 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 transition-colors" type="submit">
           Filtrar
         </button>
         <Link className="inline-flex h-10 items-center rounded-md px-3 text-sm font-medium text-slate-600" href="/reportes">
@@ -117,30 +117,4 @@ function ReportFilters({ preview }: { preview: ReportPreview }) {
       </div>
     </form>
   )
-}
-
-function FilterInput({ label, name, placeholder, value }: { label: string; name: string; placeholder?: string; value: string }) {
-  return (
-    <label className="space-y-1 text-sm font-medium text-slate-700">
-      {label}
-      <input className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm" defaultValue={value} name={name} placeholder={placeholder} />
-    </label>
-  )
-}
-
-function Metric({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="rounded-md border border-slate-200 bg-white p-4">
-      <p className="text-xs font-semibold uppercase text-slate-500">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-slate-950">{value}</p>
-    </div>
-  )
-}
-
-function Th({ children }: { children: ReactNode }) {
-  return <th className="whitespace-nowrap px-4 py-3 font-semibold">{children}</th>
-}
-
-function Td({ children }: { children: ReactNode }) {
-  return <td className="whitespace-nowrap px-4 py-3 text-slate-700">{children}</td>
 }

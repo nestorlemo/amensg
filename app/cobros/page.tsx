@@ -1,7 +1,7 @@
 import Link from 'next/link'
-import type { ReactNode } from 'react'
 
 import { ChangeEstadoCobroForm } from '@/components/change-estado-cobro-form'
+import { StatCard, TableTh, TableTd, FilterTextInput } from '@/components/ui/primitives'
 import { getCobros } from '@/lib/read-models'
 
 type PageProps = {
@@ -21,12 +21,12 @@ export default async function CobrosPage({ searchParams }: PageProps) {
       </header>
 
       <form className="grid gap-3 rounded-md border border-slate-200 bg-white p-4 md:grid-cols-5" method="get">
-        <FilterInput label="Anio" name="anio" value={stringValue(params.anio)} placeholder="2026" />
-        <FilterInput label="Mes" name="mes" value={stringValue(params.mes)} placeholder="4" />
+        <FilterTextInput label="Anio" name="anio" value={stringValue(params.anio)} placeholder="2026" />
+        <FilterTextInput label="Mes" name="mes" value={stringValue(params.mes)} placeholder="4" />
         <label className="space-y-1 text-sm font-medium text-slate-700">
           Empresa
           <select
-            className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
+            className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
             defaultValue={stringValue(params.empresaId)}
             name="empresaId"
           >
@@ -41,7 +41,7 @@ export default async function CobrosPage({ searchParams }: PageProps) {
         <label className="space-y-1 text-sm font-medium text-slate-700">
           Estado
           <select
-            className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
+            className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
             defaultValue={stringValue(params.estado)}
             name="estado"
           >
@@ -54,7 +54,7 @@ export default async function CobrosPage({ searchParams }: PageProps) {
           </select>
         </label>
         <div className="flex items-end gap-2">
-          <button className="h-10 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white" type="submit">
+          <button className="h-10 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 transition-colors" type="submit">
             Filtrar
           </button>
           <Link className="inline-flex h-10 items-center rounded-md px-3 text-sm font-medium text-slate-600" href="/cobros">
@@ -64,35 +64,35 @@ export default async function CobrosPage({ searchParams }: PageProps) {
       </form>
 
       <section className="grid gap-3 md:grid-cols-4">
-        <Metric label="Pendiente sin IVA" value={resumen.totalPendienteSinIva} />
-        <Metric label="Pendiente con IVA" value={resumen.totalPendienteConIva} />
-        <Metric label="Empresas con deuda" value={resumen.empresasConDeuda} />
-        <Metric label="Periodos pendientes" value={resumen.periodosPendientes} />
+        <StatCard label="Pendiente sin IVA" value={resumen.totalPendienteSinIva} />
+        <StatCard label="Pendiente con IVA" value={resumen.totalPendienteConIva} />
+        <StatCard label="Empresas con deuda" value={resumen.empresasConDeuda} />
+        <StatCard label="Periodos pendientes" value={resumen.periodosPendientes} />
       </section>
 
       <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
         <table className="min-w-full text-sm">
           <thead className="bg-slate-100 text-left text-xs uppercase text-slate-600">
             <tr>
-              <Th>Empresa</Th>
-              <Th>Periodo</Th>
-              <Th>Total sin IVA</Th>
-              <Th>Total con IVA</Th>
-              <Th>Estado</Th>
-              <Th>Fecha cobro</Th>
-              <Th>Acciones</Th>
+              <TableTh>Empresa</TableTh>
+              <TableTh>Periodo</TableTh>
+              <TableTh>Total sin IVA</TableTh>
+              <TableTh>Total con IVA</TableTh>
+              <TableTh>Estado</TableTh>
+              <TableTh>Fecha cobro</TableTh>
+              <TableTh>Acciones</TableTh>
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr className="border-t border-slate-200" key={row.id}>
-                <Td>{row.empresa}</Td>
-                <Td>{formatPeriod(row.anio, row.mes)}</Td>
-                <Td>{row.subtotal}</Td>
-                <Td>{row.total}</Td>
-                <Td>{row.estadoCobro}</Td>
-                <Td>{row.fechaCobro ? formatDate(row.fechaCobro) : 'Sin registrar'}</Td>
-                <Td>
+              <tr className="border-t border-slate-200 hover:bg-slate-50 transition-colors" key={row.id}>
+                <TableTd>{row.empresa}</TableTd>
+                <TableTd>{formatPeriod(row.anio, row.mes)}</TableTd>
+                <TableTd>{row.subtotal}</TableTd>
+                <TableTd>{row.total}</TableTd>
+                <TableTd>{row.estadoCobro}</TableTd>
+                <TableTd>{row.fechaCobro ? formatDate(row.fechaCobro) : 'Sin registrar'}</TableTd>
+                <TableTd>
                   <div className="flex flex-col gap-3">
                     <ChangeEstadoCobroForm
                       estadoCobroId={row.estadoCobroId}
@@ -108,63 +108,18 @@ export default async function CobrosPage({ searchParams }: PageProps) {
                       Ver activaciones
                     </Link>
                   </div>
-                </Td>
+                </TableTd>
               </tr>
             ))}
             {rows.length === 0 ? (
               <tr>
-                <Td colSpan={7}>No hay cobros para los filtros seleccionados.</Td>
+                <TableTd colSpan={7}>No hay cobros para los filtros seleccionados.</TableTd>
               </tr>
             ) : null}
           </tbody>
         </table>
       </div>
     </div>
-  )
-}
-
-function Metric({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="rounded-md border border-slate-200 bg-white p-4">
-      <p className="text-xs font-semibold uppercase text-slate-500">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-slate-950">{value}</p>
-    </div>
-  )
-}
-
-function FilterInput({
-  label,
-  name,
-  value,
-  placeholder,
-}: {
-  label: string
-  name: string
-  value: string
-  placeholder?: string
-}) {
-  return (
-    <label className="space-y-1 text-sm font-medium text-slate-700">
-      {label}
-      <input
-        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
-        defaultValue={value}
-        name={name}
-        placeholder={placeholder}
-      />
-    </label>
-  )
-}
-
-function Th({ children }: { children: ReactNode }) {
-  return <th className="whitespace-nowrap px-4 py-3 font-semibold">{children}</th>
-}
-
-function Td({ children, colSpan }: { children: ReactNode; colSpan?: number }) {
-  return (
-    <td className="whitespace-nowrap px-4 py-3 text-slate-700" colSpan={colSpan}>
-      {children}
-    </td>
   )
 }
 
