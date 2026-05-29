@@ -1,11 +1,13 @@
+'use client'
+
 import type { ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
 
-const accentClasses: Record<string, string> = {
-  default: 'border-slate-200',
-  green: 'border-l-4 border-l-emerald-500 border-slate-200',
-  amber: 'border-l-4 border-l-amber-400 border-slate-200',
-  red: 'border-l-4 border-l-red-400 border-slate-200',
+const accentConfig: Record<string, { border: string; iconBg: string; iconColor: string }> = {
+  default: { border: '#e6eefc', iconBg: 'rgba(23,105,224,0.08)', iconColor: '#1769E0' },
+  green:   { border: '#20E0B2', iconBg: 'rgba(32,224,178,0.12)', iconColor: '#20E0B2' },
+  amber:   { border: '#f59e0b', iconBg: 'rgba(245,158,11,0.10)', iconColor: '#f59e0b' },
+  red:     { border: '#ef4444', iconBg: 'rgba(239,68,68,0.10)',  iconColor: '#ef4444' },
 }
 
 export function StatCard({
@@ -19,18 +21,43 @@ export function StatCard({
   icon?: LucideIcon
   accent?: 'default' | 'green' | 'amber' | 'red'
 }) {
+  const cfg = accentConfig[accent]
   return (
-    <div className={`relative rounded-lg border bg-white p-5 shadow-sm ${accentClasses[accent]}`}>
-      {Icon ? <Icon size={20} className="absolute right-4 top-4 text-slate-300" /> : null}
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-2 text-2xl font-bold text-slate-950">{value}</p>
+    <div
+      className="relative rounded-xl p-5"
+      style={{
+        background: '#ffffff',
+        border: `1px solid ${cfg.border}`,
+        boxShadow: '0 1px 4px rgba(23,105,224,0.06)',
+      }}
+    >
+      {Icon ? (
+        <div
+          className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-lg"
+          style={{ background: cfg.iconBg }}
+        >
+          <Icon size={18} style={{ color: cfg.iconColor }} />
+        </div>
+      ) : null}
+      <p
+        className="text-xs font-semibold uppercase tracking-widest"
+        style={{ color: '#8ba3c7' }}
+      >
+        {label}
+      </p>
+      <p className="mt-2 text-2xl font-bold" style={{ color: '#0B1F3A' }}>
+        {value}
+      </p>
     </div>
   )
 }
 
 export function TableTh({ children, align }: { children: ReactNode; align?: 'right' | 'left' }) {
   return (
-    <th className={`whitespace-nowrap px-4 py-3 font-semibold ${align === 'right' ? 'text-right' : ''}`}>
+    <th
+      className={`whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wide ${align === 'right' ? 'text-right' : ''}`}
+      style={{ color: '#8ba3c7', background: '#F5F7FA' }}
+    >
       {children}
     </th>
   )
@@ -38,7 +65,11 @@ export function TableTh({ children, align }: { children: ReactNode; align?: 'rig
 
 export function TableTd({ children, colSpan, align }: { children: ReactNode; colSpan?: number; align?: 'right' }) {
   return (
-    <td className={`whitespace-nowrap px-4 py-3 text-slate-700 ${align === 'right' ? 'text-right' : ''}`} colSpan={colSpan}>
+    <td
+      className={`whitespace-nowrap px-4 py-3 text-sm ${align === 'right' ? 'text-right' : ''}`}
+      style={{ color: '#5a6a82' }}
+      colSpan={colSpan}
+    >
       {children}
     </td>
   )
@@ -56,10 +87,23 @@ export function FilterTextInput({
   placeholder?: string
 }) {
   return (
-    <label className="space-y-1 text-sm font-medium text-slate-700">
+    <label className="block space-y-1 text-sm font-medium" style={{ color: '#0B1F3A' }}>
       {label}
       <input
-        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
+        className="mt-1 h-10 w-full rounded-lg px-3 text-sm outline-none transition-all"
+        style={{
+          background: '#F5F7FA',
+          border: '1.5px solid #e6eefc',
+          color: '#0B1F3A',
+        }}
+        onFocus={(e) => {
+          e.currentTarget.style.border = '1.5px solid #1769E0'
+          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(23,105,224,0.12)'
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.border = '1.5px solid #e6eefc'
+          e.currentTarget.style.boxShadow = 'none'
+        }}
         defaultValue={value}
         name={name}
         placeholder={placeholder}
