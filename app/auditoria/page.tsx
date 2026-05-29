@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 
+import { AccessDenied } from '@/components/access-denied'
+import { requireAdminPage } from '@/lib/auth'
 import { getAuditoria } from '@/lib/auditoria'
 
 export const dynamic = 'force-dynamic'
@@ -9,6 +11,9 @@ type PageProps = {
 }
 
 export default async function AuditoriaPage({ searchParams }: PageProps) {
+  const user = await requireAdminPage()
+  if (!user) return <AccessDenied />
+
   const params = (await searchParams) ?? {}
   const { rows } = await getAuditoria(params)
 

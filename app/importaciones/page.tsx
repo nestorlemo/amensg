@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 
 import { AnularImportacionForm } from '@/components/anular-importacion-form'
+import { getCurrentUser, isAdmin } from '@/lib/auth'
 import { getImportaciones } from '@/lib/read-models'
 
 type PageProps = {
@@ -25,6 +26,7 @@ const months = [
 
 export default async function ImportacionesPage({ searchParams }: PageProps) {
   const params = (await searchParams) ?? {}
+  const user = await getCurrentUser()
   const { rows } = await getImportaciones(params)
 
   return (
@@ -106,7 +108,7 @@ export default async function ImportacionesPage({ searchParams }: PageProps) {
                     <Link className="py-2 font-semibold text-slate-950 underline" href={`/importaciones/${row.id}`}>
                       Ver detalle
                     </Link>
-                    {isConfirmada(row.estado) ? <AnularImportacionForm importacionId={row.id} /> : null}
+                    {isAdmin(user) && isConfirmada(row.estado) ? <AnularImportacionForm importacionId={row.id} /> : null}
                   </div>
                 </Td>
               </tr>

@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import { Prisma } from '@prisma/client'
 import { NextResponse } from 'next/server'
 
+import { requireApiAuth } from '@/lib/auth'
 import { parseSemicolonCsv } from '@/lib/import-preview/csv'
 import {
   buildImportPreview,
@@ -44,6 +45,8 @@ type ParameterErrorResponse = {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireApiAuth()
+  if ('error' in auth) return auth.error
   const formData = await request.formData()
   const uploadedFile = formData.get('file')
 
@@ -277,6 +280,7 @@ export async function POST(request: Request) {
           data: [
             {
               entidad: 'ImportacionActivacion',
+              usuarioId: auth.user.id,
               entidadId: importacion.id,
               accion: 'CONFIRMAR_IMPORTACION',
               detalle: {

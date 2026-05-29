@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import type { ReactNode } from 'react'
 
 import { ReabrirCierreForm } from '@/components/reabrir-cierre-form'
+import { getCurrentUser, isAdmin } from '@/lib/auth'
 import { getCierre } from '@/lib/liquidaciones'
 
 export const dynamic = 'force-dynamic'
@@ -13,6 +14,7 @@ type PageProps = {
 
 export default async function CierreDetailPage({ params }: PageProps) {
   const { id } = await params
+  const user = await getCurrentUser()
   const cierre = await getCierre(id)
 
   if (!cierre) {
@@ -40,7 +42,7 @@ export default async function CierreDetailPage({ params }: PageProps) {
         <p className="mt-4 text-sm font-medium uppercase text-slate-500">Cierre mensual</p>
         <h1 className="mt-2 text-3xl font-semibold text-slate-950">{formatPeriod(cierre.anio, cierre.mes)}</h1>
         <p className="mt-2 text-sm text-slate-600">Snapshot cerrado el {formatDate(cierre.cerradoAt)}.</p>
-        {isCerrado(cierre.estado) ? (
+        {isAdmin(user) && isCerrado(cierre.estado) ? (
           <div className="mt-4">
             <ReabrirCierreForm buttonLabel="Reabrir cierre" cierreId={cierre.id} />
           </div>

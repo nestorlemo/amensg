@@ -205,7 +205,7 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
   }
 }
 
-export async function cerrarLiquidacion(period: PeriodInput, confirmacion: boolean) {
+export async function cerrarLiquidacion(period: PeriodInput, confirmacion: boolean, usuarioId?: string) {
   if (!confirmacion) {
     return {
       error: { error: 'CONFIRMACION_REQUERIDA', message: 'Debe confirmar el cierre mensual.' },
@@ -285,6 +285,7 @@ export async function cerrarLiquidacion(period: PeriodInput, confirmacion: boole
       data: {
         entidad: 'CierreMensual',
         entidadId: cierreMensual.id,
+        usuarioId,
         accion: cierreExistente ? 'RECERRAR_LIQUIDACION_MENSUAL' : 'CERRAR_LIQUIDACION_MENSUAL',
         detalle: snapshot,
       },

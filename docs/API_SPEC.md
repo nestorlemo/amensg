@@ -291,3 +291,16 @@ Query params:
 - `limit`
 
 The response returns newest audit records first with id, timestamp, user, action, entity, entity id, summary, and readable detail key/value rows. Stored JSON metadata is transformed into readable fields for the UI instead of raw JSON blocks.
+
+## Authentication and Users
+
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET /api/usuarios`
+- `POST /api/usuarios`
+- `PUT /api/usuarios/:id`
+- `POST /api/usuarios/:id/desactivar`
+
+Local MVP authentication uses a signed session cookie. The seed creates an active `ADMIN` user from environment variables `ADMIN_NAME`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD`.
+
+Protected routes require a valid session. Admin-only APIs return `403 FORBIDDEN` with a clear message when the current user does not have permission. Passwords are stored as hashes and are never returned in API responses.

@@ -1,16 +1,19 @@
 import { Prisma, PrismaClient } from '@prisma/client'
 
+import { hashPassword } from '../lib/passwords'
+
 const prisma = new PrismaClient()
 
 async function main() {
   const name = process.env.ADMIN_NAME || 'Administrador'
   const email = process.env.ADMIN_EMAIL || 'admin@amensg.local'
   const password = process.env.ADMIN_PASSWORD || 'change_me'
+  const passwordHash = hashPassword(password)
 
   await prisma.usuario.upsert({
     where: { email },
-    update: { nombre: name },
-    create: { nombre: name, email, passwordHash: password },
+    update: { nombre: name, passwordHash, rol: 'ADMIN', activo: true },
+    create: { nombre: name, email, passwordHash, rol: 'ADMIN', activo: true },
   })
 
   for (const codigo of ['PENDIENTE', 'ENVIADO', 'PAGADO', 'CONTADO', 'CHEQUE', 'ANULADO']) {

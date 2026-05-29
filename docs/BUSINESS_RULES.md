@@ -63,6 +63,18 @@
 - Audit records are historical and must not be edited from the UI.
 - Business users must see readable audit summaries and details, not raw JSON dumps.
 
+## Users and Permissions Rules
+
+- MVP roles are `ADMIN` and `OPERADOR`.
+- `ADMIN` can access all screens and can manage parameters, socios, users, import annulment, liquidation closing, closure reopening, audit, and reports.
+- `OPERADOR` can access dashboard, importaciones, activaciones, facturacion, cobros, gastos, ingresos adicionales, liquidation preview, cierres, and reports.
+- `OPERADOR` can confirm imports, change billing collection status, manage gastos, and manage ingresos adicionales.
+- `OPERADOR` cannot manage parameters, socios, users, annul imports, close liquidations, reopen closures, or view audit.
+- The seed creates one active `ADMIN` user from `ADMIN_NAME`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD`.
+- Passwords must be stored as hashes, never plain text.
+- Users are deactivated instead of physically deleted.
+- The system must prevent deactivating or demoting the last active `ADMIN`.
+
 ## Parameters and Partners Rules
 
 - Required parameters are `precio_unitario_activacion`, `porcentaje_iva`, and `tipo_cambio_usd`.

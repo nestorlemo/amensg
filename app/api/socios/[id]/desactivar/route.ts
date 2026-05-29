@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 
+import { requireApiAdmin } from '@/lib/auth'
 import { deactivateSocio } from '@/lib/parametros-socios'
 
 export const runtime = 'nodejs'
@@ -9,8 +10,10 @@ type RouteContext = {
 }
 
 export async function POST(_request: Request, context: RouteContext) {
+  const auth = await requireApiAdmin()
+  if ('error' in auth) return auth.error
   const { id } = await context.params
-  const result = await deactivateSocio(id)
+  const result = await deactivateSocio(id, auth.user.id)
 
   return 'error' in result ? NextResponse.json(result.error, { status: result.status }) : NextResponse.json(result.data, { status: result.status })
 }

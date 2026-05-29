@@ -5,6 +5,7 @@ This checklist defines the manual operational validation plan for the AMENSG mon
 ## 1. Preparation
 
 - [ ] Confirm `.env` exists and contains the local values required by `.env.example`.
+- [ ] Confirm `ADMIN_NAME`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` are configured for local login.
 - [ ] Confirm PostgreSQL is running.
 - [ ] Run migrations:
 
@@ -28,6 +29,8 @@ This checklist defines the manual operational validation plan for the AMENSG mon
   - `porcentaje_iva = 0.22`
   - `tipo_cambio_usd > 0`
 - [ ] Confirm active socios sum exactly 100%.
+- [ ] Log in at `/login` with the seeded admin credentials.
+- [ ] Confirm an `OPERADOR` user cannot see Parametros, Socios, Usuarios, or Auditoria in the sidebar.
 - [ ] Confirm Socio percentages:
   - Socio 1: `0.1200`
   - Socio 2: `0.4400`

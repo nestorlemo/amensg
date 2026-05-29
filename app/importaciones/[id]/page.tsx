@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import type { ReactNode } from 'react'
 
 import { AnularImportacionForm } from '@/components/anular-importacion-form'
+import { getCurrentUser, isAdmin } from '@/lib/auth'
 import { getImportacionDetail } from '@/lib/read-models'
 
 type PageProps = {
@@ -11,6 +12,7 @@ type PageProps = {
 
 export default async function ImportacionDetailPage({ params }: PageProps) {
   const { id } = await params
+  const user = await getCurrentUser()
   const importacion = await getImportacionDetail(id)
 
   if (!importacion) {
@@ -26,7 +28,7 @@ export default async function ImportacionDetailPage({ params }: PageProps) {
         <p className="mt-4 text-sm font-medium uppercase text-slate-500">Importacion</p>
         <h1 className="mt-2 text-3xl font-semibold text-slate-950">{formatPeriod(importacion.anio, importacion.mes)}</h1>
         <p className="mt-2 text-sm text-slate-600">{importacion.nombreArchivo ?? 'Sin nombre de archivo'}</p>
-        {isConfirmada(importacion.estado) ? (
+        {isAdmin(user) && isConfirmada(importacion.estado) ? (
           <div className="mt-4">
             <AnularImportacionForm buttonLabel="Anular importación" importacionId={importacion.id} />
           </div>

@@ -125,7 +125,7 @@ export async function getParametros() {
   }
 }
 
-export async function updateParametro(id: string, input: Record<string, unknown>) {
+export async function updateParametro(id: string, input: Record<string, unknown>, usuarioId?: string) {
   const existing = await prisma.parametro.findUnique({
     where: { id },
   })
@@ -163,6 +163,7 @@ export async function updateParametro(id: string, input: Record<string, unknown>
       data: {
         entidad: 'Parametro',
         entidadId: id,
+        usuarioId,
         accion: 'ACTUALIZAR_PARAMETRO',
         detalle: {
           clave: existing.clave,
@@ -218,7 +219,7 @@ export async function validateSociosPercentages() {
   }
 }
 
-export async function createSocio(input: Record<string, unknown>) {
+export async function createSocio(input: Record<string, unknown>, usuarioId?: string) {
   const parsed = parseSocioInput(input)
   if ('error' in parsed) {
     return parsed
@@ -233,6 +234,7 @@ export async function createSocio(input: Record<string, unknown>) {
       data: {
         entidad: 'Socio',
         entidadId: created.id,
+        usuarioId,
         accion: 'CREAR_SOCIO',
         detalle: serializeSocio(created),
       },
@@ -244,7 +246,7 @@ export async function createSocio(input: Record<string, unknown>) {
   return { data: serializeSocio(socio), status: 201 }
 }
 
-export async function updateSocio(id: string, input: Record<string, unknown>) {
+export async function updateSocio(id: string, input: Record<string, unknown>, usuarioId?: string) {
   const existing = await prisma.socio.findUnique({
     where: { id },
   })
@@ -268,6 +270,7 @@ export async function updateSocio(id: string, input: Record<string, unknown>) {
       data: {
         entidad: 'Socio',
         entidadId: id,
+        usuarioId,
         accion: 'ACTUALIZAR_SOCIO',
         detalle: {
           anterior: serializeSocio(existing),
@@ -282,7 +285,7 @@ export async function updateSocio(id: string, input: Record<string, unknown>) {
   return { data: serializeSocio(socio), status: 200 }
 }
 
-export async function deactivateSocio(id: string) {
+export async function deactivateSocio(id: string, usuarioId?: string) {
   const existing = await prisma.socio.findUnique({
     where: { id },
   })
@@ -301,6 +304,7 @@ export async function deactivateSocio(id: string) {
       data: {
         entidad: 'Socio',
         entidadId: id,
+        usuarioId,
         accion: 'DESACTIVAR_SOCIO',
         detalle: {
           anterior: serializeSocio(existing),

@@ -12,8 +12,10 @@ model Usuario {
   nombre       String
   email        String      @unique
   passwordHash String
+  rol          String      @default("OPERADOR")
   activo       Boolean     @default(true)
   creadoEn     DateTime    @default(now())
+  actualizadoEn DateTime   @updatedAt
   auditorias   Auditoria[]
 }
 

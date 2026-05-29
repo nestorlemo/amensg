@@ -97,3 +97,12 @@ The current UI is a placeholder shell only.
 - Audit rows show date/time, user, action, entity, summary, and expandable readable details.
 - Audit details are shown as business-readable key/value rows, not raw JSON blocks.
 - Audit records are read-only from the UI.
+
+## Users and Permissions UI
+
+- `/login` provides local MVP login.
+- The sidebar shows current user name, role, and `Salir`.
+- The sidebar hides admin-only menu items for `OPERADOR`: Parametros, Socios, Usuarios, and Auditoria.
+- `/usuarios` is an admin-only screen to list users, create users, edit name/role/active state, reset password, and deactivate users.
+- Unauthorized users see a clear access denied message for admin-only pages.
+- Admin-only actions such as import annulment, liquidation closing, closure reopening, parameter edits, socio edits, and user management are hidden or disabled for non-admin users.

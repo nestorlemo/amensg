@@ -2,11 +2,13 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 
 import { ReabrirCierreForm } from '@/components/reabrir-cierre-form'
+import { getCurrentUser, isAdmin } from '@/lib/auth'
 import { getCierres } from '@/lib/liquidaciones'
 
 export const dynamic = 'force-dynamic'
 
 export default async function CierresPage() {
+  const user = await getCurrentUser()
   const { rows } = await getCierres()
 
   return (
@@ -48,7 +50,7 @@ export default async function CierresPage() {
                     <Link className="py-2 font-semibold text-slate-950 underline" href={`/cierres/${row.id}`}>
                       Ver detalle
                     </Link>
-                    {isCerrado(row.estado) ? <ReabrirCierreForm cierreId={row.id} /> : null}
+                    {isAdmin(user) && isCerrado(row.estado) ? <ReabrirCierreForm cierreId={row.id} /> : null}
                   </div>
                 </Td>
               </tr>

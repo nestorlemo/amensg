@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 
+import { requireApiAdmin } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
@@ -9,6 +10,8 @@ type RouteContext = {
 }
 
 export async function POST(request: Request, context: RouteContext) {
+  const auth = await requireApiAdmin()
+  if ('error' in auth) return auth.error
   const { id } = await context.params
   const body = await request.json().catch(() => null)
   const motivo = typeof body?.motivo === 'string' ? body.motivo.trim() : ''
@@ -77,6 +80,7 @@ export async function POST(request: Request, context: RouteContext) {
     await tx.auditoria.create({
       data: {
         entidad: 'CierreMensual',
+        usuarioId: auth.user.id,
         entidadId: id,
         accion: 'REABRIR_CIERRE_MENSUAL',
         detalle: {

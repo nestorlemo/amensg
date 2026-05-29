@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { CerrarLiquidacionButton } from '@/components/cerrar-liquidacion-button'
+import { getCurrentUser, isAdmin } from '@/lib/auth'
 import { buildLiquidacionPreview } from '@/lib/liquidaciones'
 
 export const dynamic = 'force-dynamic'
@@ -13,6 +14,7 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
   const params = (await searchParams) ?? {}
   const anio = parseIntParam(params.anio) ?? new Date().getFullYear()
   const mes = parseIntParam(params.mes) ?? new Date().getMonth() + 1
+  const user = await getCurrentUser()
   const preview = await buildLiquidacionPreview({ anio, mes })
   const facturacionIva = sumMoney(preview.ingresos.facturaciones.map((row) => row.iva))
   const facturacionConIva = sumMoney(preview.ingresos.facturaciones.map((row) => row.totalConIva))
@@ -74,7 +76,7 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
             <h2 className="text-lg font-semibold text-slate-950">Ingresos</h2>
             <p className="text-sm text-slate-600">Resumen del ingreso facturado y adicional para el periodo.</p>
           </div>
-          {preview.puedeCerrar ? <CerrarLiquidacionButton anio={anio} mes={mes} /> : null}
+          {preview.puedeCerrar && isAdmin(user) ? <CerrarLiquidacionButton anio={anio} mes={mes} /> : null}
         </div>
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full text-sm">

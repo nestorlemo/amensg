@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 
+import { requireApiAdmin } from '@/lib/auth'
 import { closedPeriodError, isPeriodClosed } from '@/lib/periods'
 import { prisma } from '@/lib/prisma'
 
@@ -10,6 +11,8 @@ type RouteContext = {
 }
 
 export async function POST(request: Request, context: RouteContext) {
+  const auth = await requireApiAdmin()
+  if ('error' in auth) return auth.error
   const { id } = await context.params
   const body = await request.json().catch(() => null)
   const motivo = typeof body?.motivo === 'string' ? body.motivo.trim() : ''
@@ -105,6 +108,7 @@ export async function POST(request: Request, context: RouteContext) {
     await tx.auditoria.create({
       data: {
         entidad: 'ImportacionActivacion',
+        usuarioId: auth.user.id,
         entidadId: id,
         accion: 'ANULAR_IMPORTACION',
         detalle: {

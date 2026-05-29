@@ -1,9 +1,14 @@
+import { AccessDenied } from '@/components/access-denied'
 import { ParametrosManager } from '@/components/parametros-manager'
+import { requireAdminPage } from '@/lib/auth'
 import { getParametros } from '@/lib/parametros-socios'
 
 export const dynamic = 'force-dynamic'
 
 export default async function ParametrosPage() {
+  const user = await requireAdminPage()
+  if (!user) return <AccessDenied />
+
   const { rows } = await getParametros()
 
   return (

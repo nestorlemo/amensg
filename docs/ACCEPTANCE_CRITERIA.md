@@ -81,5 +81,11 @@
 - `/auditoria` lists audit records newest first with filters by date range, entity, action, user, free text, and limit.
 - `/auditoria` shows readable summaries and expandable key/value details without raw JSON blocks.
 - Audit records are not editable from the UI.
+- `/login` authenticates active users with hashed passwords and a signed session cookie.
+- Seed creates an active `ADMIN` from `ADMIN_NAME`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD`.
+- Sidebar shows current user and hides admin-only menu items for `OPERADOR`.
+- `/usuarios` allows `ADMIN` users to create, edit, reset password, and deactivate users.
+- APIs enforce admin-only permissions server-side and return `403 FORBIDDEN` when unauthorized.
+- The last active `ADMIN` cannot be deactivated or changed to `OPERADOR`.
 - Full authentication is not implemented.
 - Business workflows are not implemented.

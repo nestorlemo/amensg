@@ -10,8 +10,8 @@ export const navigationItems = [
   { href: '/liquidaciones', label: 'Liquidaciones' },
   { href: '/cierres', label: 'Cierres' },
   { href: '/reportes', label: 'Reportes' },
-  { href: '/parametros', label: 'Parametros' },
-  { href: '/socios', label: 'Socios' },
-  { href: '/usuarios', label: 'Usuarios' },
-  { href: '/auditoria', label: 'Auditoria' },
+  { href: '/parametros', label: 'Parametros', adminOnly: true },
+  { href: '/socios', label: 'Socios', adminOnly: true },
+  { href: '/usuarios', label: 'Usuarios', adminOnly: true },
+  { href: '/auditoria', label: 'Auditoria', adminOnly: true },
 ]

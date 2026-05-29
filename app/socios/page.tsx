@@ -1,9 +1,14 @@
+import { AccessDenied } from '@/components/access-denied'
 import { SociosManager } from '@/components/socios-manager'
+import { requireAdminPage } from '@/lib/auth'
 import { getSocios } from '@/lib/parametros-socios'
 
 export const dynamic = 'force-dynamic'
 
 export default async function SociosPage() {
+  const user = await requireAdminPage()
+  if (!user) return <AccessDenied />
+
   const { rows, validation } = await getSocios()
 
   return (

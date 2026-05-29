@@ -45,6 +45,8 @@
 - `FacturacionMensual.observaciones` stores optional collection notes.
 - `Parametro.tipo` stores the parameter value type.
 - `Parametro.activo` marks whether the parameter is active without deleting it.
+- `Usuario.rol` stores `ADMIN` or `OPERADOR`.
+- `Usuario.actualizadoEn` stores the last user update timestamp.
 - `CierreMensual.snapshot` stores the monthly close snapshot.
 - `CierreSocio.snapshot` stores the partner close snapshot.
 - `CierreMensual.estado` stores the close status.

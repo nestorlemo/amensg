@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 
+import { requireApiAuth } from '@/lib/auth'
 import { closedPeriodError, isPeriodClosed } from '@/lib/periods'
 import { prisma } from '@/lib/prisma'
 
@@ -20,6 +21,8 @@ type ChangeEstadoCobroRequest = {
 }
 
 export async function POST(request: Request, context: RouteContext) {
+  const auth = await requireApiAuth()
+  if ('error' in auth) return auth.error
   const { id } = await context.params
   const body = (await request.json().catch(() => null)) as ChangeEstadoCobroRequest | null
 
@@ -120,6 +123,7 @@ export async function POST(request: Request, context: RouteContext) {
     await tx.auditoria.create({
       data: {
         entidad: 'FacturacionMensual',
+        usuarioId: auth.user.id,
         entidadId: id,
         accion: 'CAMBIAR_ESTADO_COBRO',
         detalle: {
