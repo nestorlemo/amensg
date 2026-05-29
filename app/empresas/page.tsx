@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { Building2, Plus, Search, Pencil, ToggleLeft, ToggleRight, X, Check, AlertTriangle, ChevronDown } from 'lucide-react'
+import { Building2, Plus, Search, Pencil, ToggleLeft, ToggleRight, X, Check, AlertTriangle } from 'lucide-react'
+import { PageHeader } from '@/components/page-header'
 
 type Empresa = {
   id: string
@@ -42,14 +43,20 @@ async function apiFetch<T>(
   url: string,
   options?: RequestInit,
 ): Promise<{ data: T | null; error: string | null }> {
+  let res: Response
   try {
-    const res = await fetch(url, options)
-    const json = (await res.json()) as Record<string, unknown>
-    if (!res.ok) return { data: null, error: (json.message as string) ?? 'Error inesperado.' }
-    return { data: json as T, error: null }
+    res = await fetch(url, options)
   } catch {
-    return { data: null, error: 'Error de red.' }
+    return { data: null, error: 'Error de red: no se pudo conectar con el servidor.' }
   }
+  let json: Record<string, unknown>
+  try {
+    json = (await res.json()) as Record<string, unknown>
+  } catch {
+    return { data: null, error: `Error del servidor (${res.status}). Intente nuevamente.` }
+  }
+  if (!res.ok) return { data: null, error: (json.message as string) ?? 'Error inesperado.' }
+  return { data: json as T, error: null }
 }
 
 function formatDate(iso: string) {
@@ -340,27 +347,21 @@ export default function EmpresasPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <header
-        className="flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-start sm:justify-between"
-        style={{ borderColor: BORDER }}
-      >
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: MUTED }}>Configuración</p>
-          <h1 className="mt-1 text-3xl font-bold" style={{ color: TEXT, letterSpacing: '-0.02em' }}>Empresas</h1>
-          <p className="mt-1 text-sm" style={{ color: '#5a6a82' }}>
-            {totalActivas} empresa{totalActivas !== 1 ? 's' : ''} activa{totalActivas !== 1 ? 's' : ''}
-          </p>
-        </div>
-        <button
-          className="inline-flex h-10 items-center gap-2 self-start rounded-xl px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-          style={{ background: `linear-gradient(135deg, ${PRIMARY}, #19C3FF)`, boxShadow: '0 4px 16px rgba(23,105,224,0.25)' }}
-          onClick={() => { setShowNew(true); setNewError(null) }}
-        >
-          <Plus size={16} />
-          Nueva empresa
-        </button>
-      </header>
+      <PageHeader
+        section="Configuración"
+        title="Empresas"
+        description={`${totalActivas} empresa${totalActivas !== 1 ? 's' : ''} activa${totalActivas !== 1 ? 's' : ''}`}
+        action={
+          <button
+            className="inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)' }}
+            onClick={() => { setShowNew(true); setNewError(null) }}
+          >
+            <Plus size={16} />
+            Nueva empresa
+          </button>
+        }
+      />
 
       {/* Create form */}
       {showNew ? (

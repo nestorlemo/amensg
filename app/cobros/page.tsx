@@ -1,6 +1,7 @@
 import Link from 'next/link'
 
 import { ChangeEstadoCobroForm } from '@/components/change-estado-cobro-form'
+import { PageHeader } from '@/components/page-header'
 import { StatCard, TableTh, TableTd, FilterTextInput } from '@/components/ui/primitives'
 import { getCobros } from '@/lib/read-models'
 
@@ -14,11 +15,11 @@ export default async function CobrosPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <header className="border-b border-slate-200 pb-5">
-        <p className="text-sm font-medium uppercase text-slate-500">Cobros</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-950">Gestion de cobros</h1>
-        <p className="mt-2 text-sm text-slate-600">Seguimiento de estados de cobro sobre facturaciones generadas.</p>
-      </header>
+      <PageHeader
+        section="Cobros"
+        title="Gestión de cobros"
+        description="Seguimiento de estados de cobro sobre facturaciones generadas."
+      />
 
       <form className="grid gap-3 rounded-md border border-slate-200 bg-white p-4 md:grid-cols-5" method="get">
         <FilterTextInput label="Anio" name="anio" value={stringValue(params.anio)} placeholder="2026" />

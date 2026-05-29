@@ -46,10 +46,7 @@ export function AppSidebar({ user }: { user: CurrentUser }) {
       {/* Brand */}
       <div className="shrink-0 flex items-center gap-3 px-5 py-5">
         <LogoMark />
-        <div>
-          <p className="text-base font-bold" style={{ color: '#0B1F3A', letterSpacing: '-0.01em' }}>amensg</p>
-          <p className="text-xs font-medium uppercase tracking-widest" style={{ color: '#8ba3c7' }}>Activaciones</p>
-        </div>
+        <p className="text-base font-bold" style={{ color: '#0B1F3A', letterSpacing: '-0.01em' }}>amensg</p>
       </div>
 
       {/* Navigation */}

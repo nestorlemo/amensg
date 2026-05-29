@@ -118,7 +118,7 @@ export default function DashboardPage() {
           </p>
         </div>
         <h1 className="relative text-3xl font-bold text-white" style={{ letterSpacing: '-0.02em' }}>
-          Bienvenido a AMENSG
+          Bienvenido a amensg
         </h1>
         <p className="relative mt-2 text-sm" style={{ color: 'rgba(255,255,255,0.65)' }}>
           Sistema de facturación mensual de activaciones

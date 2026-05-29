@@ -1,5 +1,7 @@
 import Link from 'next/link'
 
+import { PageHeader } from '@/components/page-header'
+
 const reportGroups = [
   {
     title: 'Operación',
@@ -63,13 +65,11 @@ const reportGroups = [
 export default function ReportesPage() {
   return (
     <div className="min-w-0 max-w-full space-y-8">
-      <header className="border-b border-slate-200 pb-5">
-        <p className="text-sm font-medium uppercase text-slate-500">Reportes</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-950">Centro de reportes</h1>
-        <p className="mt-2 max-w-3xl text-sm text-slate-600">
-          Seleccione un reporte para revisar una vista previa filtrada antes de exportar el CSV.
-        </p>
-      </header>
+      <PageHeader
+        section="Reportes"
+        title="Centro de reportes"
+        description="Seleccione un reporte para revisar una vista previa filtrada antes de exportar el CSV."
+      />
 
       {reportGroups.map((group) => (
         <section className="space-y-3" key={group.title}>

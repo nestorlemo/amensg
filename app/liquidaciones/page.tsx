@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { CerrarLiquidacionButton } from '@/components/cerrar-liquidacion-button'
+import { PageHeader } from '@/components/page-header'
 import { getCurrentUser, isAdmin } from '@/lib/auth'
 import { buildLiquidacionPreview } from '@/lib/liquidaciones'
 
@@ -23,11 +24,11 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
 
   return (
     <div className="min-w-0 max-w-full space-y-6">
-      <header className="border-b border-slate-200 pb-5">
-        <p className="text-sm font-medium uppercase text-slate-500">Liquidaciones</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-950">Preview de liquidacion mensual</h1>
-        <p className="mt-2 text-sm text-slate-600">Liquidacion basada en facturado, no en cobrado.</p>
-      </header>
+      <PageHeader
+        section="Liquidaciones"
+        title="Preview de liquidación mensual"
+        description="Liquidación basada en facturado, no en cobrado."
+      />
 
       <form className="grid gap-3 rounded-md border border-slate-200 bg-white p-4 md:grid-cols-3" method="get">
         <FilterInput label="Anio" name="anio" value={String(anio)} />
