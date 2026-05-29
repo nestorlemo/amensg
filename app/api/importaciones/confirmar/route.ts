@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import { Prisma } from '@prisma/client'
 import { NextResponse } from 'next/server'
 
+import { apiError, internalError } from '@/lib/api-errors'
 import { requireApiAuth } from '@/lib/auth'
 import { parseSemicolonCsv } from '@/lib/import-preview/csv'
 import {
@@ -51,12 +52,7 @@ export async function POST(request: Request) {
   const uploadedFile = formData.get('file')
 
   if (!(uploadedFile instanceof File)) {
-    return NextResponse.json(
-      {
-        error: 'Debe enviar un archivo CSV en el campo "file".',
-      },
-      { status: 400 },
-    )
+    return apiError('INVALID_CSV', 'Debe enviar un archivo CSV en el campo "file".', 400)
   }
 
   const bytes = Buffer.from(await uploadedFile.arrayBuffer())
@@ -80,8 +76,9 @@ export async function POST(request: Request) {
   if (preview.validation.hasBlockingErrors || !preview.detectedPeriod) {
     return NextResponse.json(
       {
-        error: 'La importacion tiene errores bloqueantes. Genere una vista previa valida antes de confirmar.',
-        validation: preview.validation,
+        error: 'INVALID_CSV',
+        message: 'La importación tiene errores bloqueantes. Genere una vista previa válida antes de confirmar.',
+        details: { validation: preview.validation },
       },
       { status: 422 },
     )
@@ -115,7 +112,9 @@ export async function POST(request: Request) {
   if (missingCompanies.length > 0) {
     return NextResponse.json(
       {
-        error: 'Existen empresas del CSV que no estan registradas en el maestro Empresa.',
+        error: 'VALIDATION_ERROR',
+        message: 'Existen empresas del CSV que no están registradas en el maestro Empresa.',
+        details: { missingCompanies },
         missingCompanies,
       },
       { status: 409 },
@@ -130,7 +129,9 @@ export async function POST(request: Request) {
   if (existingHash) {
     return NextResponse.json(
       {
-        error: 'Este archivo ya fue confirmado anteriormente.',
+        error: 'DUPLICATE_IMPORT',
+        message: 'Este archivo ya fue confirmado anteriormente.',
+        details: { importacionId: existingHash.id },
         importacionId: existingHash.id,
       },
       { status: 409 },
@@ -151,7 +152,9 @@ export async function POST(request: Request) {
   if (existingPeriod) {
     return NextResponse.json(
       {
-        error: 'Ya existe una importacion confirmada para este periodo.',
+        error: 'DUPLICATE_IMPORT',
+        message: 'Ya existe una importación confirmada para este período.',
+        details: { importacionId: existingPeriod.id },
         importacionId: existingPeriod.id,
       },
       { status: 409 },
@@ -320,12 +323,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result)
   } catch (error) {
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : 'No se pudo confirmar la importacion.',
-      },
-      { status: 500 },
-    )
+    console.error('Import confirmation failed', error)
+    return internalError('No se pudo confirmar la importación. Revise los datos e intente nuevamente.')
   }
 }
 

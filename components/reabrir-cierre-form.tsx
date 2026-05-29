@@ -3,6 +3,9 @@
 import { useRouter } from 'next/navigation'
 import { FormEvent, useState } from 'react'
 
+import { AlertError } from '@/components/alerts'
+import { requestJson } from '@/lib/client-api'
+
 type ReabrirCierreFormProps = {
   cierreId: string
   buttonLabel?: string
@@ -27,15 +30,14 @@ export function ReabrirCierreForm({ cierreId, buttonLabel = 'Reabrir' }: Reabrir
     setIsSubmitting(true)
     setError(null)
 
-    const response = await fetch(`/api/cierres/${cierreId}/reabrir`, {
+    const result = await requestJson(`/api/cierres/${cierreId}/reabrir`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ motivo: trimmedMotivo }),
-    })
+    }, 'No se pudo reabrir el cierre.')
 
-    if (!response.ok) {
-      const payload = await response.json().catch(() => null)
-      setError(payload?.message ?? 'No se pudo reabrir el cierre.')
+    if (!result.ok) {
+      setError(result.error)
       setIsSubmitting(false)
       return
     }
@@ -71,7 +73,7 @@ export function ReabrirCierreForm({ cierreId, buttonLabel = 'Reabrir' }: Reabrir
         value={motivo}
         onChange={(event) => setMotivo(event.target.value)}
       />
-      {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
+      {error ? <AlertError>{error}</AlertError> : null}
       <div className="flex flex-wrap gap-2">
         <button
           className="rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"

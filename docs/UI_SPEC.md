@@ -9,6 +9,15 @@ The current UI is a placeholder shell only.
 - Tailwind CSS for styling.
 - shadcn/ui-ready project configuration through `components.json`, `tailwind.config.ts`, and path aliases.
 
+## Messages and Validation
+
+- User-facing forms and actions display clear business messages, not raw API payloads.
+- Error, warning, success, and info messages use consistent lightweight alert styling.
+- API validation messages are displayed from the response `message` field when available.
+- Network failures use `No se pudo conectar con el servidor.`
+- Unexpected failures use `Ocurrió un error inesperado.`
+- Screens must not show raw JSON, stack traces, Prisma errors, internal file paths, or JavaScript exception text to business users.
+
 ## Placeholder Pages
 
 - Dashboard

@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { NextResponse } from 'next/server'
 
+import { apiError } from '@/lib/api-errors'
 import { canViewRouteForRole, isAdminRole } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
 
@@ -72,7 +73,7 @@ export async function requireAdminPage() {
 export async function requireApiAuth() {
   const user = await getCurrentUser()
   if (!user) {
-    return { error: NextResponse.json({ error: 'UNAUTHORIZED', message: 'Debe iniciar sesion.' }, { status: 401 }) }
+    return { error: apiError('UNAUTHORIZED', 'Debe iniciar sesión para continuar.', 401) }
   }
   return { user }
 }
@@ -87,7 +88,7 @@ export async function requireApiAdmin() {
 }
 
 export function forbiddenResponse(message = 'No tiene permisos para realizar esta accion.') {
-  return NextResponse.json({ error: 'FORBIDDEN', message }, { status: 403 })
+  return apiError('FORBIDDEN', message, 403)
 }
 
 export function clearSessionResponse(redirectTo = '/login') {

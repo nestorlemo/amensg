@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 
+import { notFoundError } from '@/lib/api-errors'
 import { requireApiAuth } from '@/lib/auth'
 import { closedPeriodError, isPeriodClosed } from '@/lib/periods'
 import { prisma } from '@/lib/prisma'
@@ -58,7 +59,7 @@ export async function POST(request: Request, context: RouteContext) {
   })
 
   if (!facturacion) {
-    return NextResponse.json({ error: 'FACTURACION_NO_ENCONTRADA' }, { status: 404 })
+    return notFoundError('No se encontró la facturación.')
   }
 
   if (await isPeriodClosed(facturacion.anio, facturacion.mes)) {
@@ -78,7 +79,7 @@ export async function POST(request: Request, context: RouteContext) {
   })
 
   if (!nextEstado) {
-    return NextResponse.json({ error: 'ESTADO_COBRO_NO_ENCONTRADO' }, { status: 404 })
+    return notFoundError('No se encontró el estado de cobro.')
   }
 
   if (!SUPPORTED_STATES.has(nextEstado.codigo)) {

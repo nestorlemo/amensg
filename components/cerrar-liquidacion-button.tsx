@@ -3,6 +3,13 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+import { AlertError } from '@/components/alerts'
+import { requestJson } from '@/lib/client-api'
+
+type CloseResult = {
+  id: string
+}
+
 export function CerrarLiquidacionButton({ anio, mes, disabled = false }: { anio: number; mes: number; disabled?: boolean }) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
@@ -12,26 +19,21 @@ export function CerrarLiquidacionButton({ anio, mes, disabled = false }: { anio:
     setIsClosing(true)
     setError(null)
 
-    try {
-      const response = await fetch('/api/liquidaciones/cerrar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ anio, mes, confirmacion: true }),
-      })
-      const payload = await response.json()
+    const result = await requestJson<CloseResult>('/api/liquidaciones/cerrar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ anio, mes, confirmacion: true }),
+    }, 'No se pudo cerrar la liquidación.')
 
-      if (!response.ok) {
-        setError(payload.message ?? payload.error ?? 'No se pudo cerrar la liquidacion.')
-        return
-      }
-
-      router.push(`/cierres/${payload.id}`)
-      router.refresh()
-    } catch {
-      setError('No se pudo conectar con el endpoint de cierre.')
-    } finally {
+    if (!result.ok) {
+      setError(result.error)
       setIsClosing(false)
+      return
     }
+
+    router.push(`/cierres/${result.data.id}`)
+    router.refresh()
+    setIsClosing(false)
   }
 
   return (
@@ -44,7 +46,7 @@ export function CerrarLiquidacionButton({ anio, mes, disabled = false }: { anio:
       >
         {isClosing ? 'Cerrando...' : 'Cerrar período'}
       </button>
-      {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
+      {error ? <AlertError>{error}</AlertError> : null}
     </div>
   )
 }

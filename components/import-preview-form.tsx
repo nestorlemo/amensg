@@ -4,6 +4,8 @@ import Link from 'next/link'
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 
+import { AlertError, AlertSuccess } from '@/components/alerts'
+import { requestJson } from '@/lib/client-api'
 import type { ImportPreviewResult } from '@/lib/import-preview/types'
 
 type ConfirmResult = {
@@ -57,25 +59,19 @@ export function ImportPreviewForm() {
     const formData = new FormData()
     formData.append('file', file)
 
-    try {
-      const response = await fetch('/api/importaciones/preview', {
-        method: 'POST',
-        body: formData,
-      })
+    const result = await requestJson<ImportPreviewResult>('/api/importaciones/preview', {
+      method: 'POST',
+      body: formData,
+    }, 'No se pudo generar la vista previa.')
 
-      const payload = await parseResponsePayload(response)
-
-      if (!response.ok) {
-        setError(apiErrorMessage(payload, 'No se pudo generar la vista previa.'))
-        return
-      }
-
-      setPreview(payload as ImportPreviewResult)
-    } catch {
-      setError('No se pudo conectar con el endpoint de vista previa.')
-    } finally {
+    if (!result.ok) {
+      setError(result.error)
       setIsLoading(false)
+      return
     }
+
+    setPreview(result.data)
+    setIsLoading(false)
   }
 
   async function handleConfirm() {
@@ -91,26 +87,22 @@ export function ImportPreviewForm() {
     const formData = new FormData()
     formData.append('file', file)
 
-    try {
-      const response = await fetch('/api/importaciones/confirmar', {
-        method: 'POST',
-        body: formData,
-      })
-      const payload = (await parseResponsePayload(response)) as ApiPayload & ConfirmResult
+    const result = await requestJson<ConfirmResult>('/api/importaciones/confirmar', {
+      method: 'POST',
+      body: formData,
+    }, 'No se pudo confirmar la importación.')
 
-      if (!response.ok) {
-        setConfirmError(payload.message ?? payload.error ?? 'No se pudo confirmar la importación.')
-        setMissingCompanies('missingCompanies' in payload && Array.isArray(payload.missingCompanies) ? payload.missingCompanies : [])
-        return
-      }
-
-      setShowConfirmStep(false)
-      setConfirmResult(payload as ConfirmResult)
-    } catch {
-      setConfirmError('No se pudo conectar con el endpoint de confirmación.')
-    } finally {
+    if (!result.ok) {
+      setConfirmError(result.error)
+      const payload = result.body as ApiPayload | undefined
+      setMissingCompanies(payload && Array.isArray(payload.missingCompanies) ? payload.missingCompanies : [])
       setIsConfirming(false)
+      return
     }
+
+    setShowConfirmStep(false)
+    setConfirmResult(result.data)
+    setIsConfirming(false)
   }
 
   return (
@@ -140,9 +132,7 @@ export function ImportPreviewForm() {
         </form>
       </section>
 
-      {error ? (
-        <section className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</section>
-      ) : null}
+      {error ? <AlertError>{error}</AlertError> : null}
 
       {preview ? (
         <PreviewResult
@@ -250,7 +240,7 @@ function PreviewResult({
       ) : null}
 
       {confirmError ? (
-        <section className="rounded-lg border border-red-200 bg-red-50 p-5 text-sm text-red-900">
+        <AlertError className="p-5">
           <p className="font-semibold">{confirmError}</p>
           {missingCompanies.length > 0 ? (
             <ul className="mt-3 list-inside list-disc">
@@ -259,7 +249,7 @@ function PreviewResult({
               ))}
             </ul>
           ) : null}
-        </section>
+        </AlertError>
       ) : null}
 
       {confirmResult ? <ConfirmationResult result={confirmResult} /> : null}
@@ -286,7 +276,7 @@ function PreviewResult({
 
 function ConfirmationResult({ result }: { result: ConfirmResult }) {
   return (
-    <section className="rounded-lg border border-emerald-200 bg-emerald-50 p-5">
+    <AlertSuccess className="p-5">
       <h2 className="text-lg font-semibold text-emerald-950">Importación confirmada</h2>
       <p className="mt-2 text-sm text-emerald-900">Importacion ID: {result.importacionId}</p>
       <div className="mt-4 overflow-x-auto">
@@ -318,7 +308,7 @@ function ConfirmationResult({ result }: { result: ConfirmResult }) {
       <Link className="mt-4 inline-flex text-sm font-semibold text-emerald-950 underline" href="/importaciones">
         Ver importaciones
       </Link>
-    </section>
+    </AlertSuccess>
   )
 }
 
@@ -486,31 +476,6 @@ function Metric({ label, value, wide = false }: { label: string; value: string |
       <p className="mt-1 break-words text-sm font-semibold text-slate-950">{value}</p>
     </div>
   )
-}
-
-async function parseResponsePayload(response: Response): Promise<ApiPayload | ImportPreviewResult | ConfirmResult> {
-  const contentType = response.headers.get('content-type') ?? ''
-
-  if (contentType.includes('application/json')) {
-    return (await response.json()) as ApiPayload | ImportPreviewResult | ConfirmResult
-  }
-
-  const text = await response.text().catch(() => '')
-  return {
-    error: text || `${response.status} ${response.statusText}`,
-  }
-}
-
-function apiErrorMessage(payload: ApiPayload | ImportPreviewResult | ConfirmResult, fallback: string) {
-  if ('message' in payload && payload.message) {
-    return payload.message
-  }
-
-  if ('error' in payload && payload.error) {
-    return payload.error
-  }
-
-  return fallback
 }
 
 function groupWarnings(items: ImportPreviewResult['validation']['warnings']) {

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 
 import { NextResponse } from 'next/server'
 
+import { apiError } from '@/lib/api-errors'
 import { requireApiAuth } from '@/lib/auth'
 import { buildImportPreview } from '@/lib/import-preview/preview'
 import type { ImportPreviewParameters, ValidationIssue } from '@/lib/import-preview/types'
@@ -22,12 +23,7 @@ export async function POST(request: Request) {
   const uploadedFile = formData.get('file')
 
   if (!(uploadedFile instanceof File)) {
-    return NextResponse.json(
-      {
-        error: 'Debe enviar un archivo CSV en el campo "file".',
-      },
-      { status: 400 },
-    )
+    return apiError('INVALID_CSV', 'Debe enviar un archivo CSV en el campo "file".', 400)
   }
 
   const bytes = Buffer.from(await uploadedFile.arrayBuffer())

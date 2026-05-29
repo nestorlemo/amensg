@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 
+import { notFoundError } from '@/lib/api-errors'
 import { requireApiAuth } from '@/lib/auth'
 import { getCierre } from '@/lib/liquidaciones'
 
@@ -16,7 +17,7 @@ export async function GET(_request: Request, context: RouteContext) {
   const cierre = await getCierre(id)
 
   if (!cierre) {
-    return NextResponse.json({ error: 'CIERRE_NO_ENCONTRADO' }, { status: 404 })
+    return notFoundError('No se encontró el cierre mensual.')
   }
 
   return NextResponse.json(cierre)

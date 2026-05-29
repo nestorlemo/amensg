@@ -4,6 +4,9 @@ import { useRouter } from 'next/navigation'
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 
+import { AlertError, AlertWarning } from '@/components/alerts'
+import { requestJson } from '@/lib/client-api'
+
 type EstadoCobroOption = {
   id: string
   codigo: string
@@ -54,31 +57,26 @@ export function ChangeEstadoCobroForm({
 
     setIsSaving(true)
 
-    try {
-      const response = await fetch(`/api/facturacion/${facturacionId}/cambiar-estado-cobro`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          estadoCobroId: selectedEstadoId,
-          fechaCobro: selectedFechaCobro || null,
-          observaciones: selectedObservaciones || null,
-        }),
-      })
-      const payload = await response.json()
+    const result = await requestJson(`/api/facturacion/${facturacionId}/cambiar-estado-cobro`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        estadoCobroId: selectedEstadoId,
+        fechaCobro: selectedFechaCobro || null,
+        observaciones: selectedObservaciones || null,
+      }),
+    }, 'No se pudo actualizar el estado.')
 
-      if (!response.ok) {
-        setError(payload.message ?? payload.error ?? 'No se pudo actualizar el estado.')
-        return
-      }
-
-      router.refresh()
-    } catch {
-      setError('No se pudo conectar con el endpoint de cobros.')
-    } finally {
+    if (!result.ok) {
+      setError(result.error)
       setIsSaving(false)
+      return
     }
+
+    router.refresh()
+    setIsSaving(false)
   }
 
   return (
@@ -116,8 +114,8 @@ export function ChangeEstadoCobroForm({
       >
         {isSaving ? 'Guardando...' : 'Cambiar estado'}
       </button>
-      {error ? <p className="max-w-72 text-xs font-medium text-red-700">{error}</p> : null}
-      {disabled ? <p className="text-xs font-medium text-amber-700">El período ya está cerrado. No se puede modificar el estado de cobro.</p> : null}
+      {error ? <AlertError className="max-w-72 p-2 text-xs">{error}</AlertError> : null}
+      {disabled ? <AlertWarning className="max-w-72 p-2 text-xs">El período ya está cerrado. No se puede modificar el estado de cobro.</AlertWarning> : null}
       {requiresDate ? <p className="text-xs text-slate-500">Este estado requiere fecha de cobro.</p> : null}
     </form>
   )

@@ -15,6 +15,34 @@ Expected response:
 
 Future API work must preserve the business rules documented in `BUSINESS_RULES.md` and the persistence rules documented in `DATA_MODEL.md`.
 
+## Standard Error Responses
+
+User-facing APIs should return errors with this shape whenever practical:
+
+```json
+{
+  "error": "ERROR_CODE",
+  "message": "Readable business message",
+  "details": {}
+}
+```
+
+`details` is optional and may include structured data for the UI, such as validation lists, missing companies, or related ids. APIs must not expose stack traces, raw Prisma errors, internal file paths, or cryptic JavaScript messages to business users.
+
+Common error codes:
+
+- `VALIDATION_ERROR`
+- `FORBIDDEN`
+- `UNAUTHORIZED`
+- `NOT_FOUND`
+- `PERIODO_CERRADO`
+- `DUPLICATE_IMPORT`
+- `INVALID_CSV`
+- `INVALID_CREDENTIALS`
+- `INTERNAL_ERROR`
+
+Client screens should display `message` when present, with fallbacks only for network failures or unexpected responses. Authentication failures use `Debe iniciar sesión para continuar.`, permission failures use `No tiene permisos para realizar esta acción.`, invalid login uses `Email o contraseña incorrectos.`, and inactive login uses `El usuario está inactivo.`.
+
 ## Import Preview
 
 - `POST /api/importaciones/preview`

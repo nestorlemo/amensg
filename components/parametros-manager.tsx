@@ -4,6 +4,9 @@ import { useRouter } from 'next/navigation'
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 
+import { AlertError } from '@/components/alerts'
+import { requestJson } from '@/lib/client-api'
+
 type Parametro = {
   id: string
   clave: string
@@ -96,7 +99,7 @@ function ParametroRow({ parametro }: { parametro: Parametro }) {
           >
             Guardar
           </button>
-          {error ? <p className="text-sm font-medium text-red-700 lg:col-span-5">{error}</p> : null}
+          {error ? <AlertError className="lg:col-span-5">{error}</AlertError> : null}
         </form>
       </td>
     </tr>
@@ -108,15 +111,11 @@ function Th({ children }: { children: string }) {
 }
 
 async function request(url: string, body: Record<string, unknown>) {
-  const response = await fetch(url, {
+  const result = await requestJson(url, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-  })
-  const payload = await response.json().catch(() => ({}))
+  }, 'No se pudo guardar el parámetro.')
 
-  return {
-    ok: response.ok,
-    error: payload.message ?? payload.error ?? 'No se pudo guardar el parámetro.',
-  }
+  return result.ok ? { ok: true, error: null } : { ok: false, error: result.error }
 }

@@ -3,6 +3,9 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+import { AlertError } from '@/components/alerts'
+import { requestJson } from '@/lib/client-api'
+
 export function LoginForm({ next }: { next: string }) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
@@ -15,29 +18,24 @@ export function LoginForm({ next }: { next: string }) {
     setLoading(true)
     setError(null)
 
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: data.get('email'),
-          password: data.get('password'),
-        }),
-      })
-      const payload = await response.json().catch(() => ({}))
+    const result = await requestJson('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: data.get('email'),
+        password: data.get('password'),
+      }),
+    }, 'No se pudo iniciar sesión.')
 
-      if (!response.ok) {
-        setError(payload.message ?? payload.error ?? 'No se pudo iniciar sesion.')
-        return
-      }
-
-      router.push(safeNext(next))
-      router.refresh()
-    } catch {
-      setError('No se pudo conectar con el endpoint de login.')
-    } finally {
+    if (!result.ok) {
+      setError(result.error)
       setLoading(false)
+      return
     }
+
+    router.push(safeNext(next))
+    router.refresh()
+    setLoading(false)
   }
 
   return (
@@ -53,7 +51,7 @@ export function LoginForm({ next }: { next: string }) {
       <button className="h-10 w-full rounded-md bg-slate-950 px-4 text-sm font-semibold text-white disabled:opacity-60" disabled={loading} type="submit">
         {loading ? 'Ingresando...' : 'Ingresar'}
       </button>
-      {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
+      {error ? <AlertError>{error}</AlertError> : null}
     </form>
   )
 }

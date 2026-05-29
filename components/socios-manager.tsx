@@ -4,6 +4,9 @@ import { useRouter } from 'next/navigation'
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 
+import { AlertError } from '@/components/alerts'
+import { requestJson } from '@/lib/client-api'
+
 type Socio = {
   id: string
   nombre: string
@@ -101,7 +104,7 @@ function CreateSocioForm() {
           </button>
         </div>
       </form>
-      {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
+      {error ? <AlertError>{error}</AlertError> : null}
     </section>
   )
 }
@@ -174,7 +177,7 @@ function SocioRow({ socio }: { socio: Socio }) {
               Desactivar
             </button>
           </div>
-          {error ? <p className="text-sm font-medium text-red-700 lg:col-span-6">{error}</p> : null}
+          {error ? <AlertError className="lg:col-span-6">{error}</AlertError> : null}
         </form>
       </td>
     </tr>
@@ -219,15 +222,11 @@ function formatPercent(value: string) {
 }
 
 async function request(url: string, method: string, body: Record<string, unknown>) {
-  const response = await fetch(url, {
+  const result = await requestJson(url, {
     method,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-  })
-  const payload = await response.json().catch(() => ({}))
+  }, 'No se pudo completar la operación.')
 
-  return {
-    ok: response.ok,
-    error: payload.message ?? payload.error ?? 'No se pudo completar la operación.',
-  }
+  return result.ok ? { ok: true, error: null } : { ok: false, error: result.error }
 }

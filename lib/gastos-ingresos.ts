@@ -284,7 +284,7 @@ export async function updateGasto(id: string, body: Record<string, unknown>) {
   if ('error' in parsed) return parsed
 
   const existing = await prisma.gastoMensual.findUnique({ where: { id }, include: { concepto: true } })
-  if (!existing) return { error: { error: 'GASTO_NO_ENCONTRADO' }, status: 404 }
+  if (!existing) return { error: { error: 'NOT_FOUND', message: 'No se encontró el gasto.' }, status: 404 }
 
   const closed = await assertOpenPeriod(parsed.data.anio, parsed.data.mes)
   if (closed) return { error: closedPeriodError('El período ya está cerrado. No se pueden modificar gastos.'), status: 409 }
@@ -310,7 +310,7 @@ export async function updateGasto(id: string, body: Record<string, unknown>) {
 
 export async function deleteGasto(id: string) {
   const existing = await prisma.gastoMensual.findUnique({ where: { id }, include: { concepto: true } })
-  if (!existing) return { error: { error: 'GASTO_NO_ENCONTRADO' }, status: 404 }
+  if (!existing) return { error: { error: 'NOT_FOUND', message: 'No se encontró el gasto.' }, status: 404 }
 
   const closed = await assertOpenPeriod(existing.anio, existing.mes)
   if (closed) return { error: closedPeriodError('El período ya está cerrado. No se pueden modificar gastos.'), status: 409 }
@@ -389,7 +389,7 @@ export async function updateIngresoAdicional(id: string, body: Record<string, un
   if ('error' in parsed) return parsed
 
   const existing = await prisma.ingresoAdicional.findUnique({ where: { id }, include: { empresa: true } })
-  if (!existing) return { error: { error: 'INGRESO_ADICIONAL_NO_ENCONTRADO' }, status: 404 }
+  if (!existing) return { error: { error: 'NOT_FOUND', message: 'No se encontró el ingreso adicional.' }, status: 404 }
 
   const closed = await assertOpenPeriod(parsed.data.anio, parsed.data.mes)
   if (closed) return { error: closedPeriodError('El período ya está cerrado. No se pueden modificar ingresos adicionales.'), status: 409 }
@@ -419,7 +419,7 @@ export async function updateIngresoAdicional(id: string, body: Record<string, un
 
 export async function deleteIngresoAdicional(id: string) {
   const existing = await prisma.ingresoAdicional.findUnique({ where: { id }, include: { empresa: true } })
-  if (!existing) return { error: { error: 'INGRESO_ADICIONAL_NO_ENCONTRADO' }, status: 404 }
+  if (!existing) return { error: { error: 'NOT_FOUND', message: 'No se encontró el ingreso adicional.' }, status: 404 }
 
   const closed = await assertOpenPeriod(existing.anio, existing.mes)
   if (closed) return { error: closedPeriodError('El período ya está cerrado. No se pueden modificar ingresos adicionales.'), status: 409 }

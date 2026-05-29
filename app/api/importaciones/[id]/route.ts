@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 
+import { notFoundError } from '@/lib/api-errors'
 import { requireApiAuth } from '@/lib/auth'
 import { getImportacionDetail } from '@/lib/read-models'
 
@@ -16,7 +17,7 @@ export async function GET(_request: Request, context: RouteContext) {
   const result = await getImportacionDetail(id)
 
   if (!result) {
-    return NextResponse.json({ error: 'IMPORTACION_NO_ENCONTRADA' }, { status: 404 })
+    return notFoundError('No se encontró la importación.')
   }
 
   return NextResponse.json(result)

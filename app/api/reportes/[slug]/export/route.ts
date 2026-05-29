@@ -1,5 +1,4 @@
-import { NextResponse } from 'next/server'
-
+import { notFoundError } from '@/lib/api-errors'
 import { requireApiAuth } from '@/lib/auth'
 import { getReportCsv, type ReportSlug } from '@/lib/reportes'
 
@@ -24,7 +23,7 @@ export async function GET(request: Request, context: RouteContext) {
   if ('error' in auth) return auth.error
   const { slug } = await context.params
   if (!reportSlugs.has(slug as ReportSlug)) {
-    return NextResponse.json({ error: 'REPORTE_NO_ENCONTRADO' }, { status: 404 })
+    return notFoundError('No se encontró el reporte solicitado.')
   }
 
   const csv = await getReportCsv(slug as ReportSlug, new URL(request.url).searchParams)

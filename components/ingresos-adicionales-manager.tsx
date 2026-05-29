@@ -4,6 +4,9 @@ import { useRouter } from 'next/navigation'
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 
+import { AlertError } from '@/components/alerts'
+import { requestJson } from '@/lib/client-api'
+
 type Empresa = {
   id: string
   nombre: string
@@ -67,7 +70,7 @@ export function IngresoAdicionalForm({ disabled = false, empresas }: { disabled?
           </div>
         </div>
       </form>
-      {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
+      {error ? <AlertError>{error}</AlertError> : null}
     </section>
   )
 }
@@ -115,7 +118,7 @@ export function IngresoRowActions({ disabled = false, empresas, ingreso }: { dis
       <input className="h-9 rounded-md border border-slate-300 px-2 text-sm disabled:bg-slate-100" defaultValue={ingreso.observaciones ?? ''} disabled={disabled} name="observaciones" placeholder="Observaciones" />
       <button className="rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={disabled} type="submit">Guardar</button>
       <button className="rounded-md border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 disabled:cursor-not-allowed disabled:opacity-60" disabled={disabled} onClick={remove} type="button">Eliminar</button>
-      {error ? <p className="md:col-span-3 text-sm font-medium text-red-700">{error}</p> : null}
+      {error ? <AlertError className="md:col-span-3">{error}</AlertError> : null}
     </form>
   )
 }
@@ -175,17 +178,20 @@ function IngresoCurrencyFields({
 
   async function fetchTipoCambio() {
     setRateError(null)
-    const response = await fetch(`/api/tipo-cambio/usd?fecha=${encodeURIComponent(fechaFacturacion)}`)
-    const payload = await response.json().catch(() => ({}))
+    const result = await requestJson<{ valor: string; fuente: string; fechaTipoCambio: string }>(
+      `/api/tipo-cambio/usd?fecha=${encodeURIComponent(fechaFacturacion)}`,
+      undefined,
+      'No se pudo obtener el tipo de cambio.',
+    )
 
-    if (!response.ok) {
-      setRateError(payload.message ?? payload.error ?? 'No se pudo obtener el tipo de cambio.')
+    if (!result.ok) {
+      setRateError(result.error)
       return
     }
 
-    setTipoCambio(payload.valor)
-    setFuente(payload.fuente)
-    setFechaTipoCambio(payload.fechaTipoCambio)
+    setTipoCambio(result.data.valor)
+    setFuente(result.data.fuente)
+    setFechaTipoCambio(result.data.fechaTipoCambio)
   }
 
   if (compact) {
@@ -229,7 +235,7 @@ function IngresoCurrencyFields({
             <button className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60" disabled={disabled} onClick={fetchTipoCambio} type="button">
               Obtener tipo de cambio
             </button>
-            {rateError ? <p className="text-sm font-medium text-red-700">{rateError}</p> : null}
+            {rateError ? <AlertError>{rateError}</AlertError> : null}
           </>
         ) : (
           <>
@@ -316,7 +322,7 @@ function IngresoCurrencyFields({
               Obtener tipo de cambio
             </button>
           </div>
-          {rateError ? <p className="self-end text-sm font-medium text-red-700 md:col-span-2">{rateError}</p> : null}
+          {rateError ? <AlertError className="self-end md:col-span-2">{rateError}</AlertError> : null}
         </div>
       ) : (
         <>
@@ -389,17 +395,13 @@ function Input({
 }
 
 async function request(url: string, method: string, body: Record<string, unknown> | null) {
-  const response = await fetch(url, {
+  const result = await requestJson(url, {
     method,
     headers: body ? { 'Content-Type': 'application/json' } : undefined,
     body: body ? JSON.stringify(body) : undefined,
-  })
-  const responsePayload = await response.json().catch(() => ({}))
+  }, 'No se pudo completar la operación.')
 
-  return {
-    ok: response.ok,
-    error: responsePayload.message ?? responsePayload.error ?? 'No se pudo completar la operacion.',
-  }
+  return result.ok ? { ok: true, error: null } : { ok: false, error: result.error }
 }
 
 function calculateMontoSinIva(moneda: string, montoOrigen: string, tipoCambio: string) {

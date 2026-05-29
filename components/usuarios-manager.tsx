@@ -3,6 +3,9 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+import { AlertError } from '@/components/alerts'
+import { requestJson } from '@/lib/client-api'
+
 type Usuario = {
   id: string
   nombre: string
@@ -47,10 +50,9 @@ export function UsuariosManager({ usuarios }: { usuarios: Usuario[] }) {
 
   async function request(url: string, init: RequestInit) {
     setError(null)
-    const response = await fetch(url, init)
-    const payload = await response.json().catch(() => ({}))
-    if (!response.ok) {
-      setError(payload.message ?? payload.error ?? 'No se pudo completar la accion.')
+    const result = await requestJson(url, init, 'No se pudo completar la acción.')
+    if (!result.ok) {
+      setError(result.error)
       return
     }
     router.refresh()
@@ -58,7 +60,7 @@ export function UsuariosManager({ usuarios }: { usuarios: Usuario[] }) {
 
   return (
     <div className="space-y-6">
-      {error ? <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">{error}</p> : null}
+      {error ? <AlertError>{error}</AlertError> : null}
       <section className="rounded-md border border-slate-200 bg-white p-4">
         <h2 className="text-lg font-semibold text-slate-950">Nuevo usuario</h2>
         <form
