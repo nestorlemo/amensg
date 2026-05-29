@@ -14,6 +14,24 @@ const iconMap: Record<string, LucideIcon> = {
   Users, UserCog, Shield
 }
 
+function LogoMark() {
+  return (
+    <svg viewBox="0 0 100 110" width="36" height="40" aria-hidden="true">
+      <path
+        d="M 50 5 L 93 30 L 93 80 L 50 105 L 7 80 L 7 30 Z"
+        fill="none"
+        stroke="#1769E0"
+        strokeWidth="6"
+        strokeLinejoin="round"
+      />
+      <line x1="27" y1="73" x2="73" y2="37" stroke="#1769E0" strokeWidth="3" strokeLinecap="round" />
+      <circle cx="27" cy="73" r="7" fill="#1769E0" />
+      <circle cx="50" cy="55" r="9" fill="#19C3FF" />
+      <circle cx="73" cy="37" r="7" fill="#1769E0" />
+    </svg>
+  )
+}
+
 export function AppSidebar({ user }: { user: CurrentUser }) {
   const allItems = navigationItems.filter((item) => user.rol === 'ADMIN' || !item.adminOnly)
   const regularItems = allItems.filter((item) => !item.adminOnly)
@@ -21,11 +39,20 @@ export function AppSidebar({ user }: { user: CurrentUser }) {
   const displayName = user.nombre || user.email
 
   return (
-    <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-slate-200 bg-white">
-      <div className="shrink-0 border-l-4 border-l-slate-950 px-4 py-5">
-        <p className="text-lg font-bold text-slate-950">AMENSG</p>
-        <p className="text-xs text-slate-500 uppercase tracking-wide">Activaciones</p>
+    <aside
+      className="flex h-screen w-64 shrink-0 flex-col"
+      style={{ background: '#ffffff', borderRight: '1px solid #e6eefc' }}
+    >
+      {/* Brand */}
+      <div className="shrink-0 flex items-center gap-3 px-5 py-5">
+        <LogoMark />
+        <div>
+          <p className="text-base font-bold" style={{ color: '#0B1F3A', letterSpacing: '-0.01em' }}>AMENSG</p>
+          <p className="text-xs font-medium uppercase tracking-widest" style={{ color: '#8ba3c7' }}>Activaciones</p>
+        </div>
       </div>
+
+      {/* Navigation */}
       <nav aria-label="Principal" className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
         <ul className="space-y-0.5">
           {regularItems.map((item) => {
@@ -33,29 +60,41 @@ export function AppSidebar({ user }: { user: CurrentUser }) {
             return (
               <li key={item.href}>
                 <Link
-                  className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-950 transition-colors"
                   href={item.href}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-[#EEF4FF] hover:text-[#1769E0]"
+                  style={{ color: '#5a6a82' }}
                 >
-                  {Icon ? <Icon size={16} className="text-slate-500 shrink-0" /> : null}
+                  {Icon ? <Icon size={16} className="shrink-0" /> : null}
                   {item.label}
                 </Link>
               </li>
             )
           })}
+
           {adminItems.length > 0 ? (
             <>
-              <li className="pt-3 pb-1">
-                <p className="px-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Administración</p>
+              <li className="pt-4 pb-1 px-1">
+                <div className="flex items-center gap-2">
+                  <div className="h-px flex-1" style={{ background: '#e6eefc' }} />
+                  <span
+                    className="text-xs font-semibold uppercase tracking-widest whitespace-nowrap"
+                    style={{ color: '#8ba3c7' }}
+                  >
+                    Administración
+                  </span>
+                  <div className="h-px flex-1" style={{ background: '#e6eefc' }} />
+                </div>
               </li>
               {adminItems.map((item) => {
                 const Icon = iconMap[item.icon]
                 return (
                   <li key={item.href}>
                     <Link
-                      className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-950 transition-colors"
                       href={item.href}
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-[#EEF4FF] hover:text-[#1769E0]"
+                      style={{ color: '#5a6a82' }}
                     >
-                      {Icon ? <Icon size={16} className="text-slate-500 shrink-0" /> : null}
+                      {Icon ? <Icon size={16} className="shrink-0" /> : null}
                       {item.label}
                     </Link>
                   </li>
@@ -65,21 +104,29 @@ export function AppSidebar({ user }: { user: CurrentUser }) {
           ) : null}
         </ul>
       </nav>
-      <div className="shrink-0 border-t border-slate-200 bg-white p-4 text-sm">
+
+      {/* User + Logout */}
+      <div className="shrink-0 p-4" style={{ borderTop: '1px solid #e6eefc' }}>
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-slate-950 text-sm font-semibold text-white">
+          <div
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white"
+            style={{ background: 'linear-gradient(135deg, #1769E0, #19C3FF)' }}
+          >
             {displayName.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0">
-            <p className="truncate font-semibold text-slate-950" title={displayName}>
+            <p className="truncate text-sm font-semibold" style={{ color: '#0B1F3A' }} title={displayName}>
               {displayName}
             </p>
-            <p className="mt-0.5 text-xs font-medium uppercase text-slate-500">{user.rol}</p>
+            <p className="mt-0.5 text-xs font-medium uppercase tracking-wide" style={{ color: '#8ba3c7' }}>
+              {user.rol}
+            </p>
           </div>
         </div>
         <form action="/api/auth/logout" className="mt-3" method="post">
           <button
-            className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white hover:bg-slate-800 transition-colors"
+            className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-colors hover:bg-[#dbeafe]"
+            style={{ background: '#EEF4FF', color: '#1769E0' }}
             type="submit"
           >
             <LogOut size={14} />

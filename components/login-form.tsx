@@ -40,15 +40,59 @@ export function LoginForm({ next }: { next: string }) {
 
   return (
     <form className="space-y-4" onSubmit={submit}>
-      <label className="block space-y-1 text-sm font-medium text-slate-700">
+      <label className="block space-y-1 text-sm font-medium" style={{ color: '#0B1F3A' }}>
         Email
-        <input className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm" name="email" required type="email" />
+        <input
+          className="mt-1 h-10 w-full rounded-lg px-3 text-sm outline-none transition-all"
+          style={{
+            background: '#F5F7FA',
+            border: '1.5px solid #e6eefc',
+            color: '#0B1F3A',
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.border = '1.5px solid #1769E0'
+            e.currentTarget.style.boxShadow = '0 0 0 3px rgba(23,105,224,0.12)'
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.border = '1.5px solid #e6eefc'
+            e.currentTarget.style.boxShadow = 'none'
+          }}
+          name="email"
+          required
+          type="email"
+        />
       </label>
-      <label className="block space-y-1 text-sm font-medium text-slate-700">
+      <label className="block space-y-1 text-sm font-medium" style={{ color: '#0B1F3A' }}>
         Password
-        <input className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm" name="password" required type="password" />
+        <input
+          className="mt-1 h-10 w-full rounded-lg px-3 text-sm outline-none transition-all"
+          style={{
+            background: '#F5F7FA',
+            border: '1.5px solid #e6eefc',
+            color: '#0B1F3A',
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.border = '1.5px solid #1769E0'
+            e.currentTarget.style.boxShadow = '0 0 0 3px rgba(23,105,224,0.12)'
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.border = '1.5px solid #e6eefc'
+            e.currentTarget.style.boxShadow = 'none'
+          }}
+          name="password"
+          required
+          type="password"
+        />
       </label>
-      <button className="h-10 w-full rounded-md bg-slate-950 px-4 text-sm font-semibold text-white disabled:opacity-60" disabled={loading} type="submit">
+      <button
+        className="h-10 w-full rounded-lg text-sm font-semibold text-white transition-opacity disabled:opacity-60"
+        style={{
+          background: 'linear-gradient(135deg, #1769E0, #19C3FF)',
+          boxShadow: '0 4px 16px rgba(23,105,224,0.3)',
+        }}
+        disabled={loading}
+        type="submit"
+      >
         {loading ? 'Ingresando...' : 'Ingresar'}
       </button>
       {error ? <AlertError>{error}</AlertError> : null}
