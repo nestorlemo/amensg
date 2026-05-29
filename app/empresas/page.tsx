@@ -1,13 +1,33 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { Building2, Plus, Search, Pencil, ToggleLeft, ToggleRight, X, Check, AlertTriangle } from 'lucide-react'
+import { Building2, Plus, Search, Pencil, ToggleLeft, ToggleRight, X, Check, AlertTriangle, ChevronDown } from 'lucide-react'
 
 type Empresa = {
   id: string
   nombre: string
+  razonSocial: string | null
+  rut: string | null
+  direccion: string | null
+  contacto: string | null
+  mail: string | null
+  telefono: string | null
   activa: boolean
   creadaEn: string
+}
+
+type EmpresaFormData = {
+  nombre: string
+  razonSocial: string
+  rut: string
+  direccion: string
+  contacto: string
+  mail: string
+  telefono: string
+}
+
+const EMPTY_FORM: EmpresaFormData = {
+  nombre: '', razonSocial: '', rut: '', direccion: '', contacto: '', mail: '', telefono: '',
 }
 
 const PRIMARY = '#1769E0'
@@ -20,7 +40,7 @@ const SURFACE = '#F5F7FA'
 
 async function apiFetch<T>(
   url: string,
-  options?: RequestInit
+  options?: RequestInit,
 ): Promise<{ data: T | null; error: string | null }> {
   try {
     const res = await fetch(url, options)
@@ -33,98 +53,182 @@ async function apiFetch<T>(
 }
 
 function formatDate(iso: string) {
-  return new Intl.DateTimeFormat('es-UY', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-  }).format(new Date(iso))
+  return new Intl.DateTimeFormat('es-UY', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(iso))
 }
 
-// ── sub-components ────────────────────────────────────────────────────────────
+// ── shared input style ────────────────────────────────────────────────────────
 
-function Badge({ activa }: { activa: boolean }) {
+const inputClass = 'h-10 w-full rounded-lg px-3 text-sm outline-none transition-all'
+const inputStyle = { background: SURFACE, border: `1.5px solid ${BORDER}`, color: TEXT }
+
+function Field({ label, name, value, onChange, placeholder, type = 'text', required }: {
+  label: string; name: string; value: string; onChange: (v: string) => void
+  placeholder?: string; type?: string; required?: boolean
+}) {
   return (
-    <span
-      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold"
-      style={
-        activa
-          ? { background: 'rgba(32,224,178,0.12)', color: '#0d9488' }
-          : { background: 'rgba(139,163,199,0.12)', color: '#5a6a82' }
-      }
-    >
-      <span
-        className="inline-block h-1.5 w-1.5 rounded-full"
-        style={{ background: activa ? '#20E0B2' : '#8ba3c7' }}
+    <div className="space-y-1">
+      <label className="block text-xs font-semibold uppercase tracking-wide" style={{ color: MUTED }}>
+        {label}{required ? <span style={{ color: '#ef4444' }}> *</span> : null}
+      </label>
+      <input
+        className={inputClass}
+        style={inputStyle}
+        name={name}
+        type={type}
+        placeholder={placeholder}
+        value={value}
+        required={required}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={(e) => { e.currentTarget.style.border = `1.5px solid ${PRIMARY}`; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(23,105,224,0.12)' }}
+        onBlur={(e) => { e.currentTarget.style.border = `1.5px solid ${BORDER}`; e.currentTarget.style.boxShadow = 'none' }}
       />
-      {activa ? 'Activa' : 'Inactiva'}
-    </span>
+    </div>
   )
 }
 
-function InlineInput({
-  defaultValue,
-  onSave,
+// ── empresa form (create / edit) ──────────────────────────────────────────────
+
+function EmpresaForm({
+  initial,
+  loading,
+  error,
+  submitLabel,
+  onSubmit,
   onCancel,
 }: {
-  defaultValue: string
-  onSave: (v: string) => void
+  initial: EmpresaFormData
+  loading: boolean
+  error: string | null
+  submitLabel: string
+  onSubmit: (data: EmpresaFormData) => void
   onCancel: () => void
 }) {
-  const [value, setValue] = useState(defaultValue)
-  const ref = useRef<HTMLInputElement>(null)
+  const [form, setForm] = useState<EmpresaFormData>(initial)
+  const firstRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    ref.current?.focus()
-    ref.current?.select()
+    (firstRef.current?.querySelector('input') as HTMLInputElement | null)?.focus()
   }, [])
 
-  function handleKey(e: React.KeyboardEvent) {
-    if (e.key === 'Enter') { e.preventDefault(); onSave(value) }
-    if (e.key === 'Escape') onCancel()
+  function set(field: keyof EmpresaFormData) {
+    return (v: string) => setForm((f) => ({ ...f, [field]: v }))
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    onSubmit(form)
   }
 
   return (
-    <span className="flex items-center gap-2">
-      <input
-        ref={ref}
-        className="h-8 rounded-lg px-2 text-sm outline-none"
-        style={{
-          border: `1.5px solid ${PRIMARY}`,
-          background: SURFACE,
-          color: TEXT,
-          width: '200px',
-          boxShadow: '0 0 0 3px rgba(23,105,224,0.12)',
-        }}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={handleKey}
-      />
-      <button
-        className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-emerald-50"
-        style={{ color: '#0d9488' }}
-        onClick={() => onSave(value)}
-        title="Guardar"
-      >
-        <Check size={14} />
-      </button>
-      <button
-        className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-red-50"
-        style={{ color: '#ef4444' }}
-        onClick={onCancel}
-        title="Cancelar"
-      >
-        <X size={14} />
-      </button>
-    </span>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div ref={firstRef}>
+          <Field label="Nombre comercial" name="nombre" value={form.nombre} onChange={set('nombre')} placeholder="Ej: Empresa ABC" required />
+        </div>
+        <Field label="Razón social" name="razonSocial" value={form.razonSocial} onChange={set('razonSocial')} placeholder="Ej: ABC S.A." />
+        <Field label="RUT" name="rut" value={form.rut} onChange={set('rut')} placeholder="Ej: 21234567-8" />
+        <Field label="Teléfono" name="telefono" value={form.telefono} onChange={set('telefono')} placeholder="Ej: 099 123 456" type="tel" />
+        <Field label="Mail" name="mail" value={form.mail} onChange={set('mail')} placeholder="Ej: contacto@empresa.com" type="email" />
+        <Field label="Contacto" name="contacto" value={form.contacto} onChange={set('contacto')} placeholder="Nombre de contacto" />
+      </div>
+      <Field label="Dirección" name="direccion" value={form.direccion} onChange={set('direccion')} placeholder="Ej: 18 de Julio 1234, Montevideo" />
+
+      {error ? <p className="rounded-lg px-3 py-2 text-sm" style={{ background: 'rgba(239,68,68,0.08)', color: '#ef4444' }}>{error}</p> : null}
+
+      <div className="flex gap-2 justify-end pt-1">
+        <button
+          className="h-10 rounded-xl px-4 text-sm font-semibold transition-colors"
+          style={{ background: SURFACE, color: '#5a6a82', border: `1px solid ${BORDER}` }}
+          type="button"
+          onClick={onCancel}
+        >
+          Cancelar
+        </button>
+        <button
+          className="h-10 rounded-xl px-5 text-sm font-semibold text-white disabled:opacity-60"
+          style={{ background: PRIMARY }}
+          disabled={loading || !form.nombre.trim()}
+          type="submit"
+        >
+          {loading ? 'Guardando…' : submitLabel}
+        </button>
+      </div>
+    </form>
   )
 }
 
-function ConfirmToast({
+// ── edit drawer / panel ───────────────────────────────────────────────────────
+
+function EditPanel({
   empresa,
-  onConfirm,
-  onCancel,
+  onSave,
+  onClose,
 }: {
   empresa: Empresa
-  onConfirm: () => void
-  onCancel: () => void
+  onSave: (updated: Empresa) => void
+  onClose: () => void
+}) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError]     = useState<string | null>(null)
+
+  const initial: EmpresaFormData = {
+    nombre:      empresa.nombre,
+    razonSocial: empresa.razonSocial ?? '',
+    rut:         empresa.rut ?? '',
+    direccion:   empresa.direccion ?? '',
+    contacto:    empresa.contacto ?? '',
+    mail:        empresa.mail ?? '',
+    telefono:    empresa.telefono ?? '',
+  }
+
+  async function handleSubmit(data: EmpresaFormData) {
+    setLoading(true)
+    setError(null)
+    const { data: res, error: err } = await apiFetch<{ empresa: Empresa }>(`/api/empresas/${empresa.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (err) { setError(err); setLoading(false); return }
+    onSave(res!.empresa)
+  }
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-end justify-center sm:items-center" style={{ background: 'rgba(11,31,58,0.4)' }}>
+      <div
+        className="w-full max-w-xl rounded-t-2xl sm:rounded-2xl p-6 shadow-2xl"
+        style={{ background: '#ffffff', maxHeight: '90vh', overflowY: 'auto' }}
+      >
+        <div className="mb-5 flex items-start justify-between">
+          <div>
+            <h2 className="text-lg font-bold" style={{ color: TEXT }}>Editar empresa</h2>
+            <p className="text-sm" style={{ color: MUTED }}>{empresa.nombre}</p>
+          </div>
+          <button
+            className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-[#F5F7FA]"
+            style={{ color: MUTED }}
+            onClick={onClose}
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <EmpresaForm
+          initial={initial}
+          loading={loading}
+          error={error}
+          submitLabel="Guardar cambios"
+          onSubmit={(d) => void handleSubmit(d)}
+          onCancel={onClose}
+        />
+      </div>
+    </div>
+  )
+}
+
+// ── confirm deactivate ────────────────────────────────────────────────────────
+
+function ConfirmToast({ empresa, onConfirm, onCancel }: {
+  empresa: Empresa; onConfirm: () => void; onCancel: () => void
 }) {
   return (
     <div
@@ -132,11 +236,9 @@ function ConfirmToast({
       style={{ background: '#0B1F3A', color: 'white', minWidth: '360px' }}
     >
       <AlertTriangle size={18} style={{ color: '#fbbf24', flexShrink: 0 }} />
-      <p className="flex-1 text-sm">
-        ¿Desactivar <strong>{empresa.nombre}</strong>?
-      </p>
+      <p className="flex-1 text-sm">¿Desactivar <strong>{empresa.nombre}</strong>?</p>
       <button
-        className="rounded-lg px-3 py-1.5 text-xs font-semibold transition-opacity hover:opacity-80"
+        className="rounded-lg px-3 py-1.5 text-xs font-semibold hover:opacity-80"
         style={{ background: '#ef4444', color: 'white' }}
         onClick={onConfirm}
       >
@@ -153,19 +255,34 @@ function ConfirmToast({
   )
 }
 
+// ── badge ─────────────────────────────────────────────────────────────────────
+
+function Badge({ activa }: { activa: boolean }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+      style={activa
+        ? { background: 'rgba(32,224,178,0.12)', color: '#0d9488' }
+        : { background: 'rgba(139,163,199,0.12)', color: '#5a6a82' }}
+    >
+      <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: activa ? '#20E0B2' : '#8ba3c7' }} />
+      {activa ? 'Activa' : 'Inactiva'}
+    </span>
+  )
+}
+
 // ── main page ─────────────────────────────────────────────────────────────────
 
 export default function EmpresasPage() {
-  const [empresas, setEmpresas]       = useState<Empresa[]>([])
-  const [loading, setLoading]         = useState(true)
+  const [empresas, setEmpresas]     = useState<Empresa[]>([])
+  const [loading, setLoading]       = useState(true)
   const [globalError, setGlobalError] = useState<string | null>(null)
-  const [search, setSearch]           = useState('')
-  const [showNew, setShowNew]         = useState(false)
-  const [newNombre, setNewNombre]     = useState('')
-  const [newLoading, setNewLoading]   = useState(false)
-  const [newError, setNewError]       = useState<string | null>(null)
-  const [editingId, setEditingId]     = useState<string | null>(null)
-  const [rowError, setRowError]       = useState<Record<string, string>>({})
+  const [search, setSearch]         = useState('')
+  const [showNew, setShowNew]       = useState(false)
+  const [newLoading, setNewLoading] = useState(false)
+  const [newError, setNewError]     = useState<string | null>(null)
+  const [editTarget, setEditTarget] = useState<Empresa | null>(null)
+  const [rowError, setRowError]     = useState<Record<string, string>>({})
   const [confirmDeactivate, setConfirmDeactivate] = useState<Empresa | null>(null)
 
   useEffect(() => { void load() }, [])
@@ -178,34 +295,23 @@ export default function EmpresasPage() {
     setLoading(false)
   }
 
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault()
-    if (!newNombre.trim()) return
+  async function handleCreate(form: EmpresaFormData) {
     setNewLoading(true)
     setNewError(null)
     const { data, error } = await apiFetch<{ empresa: Empresa }>('/api/empresas', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre: newNombre.trim() }),
+      body: JSON.stringify(form),
     })
     if (error) { setNewError(error); setNewLoading(false); return }
     setEmpresas((prev) => [data!.empresa, ...prev])
-    setNewNombre('')
     setShowNew(false)
     setNewLoading(false)
   }
 
-  async function handleRename(id: string, nombre: string) {
-    if (!nombre.trim()) { setEditingId(null); return }
-    const { data, error } = await apiFetch<{ empresa: Empresa }>(`/api/empresas/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre: nombre.trim() }),
-    })
-    if (error) { setRowError((p) => ({ ...p, [id]: error })); return }
-    setEmpresas((prev) => prev.map((e) => (e.id === id ? data!.empresa : e)))
-    setEditingId(null)
-    setRowError((p) => { const n = { ...p }; delete n[id]; return n })
+  function handleEditSaved(updated: Empresa) {
+    setEmpresas((prev) => prev.map((e) => (e.id === updated.id ? updated : e)))
+    setEditTarget(null)
   }
 
   async function doToggle(empresa: Empresa, activa: boolean) {
@@ -217,6 +323,7 @@ export default function EmpresasPage() {
     })
     if (error) { setRowError((p) => ({ ...p, [empresa.id]: error })); return }
     setEmpresas((prev) => prev.map((e) => (e.id === empresa.id ? data!.empresa : e)))
+    setRowError((p) => { const n = { ...p }; delete n[empresa.id]; return n })
   }
 
   function handleToggle(empresa: Empresa) {
@@ -224,7 +331,11 @@ export default function EmpresasPage() {
     void doToggle(empresa, true)
   }
 
-  const filtered   = empresas.filter((e) => e.nombre.toLowerCase().includes(search.toLowerCase()))
+  const filtered     = empresas.filter((e) =>
+    e.nombre.toLowerCase().includes(search.toLowerCase()) ||
+    (e.razonSocial ?? '').toLowerCase().includes(search.toLowerCase()) ||
+    (e.rut ?? '').toLowerCase().includes(search.toLowerCase())
+  )
   const totalActivas = empresas.filter((e) => e.activa).length
 
   return (
@@ -235,22 +346,15 @@ export default function EmpresasPage() {
         style={{ borderColor: BORDER }}
       >
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: MUTED }}>
-            Configuración
-          </p>
-          <h1 className="mt-1 text-3xl font-bold" style={{ color: TEXT, letterSpacing: '-0.02em' }}>
-            Empresas
-          </h1>
+          <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: MUTED }}>Configuración</p>
+          <h1 className="mt-1 text-3xl font-bold" style={{ color: TEXT, letterSpacing: '-0.02em' }}>Empresas</h1>
           <p className="mt-1 text-sm" style={{ color: '#5a6a82' }}>
             {totalActivas} empresa{totalActivas !== 1 ? 's' : ''} activa{totalActivas !== 1 ? 's' : ''}
           </p>
         </div>
         <button
           className="inline-flex h-10 items-center gap-2 self-start rounded-xl px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-          style={{
-            background: `linear-gradient(135deg, ${PRIMARY}, #19C3FF)`,
-            boxShadow: '0 4px 16px rgba(23,105,224,0.25)',
-          }}
+          style={{ background: `linear-gradient(135deg, ${PRIMARY}, #19C3FF)`, boxShadow: '0 4px 16px rgba(23,105,224,0.25)' }}
           onClick={() => { setShowNew(true); setNewError(null) }}
         >
           <Plus size={16} />
@@ -258,54 +362,22 @@ export default function EmpresasPage() {
         </button>
       </header>
 
-      {/* Nueva empresa inline form */}
+      {/* Create form */}
       {showNew ? (
-        <form
-          onSubmit={(e) => void handleCreate(e)}
-          className="flex flex-col gap-3 rounded-2xl p-5 sm:flex-row sm:items-end"
+        <div
+          className="rounded-2xl p-6"
           style={{ background: '#ffffff', border: `1px solid ${PRIMARY}`, boxShadow: '0 0 0 3px rgba(23,105,224,0.08)' }}
         >
-          <div className="flex-1 space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: MUTED }}>
-              Nombre de la empresa
-            </label>
-            <input
-              autoFocus
-              className="h-10 w-full rounded-lg px-3 text-sm outline-none transition-all"
-              style={{ background: SURFACE, border: `1.5px solid ${BORDER}`, color: TEXT }}
-              onFocus={(e) => {
-                e.currentTarget.style.border = `1.5px solid ${PRIMARY}`
-                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(23,105,224,0.12)'
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.border = `1.5px solid ${BORDER}`
-                e.currentTarget.style.boxShadow = 'none'
-              }}
-              placeholder="Ej: Empresa ABC S.A."
-              value={newNombre}
-              onChange={(e) => setNewNombre(e.target.value)}
-            />
-            {newError ? <p className="text-xs" style={{ color: '#ef4444' }}>{newError}</p> : null}
-          </div>
-          <div className="flex gap-2">
-            <button
-              className="h-10 rounded-xl px-4 text-sm font-semibold text-white disabled:opacity-60"
-              style={{ background: PRIMARY }}
-              disabled={newLoading || !newNombre.trim()}
-              type="submit"
-            >
-              {newLoading ? 'Guardando…' : 'Crear'}
-            </button>
-            <button
-              className="h-10 rounded-xl px-4 text-sm font-semibold transition-colors"
-              style={{ background: SURFACE, color: '#5a6a82', border: `1px solid ${BORDER}` }}
-              type="button"
-              onClick={() => { setShowNew(false); setNewNombre(''); setNewError(null) }}
-            >
-              Cancelar
-            </button>
-          </div>
-        </form>
+          <h2 className="mb-4 text-base font-bold" style={{ color: TEXT }}>Nueva empresa</h2>
+          <EmpresaForm
+            initial={EMPTY_FORM}
+            loading={newLoading}
+            error={newError}
+            submitLabel="Crear empresa"
+            onSubmit={(d) => void handleCreate(d)}
+            onCancel={() => { setShowNew(false); setNewError(null) }}
+          />
+        </div>
       ) : null}
 
       {/* Table card */}
@@ -319,14 +391,12 @@ export default function EmpresasPage() {
           <input
             className="flex-1 bg-transparent text-sm outline-none"
             style={{ color: TEXT }}
-            placeholder="Buscar empresa…"
+            placeholder="Buscar por nombre, razón social o RUT…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
           {search ? (
-            <button onClick={() => setSearch('')} style={{ color: MUTED }}>
-              <X size={14} />
-            </button>
+            <button onClick={() => setSearch('')} style={{ color: MUTED }}><X size={14} /></button>
           ) : null}
         </div>
 
@@ -341,21 +411,14 @@ export default function EmpresasPage() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-16">
-            <div
-              className="flex h-14 w-14 items-center justify-center rounded-2xl"
-              style={{ background: 'rgba(23,105,224,0.08)' }}
-            >
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: 'rgba(23,105,224,0.08)' }}>
               <Building2 size={24} style={{ color: PRIMARY }} />
             </div>
             <p className="text-sm font-medium" style={{ color: TEXT }}>
               {search ? 'Sin resultados para tu búsqueda' : 'No hay empresas registradas'}
             </p>
             {!search ? (
-              <button
-                className="mt-1 text-sm font-semibold"
-                style={{ color: PRIMARY }}
-                onClick={() => setShowNew(true)}
-              >
+              <button className="mt-1 text-sm font-semibold" style={{ color: PRIMARY }} onClick={() => setShowNew(true)}>
                 Crear primera empresa →
               </button>
             ) : null}
@@ -364,7 +427,7 @@ export default function EmpresasPage() {
           <table className="min-w-full text-sm">
             <thead>
               <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
-                {['Nombre', 'Estado', 'Fecha de alta', 'Acciones'].map((h) => (
+                {['Nombre', 'Razón social', 'RUT', 'Estado', 'Acciones'].map((h) => (
                   <th
                     key={h}
                     className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide"
@@ -384,21 +447,20 @@ export default function EmpresasPage() {
                 >
                   {/* Nombre */}
                   <td className="px-5 py-3">
-                    {editingId === empresa.id ? (
-                      <InlineInput
-                        defaultValue={empresa.nombre}
-                        onSave={(v) => void handleRename(empresa.id, v)}
-                        onCancel={() => {
-                          setEditingId(null)
-                          setRowError((p) => { const n = { ...p }; delete n[empresa.id]; return n })
-                        }}
-                      />
-                    ) : (
-                      <span className="font-medium" style={{ color: TEXT }}>{empresa.nombre}</span>
-                    )}
+                    <span className="font-medium" style={{ color: TEXT }}>{empresa.nombre}</span>
                     {rowError[empresa.id] ? (
                       <p className="mt-0.5 text-xs" style={{ color: '#ef4444' }}>{rowError[empresa.id]}</p>
                     ) : null}
+                  </td>
+
+                  {/* Razón social */}
+                  <td className="px-5 py-3" style={{ color: '#5a6a82' }}>
+                    {empresa.razonSocial ?? <span style={{ color: MUTED }}>—</span>}
+                  </td>
+
+                  {/* RUT */}
+                  <td className="px-5 py-3" style={{ color: '#5a6a82' }}>
+                    {empresa.rut ?? <span style={{ color: MUTED }}>—</span>}
                   </td>
 
                   {/* Estado */}
@@ -406,19 +468,14 @@ export default function EmpresasPage() {
                     <Badge activa={empresa.activa} />
                   </td>
 
-                  {/* Fecha de alta */}
-                  <td className="px-5 py-3" style={{ color: '#5a6a82' }}>
-                    {formatDate(empresa.creadaEn)}
-                  </td>
-
                   {/* Acciones */}
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-1">
                       <button
                         className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-[#EEF4FF]"
-                        style={{ color: editingId === empresa.id ? PRIMARY : MUTED }}
-                        title="Editar nombre"
-                        onClick={() => setEditingId(editingId === empresa.id ? null : empresa.id)}
+                        style={{ color: MUTED }}
+                        title="Editar empresa"
+                        onClick={() => setEditTarget(empresa)}
                       >
                         <Pencil size={14} />
                       </button>
@@ -438,6 +495,15 @@ export default function EmpresasPage() {
           </table>
         )}
       </div>
+
+      {/* Edit modal */}
+      {editTarget ? (
+        <EditPanel
+          empresa={editTarget}
+          onSave={handleEditSaved}
+          onClose={() => setEditTarget(null)}
+        />
+      ) : null}
 
       {/* Confirm deactivate toast */}
       {confirmDeactivate ? (
