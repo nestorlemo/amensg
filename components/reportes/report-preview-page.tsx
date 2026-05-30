@@ -1,29 +1,29 @@
 import Link from 'next/link'
 
 import type { ReportPreview } from '@/lib/reportes'
+import { PageHeader } from '@/components/page-header'
 import { StatCard, TableTh, TableTd, FilterTextInput } from '@/components/ui/primitives'
 
 export function ReportPreviewPage({ preview }: { preview: ReportPreview }) {
   return (
     <div className="min-w-0 max-w-full space-y-6">
-      <header className="border-b border-slate-200 pb-5">
-        <Link className="text-sm font-semibold text-slate-600 hover:text-slate-950" href="/reportes">
-          ← Centro de reportes
-        </Link>
-        <p className="mt-4 text-sm font-medium uppercase text-slate-500">Reportes</p>
-        <div className="mt-2 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div>
-            <h1 className="text-3xl font-semibold text-slate-950">{preview.title}</h1>
-            <p className="mt-2 max-w-3xl text-sm text-slate-600">{preview.description}</p>
-          </div>
+      <Link className="mb-2 inline-flex text-sm font-semibold text-slate-600 hover:text-slate-950" href="/reportes">
+        ← Centro de reportes
+      </Link>
+      <PageHeader
+        section="Reportes"
+        title={preview.title}
+        description={preview.description}
+        action={
           <a
-            className="inline-flex h-10 items-center justify-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
+            className="inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)' }}
             href={preview.exportPath}
           >
             Exportar CSV
           </a>
-        </div>
-      </header>
+        }
+      />
 
       <ReportFilters preview={preview} />
 

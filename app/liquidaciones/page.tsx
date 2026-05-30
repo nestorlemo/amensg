@@ -26,7 +26,7 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
     <div className="min-w-0 max-w-full space-y-6">
       <PageHeader
         section="Liquidaciones"
-        title="Preview de liquidación mensual"
+        title="Liquidación mensual"
         description="Liquidación basada en facturado, no en cobrado."
       />
 
