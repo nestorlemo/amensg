@@ -8,6 +8,10 @@ import { parseSemicolonCsv } from '@/lib/import-preview/csv'
 import { parseDatePeriod } from '@/lib/import-preview/preview'
 
 export const runtime = 'nodejs'
+export const maxDuration = 60
+export const config = {
+  api: { bodyParser: { sizeLimit: '50mb' } },
+}
 
 const EXPECTED_HEADERS = [
   'MID',

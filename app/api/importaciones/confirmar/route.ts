@@ -17,6 +17,10 @@ import { closedPeriodError, isPeriodClosed } from '@/lib/periods'
 import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
+export const maxDuration = 60
+export const config = {
+  api: { bodyParser: { sizeLimit: '50mb' } },
+}
 
 const CHUNK_SIZE = 1000
 const REQUIRED_PARAMETER_KEYS = ['precio_unitario_activacion', 'porcentaje_iva'] as const
