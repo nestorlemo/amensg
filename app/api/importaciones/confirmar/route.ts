@@ -197,10 +197,9 @@ export async function POST(request: Request) {
       }
     }
 
-    // Create the importacion record (one per period+file, shared across companies)
-    // Reuse existing importacion for this periodHash if already created by a previous partial call
-    let importacion = await prisma.importacionActivacion.findUnique({
-      where: { hashArchivo: periodHash },
+    // One ImportacionActivacion per period — reuse existing or create new
+    let importacion = await prisma.importacionActivacion.findFirst({
+      where: { anio, mes, estado: { not: 'ANULADA' } },
       select: { id: true },
     })
     if (!importacion) {
