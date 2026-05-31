@@ -47,6 +47,9 @@ export async function POST(request: Request) {
   const formData = await request.formData()
   const uploadedFile = formData.get('file')
   const periodoParam = formData.get('periodo')
+  // Comma-separated list of company names that the user approved to overwrite
+  const sobreescribirParam = formData.get('sobreescribir')
+  const empresasAOmitirParam = formData.get('omitir')
 
   if (!(uploadedFile instanceof File)) {
     return apiError('INVALID_CSV', 'Debe enviar un archivo CSV en el campo "file".', 400)
@@ -60,10 +63,21 @@ export async function POST(request: Request) {
   const anio = Number(anioStr)
   const mes = Number(mesStr)
 
+  // Companies explicitly approved for overwrite (user confirmed)
+  const empresasAOmitir = new Set(
+    typeof empresasAOmitirParam === 'string' && empresasAOmitirParam
+      ? empresasAOmitirParam.split('|').map((s) => s.trim()).filter(Boolean)
+      : [],
+  )
+  const empresasASobreescribir = new Set(
+    typeof sobreescribirParam === 'string' && sobreescribirParam
+      ? sobreescribirParam.split('|').map((s) => s.trim()).filter(Boolean)
+      : [],
+  )
+
   const bytes = Buffer.from(await uploadedFile.arrayBuffer())
   const csvText = bytes.toString('utf8')
   const fileHash = createHash('sha256').update(bytes).digest('hex')
-  // Period-scoped hash to allow same file to import multiple periods
   const periodHash = createHash('sha256').update(`${fileHash}:${periodoParam}`).digest('hex')
 
   const parametersResult = await getRequiredParameters()
@@ -79,44 +93,22 @@ export async function POST(request: Request) {
     )
   }
 
-  const existingHash = await prisma.importacionActivacion.findUnique({
-    where: { hashArchivo: periodHash },
-    select: { id: true },
-  })
-
-  if (existingHash) {
-    return NextResponse.json(
-      {
-        error: 'DUPLICATE_IMPORT',
-        message: 'Este período de este archivo ya fue confirmado anteriormente.',
-        importacionId: existingHash.id,
-      },
-      { status: 409 },
-    )
-  }
-
-  const existingPeriod = await prisma.importacionActivacion.findFirst({
-    where: { anio, mes, estado: { not: 'ANULADA' } },
-    select: { id: true },
-  })
-
-  if (existingPeriod) {
-    return NextResponse.json(
-      {
-        error: 'DUPLICATE_IMPORT',
-        message: 'Ya existe una importación confirmada para este período.',
-        importacionId: existingPeriod.id,
-      },
-      { status: 409 },
-    )
-  }
-
-  // Parse and filter rows to the requested period
+  // Parse and filter rows to the requested period (excluding companies user chose to skip)
   const allRows = parseConfirmableRows(csvText)
-  const rows = allRows.filter((row) => row.anio === anio && row.mes === mes)
+  const rows = allRows.filter(
+    (row) => row.anio === anio && row.mes === mes && !empresasAOmitir.has(row.empresaNombreArchivo),
+  )
 
   if (rows.length === 0) {
-    return apiError('NO_ROWS', `No hay filas para el período ${periodoParam} en el archivo.`, 422)
+    return NextResponse.json({
+      ok: true,
+      periodo: periodoParam,
+      procesadas: 0,
+      total: 0,
+      omitidas: [...empresasAOmitir],
+      importacionId: null,
+      facturaciones: [],
+    })
   }
 
   // Validate companies exist
@@ -139,6 +131,37 @@ export async function POST(request: Request) {
     )
   }
 
+  // For companies flagged as sobreescribir, check they actually exist in the DB and collect their existing data
+  const conflictingCompanies: string[] = []
+  for (const nombre of companyNames) {
+    if (empresasASobreescribir.has(nombre)) continue // user approved overwrite
+    const empresa = empresasByName.get(nombre)!
+    const existingActivacion = await prisma.activacionImportada.findFirst({
+      where: {
+        empresaId: empresa.id,
+        anio,
+        mes,
+        importacion: { estado: { not: 'ANULADA' } },
+      },
+      select: { importacionId: true },
+    })
+    if (existingActivacion) {
+      conflictingCompanies.push(nombre)
+    }
+  }
+
+  // If there are conflicts the client didn't acknowledge, return them for user decision
+  if (conflictingCompanies.length > 0) {
+    return NextResponse.json(
+      {
+        error: 'EMPRESA_DUPLICADA',
+        message: 'Algunas empresas ya tienen importación para este período.',
+        conflictingCompanies,
+      },
+      { status: 409 },
+    )
+  }
+
   const estadoPendiente = await prisma.estadoCobro.findUnique({
     where: { codigo: 'PENDIENTE' },
     select: { id: true },
@@ -149,29 +172,58 @@ export async function POST(request: Request) {
   }
 
   try {
-    // Create the importacion record
-    const importacion = await prisma.importacionActivacion.create({
-      data: {
-        anio,
-        mes,
-        nombreArchivo: uploadedFile.name,
-        hashArchivo: periodHash,
-        estado: 'CONFIRMADA',
-      },
-      select: { id: true },
-    })
-
-    // Insert rows in chunks of CHUNK_SIZE
     const precioUnitario = new Prisma.Decimal(parameters.precioUnitarioActivacion)
     const porcentajeIva = new Prisma.Decimal(parameters.porcentajeIva)
 
+    // Delete existing data for companies being overwritten
+    for (const nombre of empresasASobreescribir) {
+      const empresa = empresasByName.get(nombre)
+      if (!empresa) continue
+      // Find all non-ANULADA importaciones for this empresa+period
+      const existingImportaciones = await prisma.importacionActivacion.findMany({
+        where: {
+          estado: { not: 'ANULADA' },
+          activaciones: { some: { empresaId: empresa.id, anio, mes } },
+        },
+        select: { id: true },
+      })
+      for (const imp of existingImportaciones) {
+        await prisma.activacionImportada.deleteMany({
+          where: { importacionId: imp.id, empresaId: empresa.id },
+        })
+        await prisma.facturacionMensual.deleteMany({
+          where: { importacionId: imp.id, empresaId: empresa.id },
+        })
+      }
+    }
+
+    // Create the importacion record (one per period+file, shared across companies)
+    // Reuse existing importacion for this periodHash if already created by a previous partial call
+    let importacion = await prisma.importacionActivacion.findUnique({
+      where: { hashArchivo: periodHash },
+      select: { id: true },
+    })
+    if (!importacion) {
+      importacion = await prisma.importacionActivacion.create({
+        data: {
+          anio,
+          mes,
+          nombreArchivo: uploadedFile.name,
+          hashArchivo: periodHash,
+          estado: 'CONFIRMADA',
+        },
+        select: { id: true },
+      })
+    }
+
+    // Insert rows in chunks
     for (let offset = 0; offset < rows.length; offset += CHUNK_SIZE) {
       const chunk = rows.slice(offset, offset + CHUNK_SIZE)
       await prisma.activacionImportada.createMany({
         data: chunk.map((row) => {
           const empresa = empresasByName.get(row.empresaNombreArchivo)!
           return {
-            importacionId: importacion.id,
+            importacionId: importacion!.id,
             empresaId: empresa.id,
             anio: row.anio,
             mes: row.mes,
@@ -224,6 +276,7 @@ export async function POST(request: Request) {
             totalConIva: totalConIva.toFixed(2),
             importacionId: importacion.id,
             hashArchivo: periodHash,
+            sobreescritura: empresasASobreescribir.has(empresaNombreArchivo),
           },
         },
         select: { id: true, empresaId: true, cantidadActivaciones: true, totalSinIva: true, iva: true, totalConIva: true },
@@ -247,7 +300,7 @@ export async function POST(request: Request) {
           entidad: 'ImportacionActivacion',
           usuarioId: auth.user.id,
           entidadId: importacion.id,
-          accion: 'CONFIRMAR_IMPORTACION',
+          accion: empresasASobreescribir.size > 0 ? 'SOBREESCRIBIR_IMPORTACION' : 'CONFIRMAR_IMPORTACION',
           detalle: {
             anio,
             mes,
@@ -255,6 +308,8 @@ export async function POST(request: Request) {
             nombreArchivo: uploadedFile.name,
             hashArchivo: periodHash,
             totalRows: rows.length,
+            sobreescritas: [...empresasASobreescribir],
+            omitidas: [...empresasAOmitir],
           },
         },
         ...facturaciones.map((facturacion) => ({
@@ -262,7 +317,7 @@ export async function POST(request: Request) {
           entidadId: facturacion.id,
           accion: 'GENERAR_FACTURACION',
           detalle: {
-            importacionId: importacion.id,
+            importacionId: importacion!.id,
             empresaId: facturacion.empresaId,
             empresaNombreArchivo: facturacion.empresaNombreArchivo,
             cantidadActivaciones: facturacion.cantidadActivaciones,
@@ -279,6 +334,7 @@ export async function POST(request: Request) {
       periodo: periodoParam,
       procesadas: rows.length,
       total: rows.length,
+      omitidas: [...empresasAOmitir],
       importacionId: importacion.id,
       facturaciones,
     })

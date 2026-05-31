@@ -5,37 +5,46 @@ import { useState } from 'react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+type EmpresaDecision = 'pendiente' | 'sobreescribir' | 'omitir'
+
+type EmpresaInfo = {
+  nombre: string
+  yaExiste: boolean | null // null = loading
+  decision: EmpresaDecision
+}
+
 type PeriodoResumen = {
   periodo: string // 'YYYY-MM'
   anio: number
   mes: number
   filas: number
-  empresas: string[]
+  empresas: EmpresaInfo[]
 }
 
 type ParsedFile = {
   header: string
-  byPeriod: Map<string, string[]> // periodo → raw CSV lines (no header)
+  byPeriod: Map<string, string[]>
   periodos: PeriodoResumen[]
 }
 
 type PeriodoStatus =
   | { state: 'pending' }
+  | { state: 'checking' }
+  | { state: 'ready' } // checked, no conflicts or all resolved
   | { state: 'processing' }
-  | { state: 'done'; procesadas: number; importacionId: string }
+  | { state: 'done'; procesadas: number; importacionId: string | null }
   | { state: 'error'; message: string }
 
-// ─── CSV parsing (client-side, no server round-trip) ─────────────────────────
+// ─── CSV client-side parsing ──────────────────────────────────────────────────
 
-const FECHA_IMPORTACION_IDX = 6 // column index in the spec
+const FECHA_IMPORTACION_IDX = 6
 const EMPRESA_IDX = 2
 
-function parseCSVClient(text: string): ParsedFile {
+function parseCSVClient(text: string): Omit<ParsedFile, 'periodos'> & { periodos: Omit<PeriodoResumen, 'empresas'>[] } {
   const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
   const lines = normalized.split('\n')
   const header = lines[0] ?? ''
 
-  // Determine actual column indices from header (fallback to spec defaults)
   const headers = header.split(';').map((h) => h.trim().replace(/^﻿/, ''))
   const fechaIdx = headers.indexOf('Fecha de importación') !== -1 ? headers.indexOf('Fecha de importación') : FECHA_IMPORTACION_IDX
   const empresaIdx = headers.indexOf('Empresa') !== -1 ? headers.indexOf('Empresa') : EMPRESA_IDX
@@ -47,7 +56,6 @@ function parseCSVClient(text: string): ParsedFile {
     const line = lines[i]
     if (!line || !line.trim()) continue
 
-    // Fast field extraction — split by ; (dates/names don't contain semicolons)
     const fields = line.split(';')
     const fechaStr = (fields[fechaIdx] ?? '').trim()
     const periodo = extractPeriodo(fechaStr)
@@ -65,7 +73,7 @@ function parseCSVClient(text: string): ParsedFile {
     if (empresa) empresasByPeriod.get(periodo)!.add(empresa)
   }
 
-  const periodos: PeriodoResumen[] = [...byPeriod.entries()]
+  const periodos = [...byPeriod.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([periodo, rows]) => {
       const [anioStr, mesStr] = periodo.split('-')
@@ -74,7 +82,7 @@ function parseCSVClient(text: string): ParsedFile {
         anio: Number(anioStr),
         mes: Number(mesStr),
         filas: rows.length,
-        empresas: [...(empresasByPeriod.get(periodo) ?? [])].sort(),
+        empresasNombres: [...(empresasByPeriod.get(periodo) ?? [])].sort(),
       }
     })
 
@@ -84,7 +92,7 @@ function parseCSVClient(text: string): ParsedFile {
 function extractPeriodo(fechaStr: string): string | null {
   const m = fechaStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
   if (!m) return null
-  return `${m[3]}-${m[2]}` // YYYY-MM
+  return `${m[3]}-${m[2]}`
 }
 
 function buildPartialFile(header: string, lines: string[], periodo: string): File {
@@ -92,7 +100,7 @@ function buildPartialFile(header: string, lines: string[], periodo: string): Fil
   return new File([csv], `importacion-${periodo}.csv`, { type: 'text/csv' })
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const MONTHS = ['', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
 
@@ -112,6 +120,7 @@ export function ImportPreviewForm() {
   const [fileSize, setFileSize] = useState<number>(0)
   const [parsed, setParsed] = useState<ParsedFile | null>(null)
   const [isParsing, setIsParsing] = useState(false)
+  const [isChecking, setIsChecking] = useState(false)
   const [parseError, setParseError] = useState<string | null>(null)
   const [statuses, setStatuses] = useState<Map<string, PeriodoStatus>>(new Map())
   const [isProcessing, setIsProcessing] = useState(false)
@@ -130,27 +139,64 @@ export function ImportPreviewForm() {
     setFileSize(file.size)
 
     try {
-      // Read file async (non-blocking)
       const text = await file.text()
-      // Yield to browser so spinner renders before synchronous parsing
       await new Promise<void>((r) => setTimeout(r, 0))
-      const result = parseCSVClient(text)
+      const raw = parseCSVClient(text)
 
-      if (result.periodos.length === 0) {
-        setParseError('No se encontraron períodos válidos. Verificá que la columna "Fecha de importación" tenga fechas en formato dd/mm/yyyy.')
+      if (raw.periodos.length === 0) {
+        setParseError('No se encontraron períodos válidos. Verificá que "Fecha de importación" tenga fechas en formato dd/mm/yyyy.')
         setIsParsing(false)
         return
       }
 
+      setIsParsing(false)
+      setIsChecking(true)
+
+      // Build full PeriodoResumen with empresa state, checking duplicates via API
+      const periodos: PeriodoResumen[] = []
+      for (const p of raw.periodos) {
+        const empresas: EmpresaInfo[] = []
+        for (const nombre of p.empresasNombres) {
+          const res = await fetch(`/api/importaciones/existe?empresa=${encodeURIComponent(nombre)}&anio=${p.anio}&mes=${p.mes}`)
+          const data = await res.json()
+          empresas.push({
+            nombre,
+            yaExiste: res.ok ? (data.existe as boolean) : false,
+            decision: data.existe ? 'pendiente' : 'sobreescribir', // 'sobreescribir' here means "proceed normally"
+          })
+        }
+        periodos.push({ periodo: p.periodo, anio: p.anio, mes: p.mes, filas: p.filas, empresas })
+      }
+
+      const result: ParsedFile = { header: raw.header, byPeriod: raw.byPeriod, periodos }
       setParsed(result)
+
       const initial = new Map<string, PeriodoStatus>()
-      for (const p of result.periodos) initial.set(p.periodo, { state: 'pending' })
+      for (const p of periodos) {
+        const hasConflict = p.empresas.some((e) => e.yaExiste)
+        initial.set(p.periodo, hasConflict ? { state: 'ready' } : { state: 'ready' })
+      }
       setStatuses(initial)
     } catch (err) {
       setParseError(err instanceof Error ? err.message : 'Error al leer el archivo.')
+      setIsParsing(false)
     }
 
-    setIsParsing(false)
+    setIsChecking(false)
+  }
+
+  function setEmpresaDecision(periodo: string, empresa: string, decision: EmpresaDecision) {
+    setParsed((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        periodos: prev.periodos.map((p) =>
+          p.periodo === periodo
+            ? { ...p, empresas: p.empresas.map((e) => (e.nombre === empresa ? { ...e, decision } : e)) }
+            : p,
+        ),
+      }
+    })
   }
 
   function setStatus(periodo: string, status: PeriodoStatus) {
@@ -159,13 +205,30 @@ export function ImportPreviewForm() {
 
   async function processPeriodo(resumen: PeriodoResumen, parsedData: ParsedFile): Promise<boolean> {
     const lines = parsedData.byPeriod.get(resumen.periodo) ?? []
-    const csvFile = buildPartialFile(parsedData.header, lines, resumen.periodo)
 
+    // Determine empresa sets based on user decisions
+    const sobreescribir = resumen.empresas
+      .filter((e) => e.yaExiste && e.decision === 'sobreescribir')
+      .map((e) => e.nombre)
+    const omitir = resumen.empresas
+      .filter((e) => e.yaExiste && e.decision === 'omitir')
+      .map((e) => e.nombre)
+
+    // Check if all companies are being skipped
+    const todasOmitidas = resumen.empresas.every((e) => e.yaExiste && e.decision === 'omitir')
+    if (todasOmitidas) {
+      setStatus(resumen.periodo, { state: 'done', procesadas: 0, importacionId: null })
+      return true
+    }
+
+    const csvFile = buildPartialFile(parsedData.header, lines, resumen.periodo)
     setStatus(resumen.periodo, { state: 'processing' })
 
     const formData = new FormData()
     formData.append('file', csvFile)
     formData.append('periodo', resumen.periodo)
+    if (sobreescribir.length > 0) formData.append('sobreescribir', sobreescribir.join('|'))
+    if (omitir.length > 0) formData.append('omitir', omitir.join('|'))
 
     try {
       const res = await fetch('/api/importaciones/confirmar', { method: 'POST', body: formData })
@@ -186,6 +249,12 @@ export function ImportPreviewForm() {
 
   async function handleConfirmAll() {
     if (!parsed || isProcessing) return
+
+    // Check all conflicting empresas have a decision
+    const pending = parsed.periodos.flatMap((p) =>
+      p.empresas.filter((e) => e.yaExiste && e.decision === 'pendiente').map((e) => `${e.nombre} (${periodoLabel(p.anio, p.mes)})`)
+    )
+    if (pending.length > 0) return // button disabled when pending decisions exist
 
     setIsProcessing(true)
     let done = [...statuses.values()].filter((s) => s.state === 'done').length
@@ -214,6 +283,9 @@ export function ImportPreviewForm() {
   const totalPeriodos = parsed?.periodos.length ?? 0
   const allDone = totalPeriodos > 0 && doneCount === totalPeriodos
   const anyError = [...statuses.values()].some((s) => s.state === 'error')
+  const hasPendingDecisions = parsed?.periodos.some((p) =>
+    p.empresas.some((e) => e.yaExiste && e.decision === 'pendiente')
+  ) ?? false
   const progressPct = totalPeriodos > 0 ? (doneCount / totalPeriodos) * 100 : 0
 
   return (
@@ -224,21 +296,21 @@ export function ImportPreviewForm() {
           Archivo CSV
         </label>
         <p className="mt-1 text-xs text-slate-500">
-          El archivo se procesa directamente en tu navegador — no se sube completo al servidor.
+          El archivo se procesa en tu navegador — cada mes se envía al servidor por separado.
         </p>
         <input
           accept=".csv,text/csv"
           className="mt-3 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
-          disabled={isParsing || isProcessing}
+          disabled={isParsing || isChecking || isProcessing}
           id="csv-file"
           name="file"
           onChange={handleFileChange}
           type="file"
         />
-        {isParsing ? (
+        {(isParsing || isChecking) ? (
           <p className="mt-3 flex items-center gap-2 text-sm text-slate-600">
             <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />
-            Analizando archivo...
+            {isParsing ? 'Analizando archivo...' : 'Verificando importaciones existentes...'}
           </p>
         ) : null}
       </section>
@@ -247,7 +319,7 @@ export function ImportPreviewForm() {
         <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-900">{parseError}</div>
       ) : null}
 
-      {parsed && !isParsing ? (
+      {parsed && !isParsing && !isChecking ? (
         <>
           {/* File summary */}
           <section className="rounded-xl border border-slate-200 bg-white p-6">
@@ -269,7 +341,11 @@ export function ImportPreviewForm() {
                 <h2 className="text-base font-semibold text-slate-950">
                   Períodos detectados — {totalPeriodos} {totalPeriodos === 1 ? 'mes' : 'meses'}
                 </h2>
-                {isProcessing ? (
+                {hasPendingDecisions ? (
+                  <p className="mt-1 text-sm text-amber-700">
+                    ⚠️ Hay empresas con importación existente. Definí qué hacer con cada una antes de continuar.
+                  </p>
+                ) : isProcessing ? (
                   <p className="mt-1 text-sm text-slate-500">{doneCount} de {totalPeriodos} meses completados</p>
                 ) : allDone ? (
                   <p className="mt-1 text-sm font-medium text-emerald-700">✅ Todos los meses fueron importados.</p>
@@ -280,10 +356,11 @@ export function ImportPreviewForm() {
 
               {!allDone ? (
                 <button
-                  className="shrink-0 rounded-md px-5 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={isProcessing}
+                  className="shrink-0 rounded-md px-5 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={isProcessing || hasPendingDecisions}
                   onClick={handleConfirmAll}
-                  style={{ background: isProcessing ? '#94a3b8' : 'linear-gradient(135deg,#1769E0,#19C3FF)' }}
+                  style={{ background: (isProcessing || hasPendingDecisions) ? '#94a3b8' : 'linear-gradient(135deg,#1769E0,#19C3FF)' }}
+                  title={hasPendingDecisions ? 'Resolvé los conflictos antes de confirmar' : undefined}
                   type="button"
                 >
                   {isProcessing ? 'Procesando...' : anyError ? 'Reintentar pendientes' : 'Confirmar todo'}
@@ -317,9 +394,10 @@ export function ImportPreviewForm() {
                 <PeriodoRow
                   key={p.periodo}
                   isProcessing={isProcessing}
+                  onDecision={(empresa, decision) => setEmpresaDecision(p.periodo, empresa, decision)}
                   onRetry={() => handleRetry(p)}
                   periodo={p}
-                  status={statuses.get(p.periodo) ?? { state: 'pending' }}
+                  status={statuses.get(p.periodo) ?? { state: 'ready' }}
                 />
               ))}
             </div>
@@ -334,19 +412,24 @@ export function ImportPreviewForm() {
 
 function PeriodoRow({
   isProcessing,
+  onDecision,
   onRetry,
   periodo,
   status,
 }: {
   isProcessing: boolean
+  onDecision: (empresa: string, decision: EmpresaDecision) => void
   onRetry: () => void
   periodo: PeriodoResumen
   status: PeriodoStatus
 }) {
   const label = periodoLabel(periodo.anio, periodo.mes)
+  const conflicts = periodo.empresas.filter((e) => e.yaExiste)
+  const hasConflicts = conflicts.length > 0
+  const allSkipped = periodo.empresas.every((e) => e.yaExiste && e.decision === 'omitir')
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+    <div className={`rounded-lg border bg-slate-50 p-4 ${hasConflicts && status.state !== 'done' ? 'border-amber-300' : 'border-slate-200'}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -354,12 +437,26 @@ function PeriodoRow({
             <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600">
               {periodo.filas.toLocaleString('es-UY')} filas
             </span>
+            {hasConflicts && status.state !== 'done' ? (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                {conflicts.length} empresa{conflicts.length > 1 ? 's' : ''} ya importada{conflicts.length > 1 ? 's' : ''}
+              </span>
+            ) : null}
           </div>
-          <p className="mt-1 text-xs text-slate-500 truncate">
-            {periodo.empresas.length === 1
-              ? periodo.empresas[0]
-              : `${periodo.empresas.length} empresas: ${periodo.empresas.join(', ')}`}
-          </p>
+
+          {/* Empresa list — only show if period is not yet done */}
+          {status.state !== 'done' && status.state !== 'processing' ? (
+            <div className="mt-3 space-y-2">
+              {periodo.empresas.map((empresa) => (
+                <EmpresaRow
+                  key={empresa.nombre}
+                  empresa={empresa}
+                  isProcessing={isProcessing}
+                  onDecision={(decision) => onDecision(empresa.nombre, decision)}
+                />
+              ))}
+            </div>
+          ) : null}
 
           {status.state === 'processing' ? (
             <div className="mt-3">
@@ -378,8 +475,12 @@ function PeriodoRow({
 
           {status.state === 'done' ? (
             <p className="mt-2 text-xs font-medium text-emerald-700">
-              ✅ {status.procesadas.toLocaleString('es-UY')} filas importadas
-              <span className="ml-2 font-normal text-slate-400">ID: {status.importacionId}</span>
+              {allSkipped
+                ? '⏭️ Omitido — todas las empresas ya importadas fueron salteadas'
+                : `✅ ${status.procesadas.toLocaleString('es-UY')} filas importadas`}
+              {status.importacionId ? (
+                <span className="ml-2 font-normal text-slate-400">ID: {status.importacionId}</span>
+              ) : null}
             </p>
           ) : null}
 
@@ -389,7 +490,7 @@ function PeriodoRow({
         </div>
 
         <div className="shrink-0">
-          {status.state === 'pending' && (
+          {status.state === 'ready' && (
             <span className="rounded-full bg-slate-200 px-2 py-1 text-xs text-slate-500">Pendiente</span>
           )}
           {status.state === 'processing' && (
@@ -408,6 +509,67 @@ function PeriodoRow({
               Reintentar
             </button>
           )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function EmpresaRow({
+  empresa,
+  isProcessing,
+  onDecision,
+}: {
+  empresa: EmpresaInfo
+  isProcessing: boolean
+  onDecision: (decision: EmpresaDecision) => void
+}) {
+  if (!empresa.yaExiste) {
+    // No conflict — just show the empresa name
+    return (
+      <div className="flex items-center gap-2 text-xs text-slate-600">
+        <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+        <span>{empresa.nombre}</span>
+      </div>
+    )
+  }
+
+  // Conflict — show decision controls
+  return (
+    <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <span className="text-xs font-medium text-amber-900">{empresa.nombre}</span>
+          <span className="ml-2 text-xs text-amber-700">— ya existe importación para este período</span>
+        </div>
+        <div className="flex gap-2">
+          <button
+            className={`rounded px-2 py-1 text-xs font-semibold transition-colors ${
+              empresa.decision === 'sobreescribir'
+                ? 'bg-amber-600 text-white'
+                : 'border border-amber-400 bg-white text-amber-800 hover:bg-amber-100'
+            } disabled:opacity-50`}
+            disabled={isProcessing}
+            onClick={() => onDecision('sobreescribir')}
+            type="button"
+          >
+            Sobreescribir
+          </button>
+          <button
+            className={`rounded px-2 py-1 text-xs font-semibold transition-colors ${
+              empresa.decision === 'omitir'
+                ? 'bg-slate-600 text-white'
+                : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-100'
+            } disabled:opacity-50`}
+            disabled={isProcessing}
+            onClick={() => onDecision('omitir')}
+            type="button"
+          >
+            Omitir
+          </button>
+          {empresa.decision === 'pendiente' ? (
+            <span className="self-center text-xs font-medium text-amber-700">← Decidí</span>
+          ) : null}
         </div>
       </div>
     </div>
