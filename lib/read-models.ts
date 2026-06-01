@@ -146,34 +146,31 @@ export async function getImportaciones(params: SearchParamsInput) {
     },
   })
 
-  const rows = await Promise.all(
-    importaciones.map(async (importacion) => {
-      const [totalRows, completedActivations, withoutRealActivationDate] = await Promise.all([
-        prisma.activacionImportada.count({ where: { importacionId: importacion.id } }),
-        prisma.activacionImportada.count({
-          where: { importacionId: importacion.id, tieneFechaRealActivacion: true },
-        }),
-        prisma.activacionImportada.count({
-          where: { importacionId: importacion.id, tieneFechaRealActivacion: false },
-        }),
-      ])
+  const rows = []
+  for (const importacion of importaciones) {
+    const totalRows = await prisma.activacionImportada.count({ where: { importacionId: importacion.id } })
+    const completedActivations = await prisma.activacionImportada.count({
+      where: { importacionId: importacion.id, tieneFechaRealActivacion: true },
+    })
+    const withoutRealActivationDate = await prisma.activacionImportada.count({
+      where: { importacionId: importacion.id, tieneFechaRealActivacion: false },
+    })
 
-      return {
-        id: importacion.id,
-        anio: importacion.anio,
-        mes: importacion.mes,
-        nombreArchivo: importacion.nombreArchivo,
-        estado: importacion.estado,
-        anuladaEn: iso(importacion.anuladaEn),
-        motivoAnulacion: importacion.motivoAnulacion,
-        totalRows,
-        companies: new Set(importacion.facturaciones.map((facturacion) => facturacion.empresaId)).size,
-        completedActivations,
-        withoutRealActivationDate,
-        creadaEn: iso(importacion.creadaEn),
-      }
-    }),
-  )
+    rows.push({
+      id: importacion.id,
+      anio: importacion.anio,
+      mes: importacion.mes,
+      nombreArchivo: importacion.nombreArchivo,
+      estado: importacion.estado,
+      anuladaEn: iso(importacion.anuladaEn),
+      motivoAnulacion: importacion.motivoAnulacion,
+      totalRows,
+      companies: new Set(importacion.facturaciones.map((facturacion) => facturacion.empresaId)).size,
+      completedActivations,
+      withoutRealActivationDate,
+      creadaEn: iso(importacion.creadaEn),
+    })
+  }
 
   return { rows }
 }

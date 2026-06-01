@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 
 import { AnularImportacionForm } from '@/components/anular-importacion-form'
+import { PageHeader } from '@/components/page-header'
 import { getCurrentUser, isAdmin } from '@/lib/auth'
 import { getImportaciones } from '@/lib/read-models'
 
@@ -31,19 +32,20 @@ export default async function ImportacionesPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 border-b border-slate-200 pb-5 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-sm font-medium uppercase text-slate-500">Importaciones</p>
-          <h1 className="mt-2 text-3xl font-semibold text-slate-950">Importaciones confirmadas</h1>
-          <p className="mt-2 text-sm text-slate-600">Consulta de archivos importados y sus totales operativos.</p>
-        </div>
-        <Link
-          className="inline-flex items-center justify-center rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-          href="/importaciones/nueva"
-        >
-          Nueva importacion
-        </Link>
-      </header>
+      <PageHeader
+        section="Importaciones"
+        title="Importaciones confirmadas"
+        description="Consulta de archivos importados y sus totales operativos."
+        action={
+          <Link
+            className="inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)' }}
+            href="/importaciones/nueva"
+          >
+            Nueva importacion
+          </Link>
+        }
+      />
 
       <form className="grid gap-3 rounded-md border border-slate-200 bg-white p-4 md:grid-cols-4" method="get">
         <FilterInput label="Anio" name="anio" value={stringValue(params.anio)} placeholder="2026" />

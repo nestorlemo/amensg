@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 
+import { PageHeader } from '@/components/page-header'
 import { getActivaciones } from '@/lib/read-models'
 
 type PageProps = {
@@ -15,11 +16,7 @@ export default async function ActivacionesPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <header className="border-b border-slate-200 pb-5">
-        <p className="text-sm font-medium uppercase text-slate-500">Activaciones</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-950">Activaciones importadas</h1>
-        <p className="mt-2 text-sm text-slate-600">Consulta paginada de filas importadas desde CSV.</p>
-      </header>
+      <PageHeader section="Activaciones" title="Activaciones importadas" description="Consulta paginada de filas importadas desde CSV." />
 
       <form className="grid gap-3 rounded-md border border-slate-200 bg-white p-4 md:grid-cols-4" method="get">
         <FilterInput label="Anio" name="anio" value={stringValue(params.anio)} placeholder="2026" />

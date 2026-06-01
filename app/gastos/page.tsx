@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 
 import { ConceptoForm, GastoForm, GastoRowActions } from '@/components/gastos-manager'
+import { PageHeader } from '@/components/page-header'
 import { getGastos } from '@/lib/gastos-ingresos'
 
 type PageProps = {
@@ -14,11 +15,11 @@ export default async function GastosPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <header className="border-b border-slate-200 pb-5">
-        <p className="text-sm font-medium uppercase text-slate-500">Gastos</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-950">Gastos mensuales</h1>
-        <p className="mt-2 text-sm text-slate-600">Alta, edicion y baja de gastos mientras el periodo esta abierto.</p>
-      </header>
+      <PageHeader
+        section="Gastos"
+        title="Gastos mensuales"
+        description="Alta, edición y baja de gastos mientras el período está abierto."
+      />
 
       <form className="grid gap-3 rounded-md border border-slate-200 bg-white p-4 md:grid-cols-5" method="get">
         <FilterInput label="Anio" name="anio" value={stringValue(params.anio)} placeholder="2026" />

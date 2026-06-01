@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 
 import { IngresoAdicionalForm, IngresoRowActions } from '@/components/ingresos-adicionales-manager'
+import { PageHeader } from '@/components/page-header'
 import { getIngresosAdicionales } from '@/lib/gastos-ingresos'
 
 type PageProps = {
@@ -14,11 +15,11 @@ export default async function IngresosAdicionalesPage({ searchParams }: PageProp
 
   return (
     <div className="min-w-0 max-w-full space-y-6">
-      <header className="border-b border-slate-200 pb-5">
-        <p className="text-sm font-medium uppercase text-slate-500">Ingresos adicionales</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-950">Ingresos adicionales</h1>
-        <p className="mt-2 text-sm text-slate-600">Ingresos no provenientes de activaciones, con IVA calculado.</p>
-      </header>
+      <PageHeader
+        section="Ingresos adicionales"
+        title="Ingresos adicionales"
+        description="Ingresos no provenientes de activaciones, con IVA calculado."
+      />
 
       <form className="grid min-w-0 gap-3 rounded-md border border-slate-200 bg-white p-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" method="get">
         <FilterInput label="Anio" name="anio" value={stringValue(params.anio)} placeholder="2026" />

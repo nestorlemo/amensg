@@ -22,6 +22,12 @@ model Usuario {
 model Empresa {
   id              String                 @id @default(uuid()) @db.Uuid
   nombre          String
+  razonSocial     String?
+  rut             String?
+  direccion       String?
+  contacto        String?
+  mail            String?
+  telefono        String?
   activa          Boolean                @default(true)
   creadaEn        DateTime               @default(now())
   activaciones    ActivacionImportada[]
