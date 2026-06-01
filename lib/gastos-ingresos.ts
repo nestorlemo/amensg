@@ -176,13 +176,12 @@ export async function createGastoConcepto(body: Record<string, unknown>) {
 }
 
 export async function updateGastoConcepto(id: string, body: Record<string, unknown>) {
-  const nombre = requiredString(body, 'nombre')
   const tipo = requiredString(body, 'tipo')
   const activo = typeof body.activo === 'boolean' ? body.activo : undefined
   const montoRaw = body.monto !== undefined && body.monto !== '' ? body.monto : null
 
-  if (!nombre || !tipo || !CONCEPTO_TIPOS.has(tipo)) {
-    return { error: { error: 'CONCEPTO_INVALIDO', message: 'Nombre y tipo valido son requeridos.' }, status: 422 }
+  if (!tipo || !CONCEPTO_TIPOS.has(tipo)) {
+    return { error: { error: 'CONCEPTO_INVALIDO', message: 'Tipo válido es requerido.' }, status: 422 }
   }
 
   let monto: Prisma.Decimal | null = null
@@ -197,7 +196,7 @@ export async function updateGastoConcepto(id: string, body: Record<string, unkno
   const concepto = await prisma.$transaction(async (tx) => {
     const updated = await tx.gastoConcepto.update({
       where: { id },
-      data: { nombre, tipo, monto, ...(activo === undefined ? {} : { activo }) },
+      data: { tipo, monto, ...(activo === undefined ? {} : { activo }) },
     })
 
     await tx.auditoria.create({
@@ -205,7 +204,7 @@ export async function updateGastoConcepto(id: string, body: Record<string, unkno
         entidad: 'GastoConcepto',
         entidadId: id,
         accion: 'EDITAR_CONCEPTO_GASTO',
-        detalle: { nombre, tipo, monto: monto?.toString() ?? null, activo },
+        detalle: { tipo, monto: monto?.toString() ?? null, activo },
       },
     })
 
