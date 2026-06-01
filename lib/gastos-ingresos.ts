@@ -128,6 +128,7 @@ export async function getGastoConceptos() {
       id: row.id,
       nombre: row.nombre,
       tipo: row.tipo,
+      monto: row.monto?.toString() ?? null,
       activo: row.activo,
     })),
   }
@@ -136,14 +137,24 @@ export async function getGastoConceptos() {
 export async function createGastoConcepto(body: Record<string, unknown>) {
   const nombre = requiredString(body, 'nombre')
   const tipo = requiredString(body, 'tipo') ?? 'VARIABLE'
+  const montoRaw = body.monto !== undefined && body.monto !== '' ? body.monto : null
 
   if (!nombre || !CONCEPTO_TIPOS.has(tipo)) {
     return { error: { error: 'CONCEPTO_INVALIDO', message: 'Nombre y tipo valido son requeridos.' }, status: 422 }
   }
 
+  let monto: Prisma.Decimal | null = null
+  if (tipo === 'FIJO' && montoRaw !== null) {
+    try {
+      monto = new Prisma.Decimal(String(montoRaw))
+    } catch {
+      return { error: { error: 'MONTO_INVALIDO', message: 'El monto debe ser un número válido.' }, status: 422 }
+    }
+  }
+
   const concepto = await prisma.$transaction(async (tx) => {
     const created = await tx.gastoConcepto.create({
-      data: { nombre, tipo },
+      data: { nombre, tipo, monto },
     })
 
     await tx.auditoria.create({
@@ -151,29 +162,42 @@ export async function createGastoConcepto(body: Record<string, unknown>) {
         entidad: 'GastoConcepto',
         entidadId: created.id,
         accion: 'CREAR_CONCEPTO_GASTO',
-        detalle: { nombre, tipo },
+        detalle: { nombre, tipo, monto: monto?.toString() ?? null },
       },
     })
 
     return created
   })
 
-  return { data: concepto, status: 201 }
+  return {
+    data: { id: concepto.id, nombre: concepto.nombre, tipo: concepto.tipo, monto: concepto.monto?.toString() ?? null, activo: concepto.activo },
+    status: 201,
+  }
 }
 
 export async function updateGastoConcepto(id: string, body: Record<string, unknown>) {
   const nombre = requiredString(body, 'nombre')
   const tipo = requiredString(body, 'tipo')
   const activo = typeof body.activo === 'boolean' ? body.activo : undefined
+  const montoRaw = body.monto !== undefined && body.monto !== '' ? body.monto : null
 
   if (!nombre || !tipo || !CONCEPTO_TIPOS.has(tipo)) {
     return { error: { error: 'CONCEPTO_INVALIDO', message: 'Nombre y tipo valido son requeridos.' }, status: 422 }
   }
 
+  let monto: Prisma.Decimal | null = null
+  if (tipo === 'FIJO' && montoRaw !== null) {
+    try {
+      monto = new Prisma.Decimal(String(montoRaw))
+    } catch {
+      return { error: { error: 'MONTO_INVALIDO', message: 'El monto debe ser un número válido.' }, status: 422 }
+    }
+  }
+
   const concepto = await prisma.$transaction(async (tx) => {
     const updated = await tx.gastoConcepto.update({
       where: { id },
-      data: { nombre, tipo, ...(activo === undefined ? {} : { activo }) },
+      data: { nombre, tipo, monto, ...(activo === undefined ? {} : { activo }) },
     })
 
     await tx.auditoria.create({
@@ -181,14 +205,17 @@ export async function updateGastoConcepto(id: string, body: Record<string, unkno
         entidad: 'GastoConcepto',
         entidadId: id,
         accion: 'EDITAR_CONCEPTO_GASTO',
-        detalle: { nombre, tipo, activo },
+        detalle: { nombre, tipo, monto: monto?.toString() ?? null, activo },
       },
     })
 
     return updated
   })
 
-  return { data: concepto, status: 200 }
+  return {
+    data: { id: concepto.id, nombre: concepto.nombre, tipo: concepto.tipo, monto: concepto.monto?.toString() ?? null, activo: concepto.activo },
+    status: 200,
+  }
 }
 
 export async function deactivateGastoConcepto(id: string) {
@@ -525,11 +552,12 @@ function parseIngresoBody(body: Record<string, unknown>) {
   }
 }
 
-function serializeConcepto(row: { id: string; nombre: string; tipo: string; activo: boolean }) {
+function serializeConcepto(row: { id: string; nombre: string; tipo: string; monto?: { toString(): string } | null; activo: boolean }) {
   return {
     id: row.id,
     nombre: row.nombre,
     tipo: row.tipo,
+    monto: row.monto?.toString() ?? null,
     activo: row.activo,
   }
 }

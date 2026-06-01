@@ -35,7 +35,7 @@ export function periodFromUrl(params: URLSearchParams) {
 }
 
 export async function buildLiquidacionPreview(period: PeriodInput) {
-  const [facturaciones, ingresosAdicionales, gastos, socios, tipoCambioParametro, cierrePeriodo] =
+  const [facturaciones, ingresosAdicionales, gastos, gastosFijosConceptos, socios, tipoCambioParametro, cierrePeriodo] =
     await Promise.all([
       prisma.facturacionMensual.findMany({
         where: {
@@ -65,6 +65,11 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
         where: { anio: period.anio, mes: period.mes },
         include: { concepto: true },
       }),
+      // Fixed expenses are calculated dynamically from active concepts with monto
+      prisma.gastoConcepto.findMany({
+        where: { tipo: 'FIJO', activo: true, monto: { not: null } },
+        orderBy: { nombre: 'asc' },
+      }),
       prisma.socio.findMany({
         where: { activo: true },
         orderBy: { nombre: 'asc' },
@@ -91,7 +96,9 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
   const totalIngresosSinIva = facturacionSinIva.add(ingresosAdicionalesSinIva)
   const totalIva = facturacionIva.add(ingresosAdicionalesIva)
   const totalIngresosConIva = facturacionConIva.add(ingresosAdicionalesConIva)
-  const totalGastos = sumDecimal(gastos.map((row) => row.importe))
+  const totalGastosVariables = sumDecimal(gastos.map((row) => row.importe))
+  const totalGastosFijos = sumDecimal(gastosFijosConceptos.map((c) => c.monto!))
+  const totalGastos = totalGastosVariables.add(totalGastosFijos)
   const resultadoDistribuible = totalIngresosSinIva.sub(totalGastos)
   const tipoCambioSnapshot =
     cierreCerrado && cierrePeriodo ? decimalSnapshot(safeSnapshot(cierrePeriodo.snapshot), 'tipoCambioUsd') : null
@@ -185,12 +192,22 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
     },
     gastos: {
       totalGastos: money(totalGastos),
-      detalle: gastos.map((row) => ({
-        id: row.id,
-        concepto: row.concepto.nombre,
-        tipo: row.concepto.tipo,
-        importe: money(row.importe),
-      })),
+      totalGastosFijos: money(totalGastosFijos),
+      totalGastosVariables: money(totalGastosVariables),
+      detalle: [
+        ...gastosFijosConceptos.map((c) => ({
+          id: c.id,
+          concepto: c.nombre,
+          tipo: 'FIJO' as const,
+          importe: money(c.monto!),
+        })),
+        ...gastos.map((row) => ({
+          id: row.id,
+          concepto: row.concepto.nombre,
+          tipo: row.concepto.tipo,
+          importe: money(row.importe),
+        })),
+      ],
     },
     resultado: {
       resultadoDistribuible: money(resultadoDistribuible),
