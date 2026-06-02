@@ -6,7 +6,7 @@ import { serializeIssue } from '../../route'
 
 export const runtime = 'nodejs'
 
-const ESTADOS_VALIDOS = new Set(['PENDIENTE', 'EN_DESARROLLO', 'EN_TEST', 'EN_PRODUCCION', 'CANCELADO', 'NO_HACER'])
+const ESTADOS_VALIDOS = new Set(['PENDIENTE', 'EN_DESARROLLO', 'EN_TEST', 'EN_PRODUCCION', 'CANCELADO', 'NO_HACER', 'FACTURADO', 'COBRADO'])
 
 type Params = { params: Promise<{ id: string }> }
 

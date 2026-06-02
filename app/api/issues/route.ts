@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
 
-const ESTADOS_VALIDOS = new Set(['PENDIENTE', 'EN_DESARROLLO', 'EN_TEST', 'EN_PRODUCCION', 'CANCELADO', 'NO_HACER'])
+const ESTADOS_VALIDOS = new Set(['PENDIENTE', 'EN_DESARROLLO', 'EN_TEST', 'EN_PRODUCCION', 'FACTURADO', 'COBRADO', 'CANCELADO', 'NO_HACER'])
 const PRIORIDADES_VALIDAS = new Set(['ALTA', 'MEDIA', 'BAJA'])
 
 export async function GET(request: Request) {
