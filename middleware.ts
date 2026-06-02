@@ -13,6 +13,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  console.log('middleware url:', request.nextUrl.toString(), 'host:', request.headers.get('host'))
   if (!request.cookies.get(SESSION_COOKIE)?.value) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
