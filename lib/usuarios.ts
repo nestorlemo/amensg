@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { hashPassword } from '@/lib/passwords'
 import type { CurrentUser, UserRole } from '@/lib/auth'
 
-const ROLES = new Set(['ADMIN', 'OPERADOR'])
+const ROLES = new Set(['ADMIN', 'OPERADOR', 'ISSUES'])
 
 export async function getUsuarios() {
   const rows = await prisma.usuario.findMany({
