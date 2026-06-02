@@ -29,7 +29,7 @@ export default async function ActivacionesPage({ searchParams }: PageProps) {
             name="empresaId"
           >
             <option value="">Todas</option>
-            {filters.empresas.map((empresa) => (
+            {filters.empresas.map((empresa: { id: string; nombre: string }) => (
               <option key={empresa.id} value={empresa.id}>
                 {empresa.nombre}
               </option>
