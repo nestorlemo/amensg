@@ -6,5 +6,6 @@ RUN npm ci
 COPY . .
 RUN npx prisma generate
 RUN npm run build
+ENV PORT=3000
 EXPOSE 3000
-CMD ["npm", "start"]
+CMD node_modules/.bin/next start -p 3000
