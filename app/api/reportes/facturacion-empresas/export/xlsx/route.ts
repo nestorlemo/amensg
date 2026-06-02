@@ -1,35 +1,9 @@
-import ExcelJS from 'exceljs'
-
 import { requireApiAuth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
 
 const IVA_RATE = 0.22
-const NUM_FMT = '#,##0.00'
-
-const COLOR_DARK_BLUE = '1F3864'
-const COLOR_MID_BLUE  = '2E75B6'
-const COLOR_LIGHT_BG  = 'D9E1F2'
-const COLOR_ALT_BG    = 'EEF2FF'
-const COLOR_WHITE     = 'FFFFFFFF'
-
-type Fill   = ExcelJS.Fill
-type Font   = Partial<ExcelJS.Font>
-type Align  = Partial<ExcelJS.Alignment>
-
-function solidFill(argb: string): Fill {
-  return { type: 'pattern', pattern: 'solid', fgColor: { argb: argb.length === 6 ? `FF${argb}` : argb } }
-}
-
-function applyHeader(row: ExcelJS.Row, bgArgb: string) {
-  row.eachCell({ includeEmpty: true }, (cell) => {
-    cell.fill = solidFill(bgArgb)
-    cell.font = { bold: true, size: 11, color: { argb: COLOR_WHITE } }
-    cell.alignment = { horizontal: 'center', vertical: 'middle' }
-  })
-  row.height = 18
-}
 
 export async function GET(request: Request) {
   const auth = await requireApiAuth()
@@ -82,14 +56,7 @@ export async function GET(request: Request) {
     emp.fechas.set(dateKey, (emp.fechas.get(dateKey) ?? 0) + 1)
   }
 
-  const wb = new ExcelJS.Workbook()
-  wb.creator = 'AMENSG'
-  wb.created = new Date()
-
-  if (empresaMap.size === 0) {
-    const ws = wb.addWorksheet('Sin datos')
-    ws.addRow(['Sin datos para el período'])
-  }
+  const tablas: string[] = []
 
   for (const { nombre, fechas } of empresaMap.values()) {
     const detalle = Array.from(fechas.entries()).map(([dateKey, cantidad]) => {
@@ -103,91 +70,83 @@ export async function GET(request: Request) {
     const iva            = round2(totalSinIva * IVA_RATE)
     const totalConIva    = round2(totalSinIva + iva)
 
-    const ws = wb.addWorksheet(nombre.slice(0, 31))
+    const filaDetalle = detalle.map((d, i) => {
+      const bg = i % 2 === 0 ? 'white' : '#EEF2FF'
+      return `<tr style="background:${bg}">
+        <td style="padding:4px 8px">${esc(d.fecha)}</td>
+        <td style="padding:4px 8px">Activaciones</td>
+        <td style="padding:4px 8px; text-align:center">${d.cantidad}</td>
+        <td style="padding:4px 8px; text-align:right">${fmtNum(d.totalSinIva)}</td>
+        <td style="padding:4px 8px; text-align:right">${fmtNum(d.iva)}</td>
+        <td style="padding:4px 8px; text-align:right">${fmtNum(d.totalConIva)}</td>
+      </tr>`
+    }).join('\n')
 
-    // Column widths
-    ws.columns = [
-      { key: 'a', width: 14 },
-      { key: 'b', width: 16 },
-      { key: 'c', width: 12 },
-      { key: 'd', width: 16 },
-      { key: 'e', width: 12 },
-      { key: 'f', width: 16 },
-    ]
-
-    // Row 1 — title
-    const row1 = ws.addRow([`Empresa: ${nombre}`, '', `Mes: ${mesLabel}`, '', `Año: ${anio}`, ''])
-    row1.height = 22
-    row1.eachCell({ includeEmpty: true }, (cell) => {
-      cell.fill = solidFill(COLOR_DARK_BLUE)
-      cell.font = { bold: true, size: 12, color: { argb: COLOR_WHITE } }
-      cell.alignment = { vertical: 'middle' }
-    })
-
-    // Row 2 — empty
-    ws.addRow([])
-
-    // Row 3 — "TOTALES DEL MES" (merged A3:F3)
-    const row3 = ws.addRow(['TOTALES DEL MES', '', '', '', '', ''])
-    row3.height = 20
-    ws.mergeCells('A3:F3')
-    row3.eachCell({ includeEmpty: true }, (cell) => {
-      cell.fill = solidFill(COLOR_DARK_BLUE)
-      cell.font = { bold: true, size: 12, color: { argb: COLOR_WHITE } }
-      cell.alignment = { horizontal: 'center', vertical: 'middle' }
-    })
-
-    // Row 4 — summary headers
-    const row4 = ws.addRow(['Registros', '', 'Total S/IVA ($)', 'IVA ($)', 'Total C/IVA ($)', ''])
-    applyHeader(row4, COLOR_MID_BLUE)
-
-    // Row 5 — summary totals
-    const row5 = ws.addRow([totalRegistros, '', totalSinIva, iva, totalConIva, ''])
-    row5.height = 18
-    row5.eachCell({ includeEmpty: true }, (cell) => {
-      cell.fill = solidFill(COLOR_LIGHT_BG)
-      cell.font = { bold: true, size: 11 }
-      cell.alignment = { horizontal: 'center', vertical: 'middle' }
-      if (typeof cell.value === 'number' && cell.value !== totalRegistros) {
-        cell.numFmt = NUM_FMT
-      }
-    })
-
-    // Row 6 — empty
-    ws.addRow([])
-
-    // Row 7 — detail headers
-    const row7 = ws.addRow(['Fecha', 'Tipo', 'Cantidad', 'Total S/IVA ($)', 'IVA ($)', 'Total C/IVA ($)'])
-    applyHeader(row7, COLOR_MID_BLUE)
-
-    // Data rows
-    detalle.forEach((d, i) => {
-      const values = [d.fecha, 'Activaciones', d.cantidad, d.totalSinIva, d.iva, d.totalConIva]
-      const dataRow = ws.addRow(values)
-      const useAlt = i % 2 !== 0
-      values.forEach((_, colIdx) => {
-        const cell = dataRow.getCell(colIdx + 1)
-        if (useAlt) cell.fill = solidFill(COLOR_ALT_BG)
-        if (typeof cell.value === 'number') {
-          if (colIdx >= 2) {
-            // col 3+ (0-indexed 2+): monetary or quantity
-            cell.numFmt = colIdx >= 3 ? NUM_FMT : undefined as never
-            cell.alignment = { horizontal: colIdx >= 3 ? 'right' : 'center', vertical: 'middle' }
-          }
-        } else {
-          cell.alignment = { vertical: 'middle' }
-        }
-      })
-    })
+    tablas.push(`
+<div style="page-break-after:always">
+<table style="border-collapse:collapse; font-family:Arial; width:100%">
+  <tr>
+    <td colspan="2" style="background:#1F3864;color:white;font-weight:bold;font-size:12pt;padding:6px">Empresa: ${esc(nombre)}</td>
+    <td colspan="2" style="background:#1F3864;color:white;font-weight:bold;font-size:12pt;padding:6px;text-align:center">Mes: ${esc(mesLabel)}</td>
+    <td colspan="2" style="background:#1F3864;color:white;font-weight:bold;font-size:12pt;padding:6px;text-align:right">Año: ${anio}</td>
+  </tr>
+  <tr><td colspan="6" style="height:10px"></td></tr>
+  <tr>
+    <td colspan="6" style="background:#1F3864;color:white;font-weight:bold;padding:6px">TOTALES DEL MES</td>
+  </tr>
+  <tr style="background:#2E75B6;color:white;font-weight:bold;text-align:center">
+    <td style="padding:5px 8px">Registros</td>
+    <td></td>
+    <td style="padding:5px 8px">Total S/IVA ($)</td>
+    <td style="padding:5px 8px">IVA ($)</td>
+    <td colspan="2" style="padding:5px 8px">Total C/IVA ($)</td>
+  </tr>
+  <tr style="background:#D9E1F2;font-weight:bold;text-align:center">
+    <td style="padding:5px 8px">${totalRegistros}</td>
+    <td></td>
+    <td style="padding:5px 8px">${fmtNum(totalSinIva)}</td>
+    <td style="padding:5px 8px">${fmtNum(iva)}</td>
+    <td colspan="2" style="padding:5px 8px">${fmtNum(totalConIva)}</td>
+  </tr>
+  <tr><td colspan="6" style="height:10px"></td></tr>
+  <tr style="background:#2E75B6;color:white;font-weight:bold">
+    <td style="padding:5px 8px">Fecha</td>
+    <td style="padding:5px 8px">Tipo</td>
+    <td style="padding:5px 8px;text-align:center">Cantidad</td>
+    <td style="padding:5px 8px;text-align:right">Total S/IVA ($)</td>
+    <td style="padding:5px 8px;text-align:right">IVA ($)</td>
+    <td style="padding:5px 8px;text-align:right">Total C/IVA ($)</td>
+  </tr>
+  ${filaDetalle}
+</table>
+</div>`)
   }
 
-  const buffer = await wb.xlsx.writeBuffer()
-  const filename = `facturacion-empresas-${anio}-${mesStr}.xlsx`
+  if (tablas.length === 0) {
+    tablas.push('<p style="font-family:Arial">Sin datos para el período seleccionado.</p>')
+  }
 
-  return new Response(buffer as unknown as BodyInit, {
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  body { font-family: Arial, sans-serif; font-size: 10pt; }
+  table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+  td { border: 1px solid #ccc; }
+</style>
+</head>
+<body>
+${tablas.join('\n')}
+</body>
+</html>`
+
+  const filename = `facturacion-${mesStr}-${anio}.xls`
+
+  return new Response(html, {
     headers: {
       'Content-Disposition': `attachment; filename="${filename}"`,
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Type': 'application/vnd.ms-excel; charset=UTF-8',
     },
   })
 }
@@ -199,4 +158,12 @@ function round2(n: number) {
 function formatDate(iso: string) {
   const [y, m, d] = iso.split('-')
   return `${d}/${m}/${y}`
+}
+
+function fmtNum(n: number) {
+  return new Intl.NumberFormat('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
+}
+
+function esc(s: string) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
