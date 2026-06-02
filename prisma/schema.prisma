@@ -21,7 +21,7 @@ model Usuario {
 
 model Empresa {
   id              String                 @id @default(uuid()) @db.Uuid
-  nombre          String
+  nombre          String                 @unique
   razonSocial     String?
   rut             String?
   direccion       String?
@@ -131,7 +131,7 @@ model FacturacionMensual {
 
 model GastoConcepto {
   id       String         @id @default(uuid()) @db.Uuid
-  nombre   String         @unique
+  nombre   String
   tipo     String         @default("VARIABLE")
   monto    Decimal?       @db.Decimal(12, 2)
   activo   Boolean        @default(true)

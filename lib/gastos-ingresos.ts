@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client'
 
+import { handlePrismaLibError } from '@/lib/api-errors'
 import { prisma } from '@/lib/prisma'
 import { closedPeriodError, isPeriodClosed } from '@/lib/periods'
 import type { SearchParamsInput } from '@/lib/read-models'
@@ -152,26 +153,30 @@ export async function createGastoConcepto(body: Record<string, unknown>) {
     }
   }
 
-  const concepto = await prisma.$transaction(async (tx) => {
-    const created = await tx.gastoConcepto.create({
-      data: { nombre, tipo, monto },
+  try {
+    const concepto = await prisma.$transaction(async (tx) => {
+      const created = await tx.gastoConcepto.create({
+        data: { nombre, tipo, monto },
+      })
+
+      await tx.auditoria.create({
+        data: {
+          entidad: 'GastoConcepto',
+          entidadId: created.id,
+          accion: 'CREAR_CONCEPTO_GASTO',
+          detalle: { nombre, tipo, monto: monto?.toString() ?? null },
+        },
+      })
+
+      return created
     })
 
-    await tx.auditoria.create({
-      data: {
-        entidad: 'GastoConcepto',
-        entidadId: created.id,
-        accion: 'CREAR_CONCEPTO_GASTO',
-        detalle: { nombre, tipo, monto: monto?.toString() ?? null },
-      },
-    })
-
-    return created
-  })
-
-  return {
-    data: { id: concepto.id, nombre: concepto.nombre, tipo: concepto.tipo, monto: concepto.monto?.toString() ?? null, activo: concepto.activo },
-    status: 201,
+    return {
+      data: { id: concepto.id, nombre: concepto.nombre, tipo: concepto.tipo, monto: concepto.monto?.toString() ?? null, activo: concepto.activo },
+      status: 201,
+    }
+  } catch (err) {
+    return handlePrismaLibError(err, { nombre: 'nombre' })
   }
 }
 
@@ -202,24 +207,28 @@ export async function updateGastoConcepto(id: string, body: Record<string, unkno
     ...(nombre && nombre !== current?.nombre ? { nombre } : {}),
   }
 
-  const concepto = await prisma.$transaction(async (tx) => {
-    const updated = await tx.gastoConcepto.update({ where: { id }, data })
+  try {
+    const concepto = await prisma.$transaction(async (tx) => {
+      const updated = await tx.gastoConcepto.update({ where: { id }, data })
 
-    await tx.auditoria.create({
-      data: {
-        entidad: 'GastoConcepto',
-        entidadId: id,
-        accion: 'EDITAR_CONCEPTO_GASTO',
-        detalle: { nombre, tipo, monto: monto?.toString() ?? null, activo },
-      },
+      await tx.auditoria.create({
+        data: {
+          entidad: 'GastoConcepto',
+          entidadId: id,
+          accion: 'EDITAR_CONCEPTO_GASTO',
+          detalle: { nombre, tipo, monto: monto?.toString() ?? null, activo },
+        },
+      })
+
+      return updated
     })
 
-    return updated
-  })
-
-  return {
-    data: { id: concepto.id, nombre: concepto.nombre, tipo: concepto.tipo, monto: concepto.monto?.toString() ?? null, activo: concepto.activo },
-    status: 200,
+    return {
+      data: { id: concepto.id, nombre: concepto.nombre, tipo: concepto.tipo, monto: concepto.monto?.toString() ?? null, activo: concepto.activo },
+      status: 200,
+    }
+  } catch (err) {
+    return handlePrismaLibError(err, { nombre: 'nombre' })
   }
 }
 

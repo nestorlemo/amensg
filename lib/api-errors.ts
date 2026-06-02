@@ -1,3 +1,4 @@
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 import { NextResponse } from 'next/server'
 
 export type ApiErrorCode =
@@ -33,4 +34,24 @@ export function notFoundError(message = 'No se encontró el recurso solicitado.'
 
 export function internalError(message = 'Ocurrió un error interno. Intente nuevamente.') {
   return apiError('INTERNAL_ERROR', message, 500)
+}
+
+/** Handles Prisma P2002 unique constraint errors, returning a 409 response. Re-throws anything else. */
+export function handlePrismaError(error: unknown, fieldLabels: Record<string, string> = {}) {
+  if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
+    const fields = (error.meta?.target as string[]) ?? []
+    const label = fields.map((f) => fieldLabels[f] ?? f).join(', ')
+    return apiError('DUPLICATE', `Ya existe un registro con el mismo ${label}.`, 409)
+  }
+  throw error
+}
+
+/** Same as handlePrismaError but returns lib-style { error, status } instead of NextResponse. Re-throws anything else. */
+export function handlePrismaLibError(error: unknown, fieldLabels: Record<string, string> = {}): { error: ApiErrorBody; status: number } {
+  if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
+    const fields = (error.meta?.target as string[]) ?? []
+    const label = fields.map((f) => fieldLabels[f] ?? f).join(', ')
+    return { error: { error: 'DUPLICATE', message: `Ya existe un registro con el mismo ${label}.` }, status: 409 }
+  }
+  throw error
 }
