@@ -3,6 +3,9 @@ import { NextResponse, type NextRequest } from 'next/server'
 const SESSION_COOKIE = 'amensg_session'
 const PUBLIC_PREFIXES = ['/login', '/api/auth/login', '/api/auth/logout', '/_next', '/favicon.ico']
 
+// Routes the ISSUES role can access (page routes only — /api is always allowed)
+const ISSUES_ALLOWED_PAGES = ['/', '/issues']
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
@@ -15,6 +18,19 @@ export function middleware(request: NextRequest) {
     url.pathname = '/login'
     url.searchParams.set('next', pathname)
     return NextResponse.redirect(url)
+  }
+
+  // Redirect ISSUES users away from routes they can't access
+  const rol = request.cookies.get('amensg_rol')?.value
+  if (rol === 'ISSUES' && !pathname.startsWith('/api')) {
+    const allowed = ISSUES_ALLOWED_PAGES.some((p) =>
+      p === '/' ? pathname === '/' : pathname === p || pathname.startsWith(p + '/')
+    )
+    if (!allowed) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/issues'
+      return NextResponse.redirect(url)
+    }
   }
 
   return NextResponse.next()
