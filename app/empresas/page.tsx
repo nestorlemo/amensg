@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { Building2, Plus, Search, Pencil, ToggleLeft, ToggleRight, X, Check, AlertTriangle } from 'lucide-react'
+import { Building2, Plus, Search, Pencil, ToggleLeft, ToggleRight, X, AlertTriangle } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 
 type Empresa = {
@@ -57,10 +57,6 @@ async function apiFetch<T>(
   }
   if (!res.ok) return { data: null, error: (json.message as string) ?? 'Error inesperado.' }
   return { data: json as T, error: null }
-}
-
-function formatDate(iso: string) {
-  return new Intl.DateTimeFormat('es-UY', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(iso))
 }
 
 // ── shared input style ────────────────────────────────────────────────────────

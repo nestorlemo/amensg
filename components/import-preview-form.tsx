@@ -40,7 +40,7 @@ type PeriodoStatus =
 const FECHA_IMPORTACION_IDX = 6
 const EMPRESA_IDX = 2
 
-function parseCSVClient(text: string): Omit<ParsedFile, 'periodos'> & { periodos: Omit<PeriodoResumen, 'empresas'>[] } {
+function parseCSVClient(text: string): Omit<ParsedFile, 'periodos'> & { periodos: (Omit<PeriodoResumen, 'empresas'> & { empresasNombres: string[] })[] } {
   const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
   const lines = normalized.split('\n')
   const header = lines[0] ?? ''

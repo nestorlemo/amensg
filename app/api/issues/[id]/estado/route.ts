@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 
 import { requireApiAuth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { serializeIssue } from '../../route'
+import { serializeIssue } from '@/lib/issues'
 
 export const runtime = 'nodejs'
 
