@@ -14,7 +14,6 @@ export const navigationItems: NavItem[] = [
   { href: '/reportes', label: 'Reportes', icon: 'BarChart2' },
   { href: '/issues', label: 'Issues', icon: 'Bug' },
   { href: '/issues/facturar', label: 'Facturar desarrollo', icon: 'FileCode2' },
-  { href: '/issues/valor-hora', label: 'Valor hora', icon: 'Clock' },
   { href: '/parametros', label: 'Parametros', icon: 'Settings', adminOnly: true },
   { href: '/socios', label: 'Socios', icon: 'Users', adminOnly: true },
   { href: '/usuarios', label: 'Usuarios', icon: 'UserCog', adminOnly: true },

@@ -42,9 +42,9 @@ export default function FacturarDesarrolloPage() {
       .then((r) => r.json())
       .then((d) => setSocios(d.socios ?? []))
       .catch(() => null)
-    fetch('/api/valor-hora')
+    fetch('/api/issues/config')
       .then((r) => r.json())
-      .then((d) => setValorHora(d.actual?.valorUSD ?? 0))
+      .then((d: { valorHoraUSD: number }) => setValorHora(d.valorHoraUSD ?? 0))
       .catch(() => null)
   }, [])
 
