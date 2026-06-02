@@ -380,6 +380,20 @@ export default function IssuesPage() {
             Filtrar
           </button>
           <button
+            className="h-9 rounded-md border border-emerald-600 px-4 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+            onClick={() => {
+              const qs = new URLSearchParams()
+              if (fEstado)    qs.set('estado',     fEstado)
+              if (fEmpresa)   qs.set('empresaId',  fEmpresa)
+              if (fPrioridad) qs.set('prioridad',  fPrioridad)
+              if (fDesde)     qs.set('fechaDesde', fDesde)
+              if (fHasta)     qs.set('fechaHasta', fHasta)
+              window.location.href = `/api/issues/export?${qs}`
+            }}
+          >
+            Exportar Excel
+          </button>
+          <button
             className="ml-auto h-9 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white"
             onClick={() => setShowForm((v) => !v)}
           >
