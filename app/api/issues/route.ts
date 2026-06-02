@@ -13,20 +13,25 @@ export async function GET(request: Request) {
   if ('error' in auth) return auth.error
 
   const { searchParams } = new URL(request.url)
-  const estado    = searchParams.get('estado')    ?? undefined
-  const empresaId = searchParams.get('empresaId') ?? undefined
-  const prioridad = searchParams.get('prioridad') ?? undefined
-  const anio      = searchParams.get('anio')      ? parseInt(searchParams.get('anio')!) : undefined
-  const mes       = searchParams.get('mes')       ? parseInt(searchParams.get('mes')!)  : undefined
+  const estado      = searchParams.get('estado')      ?? undefined
+  const empresaId   = searchParams.get('empresaId')   ?? undefined
+  const prioridad   = searchParams.get('prioridad')   ?? undefined
+  const fechaDesde  = searchParams.get('fechaDesde')  ?? undefined
+  const fechaHasta  = searchParams.get('fechaHasta')  ?? undefined
 
   const where: Record<string, unknown> = {}
   if (estado)    where.estado    = estado
   if (empresaId) where.empresaId = empresaId
   if (prioridad) where.prioridad = prioridad
-  if (anio && mes) {
-    const from = new Date(anio, mes - 1, 1)
-    const to   = new Date(anio, mes, 1)
-    where.fecha = { gte: from, lt: to }
+  if (fechaDesde || fechaHasta) {
+    const range: Record<string, Date> = {}
+    if (fechaDesde) range.gte = new Date(fechaDesde)
+    if (fechaHasta) {
+      const hasta = new Date(fechaHasta)
+      hasta.setDate(hasta.getDate() + 1)
+      range.lt = hasta
+    }
+    where.fechaProduccion = range
   }
 
   const issues = await prisma.issue.findMany({
