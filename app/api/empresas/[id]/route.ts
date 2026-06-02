@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { apiError } from '@/lib/api-errors'
+import { apiError, handlePrismaError } from '@/lib/api-errors'
 import { requireApiAuth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
@@ -68,7 +68,10 @@ export async function PUT(request: Request, { params }: Params) {
     return apiError('VALIDATION_ERROR', 'No hay campos para actualizar.', 400)
   }
 
-  const updated = await prisma.empresa.update({ where: { id }, data: updates, select: SELECT })
-
-  return NextResponse.json({ empresa: updated })
+  try {
+    const updated = await prisma.empresa.update({ where: { id }, data: updates, select: SELECT })
+    return NextResponse.json({ empresa: updated })
+  } catch (err) {
+    return handlePrismaError(err, { nombre: 'nombre' })
+  }
 }

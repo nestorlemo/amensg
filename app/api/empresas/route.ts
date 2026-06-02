@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { apiError } from '@/lib/api-errors'
+import { apiError, handlePrismaError } from '@/lib/api-errors'
 import { requireApiAuth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
@@ -43,20 +43,23 @@ export async function POST(request: Request) {
   const existe = await prisma.empresa.findFirst({ where: { nombre } })
   if (existe) return apiError('VALIDATION_ERROR', 'Ya existe una empresa con ese nombre.', 409)
 
-  const empresa = await prisma.empresa.create({
-    data: {
-      nombre,
-      razonSocial: optStr(d.razonSocial),
-      rut:         optStr(d.rut),
-      direccion:   optStr(d.direccion),
-      contacto:    optStr(d.contacto),
-      mail:        optStr(d.mail),
-      telefono:    optStr(d.telefono),
-    },
-    select: SELECT,
-  })
-
-  return NextResponse.json({ empresa }, { status: 201 })
+  try {
+    const empresa = await prisma.empresa.create({
+      data: {
+        nombre,
+        razonSocial: optStr(d.razonSocial),
+        rut:         optStr(d.rut),
+        direccion:   optStr(d.direccion),
+        contacto:    optStr(d.contacto),
+        mail:        optStr(d.mail),
+        telefono:    optStr(d.telefono),
+      },
+      select: SELECT,
+    })
+    return NextResponse.json({ empresa }, { status: 201 })
+  } catch (err) {
+    return handlePrismaError(err, { nombre: 'nombre' })
+  }
 }
 
 function optStr(v: unknown): string | null {

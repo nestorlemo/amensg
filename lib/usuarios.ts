@@ -1,3 +1,4 @@
+import { handlePrismaLibError } from '@/lib/api-errors'
 import { prisma } from '@/lib/prisma'
 import { hashPassword } from '@/lib/passwords'
 import type { CurrentUser, UserRole } from '@/lib/auth'
@@ -31,29 +32,33 @@ export async function createUsuario(input: Record<string, unknown>, actor: Curre
   const parsed = parseUsuarioInput(input, true)
   if ('error' in parsed) return parsed
 
-  const created = await prisma.$transaction(async (tx) => {
-    const user = await tx.usuario.create({
-      data: {
-        nombre: parsed.data.nombre,
-        email: parsed.data.email,
-        rol: parsed.data.rol,
-        activo: parsed.data.activo,
-        passwordHash: hashPassword(parsed.data.password as string),
-      },
+  try {
+    const created = await prisma.$transaction(async (tx) => {
+      const user = await tx.usuario.create({
+        data: {
+          nombre: parsed.data.nombre,
+          email: parsed.data.email,
+          rol: parsed.data.rol,
+          activo: parsed.data.activo,
+          passwordHash: hashPassword(parsed.data.password as string),
+        },
+      })
+      await tx.auditoria.create({
+        data: {
+          usuarioId: actor.id,
+          entidad: 'Usuario',
+          entidadId: user.id,
+          accion: 'CREAR_USUARIO',
+          detalle: { nombre: user.nombre, email: user.email, rol: user.rol, activo: user.activo },
+        },
+      })
+      return user
     })
-    await tx.auditoria.create({
-      data: {
-        usuarioId: actor.id,
-        entidad: 'Usuario',
-        entidadId: user.id,
-        accion: 'CREAR_USUARIO',
-        detalle: { nombre: user.nombre, email: user.email, rol: user.rol, activo: user.activo },
-      },
-    })
-    return user
-  })
 
-  return { data: { id: created.id }, status: 201 }
+    return { data: { id: created.id }, status: 201 }
+  } catch (err) {
+    return handlePrismaLibError(err, { email: 'email' })
+  }
 }
 
 export async function updateUsuario(id: string, input: Record<string, unknown>, actor: CurrentUser) {
