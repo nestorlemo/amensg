@@ -7,6 +7,12 @@ const reportGroups = [
     title: 'Operación',
     reports: [
       {
+        href: '/reportes/facturacion-empresas',
+        title: 'Facturación por empresa',
+        description: 'Activaciones agrupadas por empresa y fecha de importación con cálculo de IVA. Exportable a Excel con una hoja por empresa.',
+        filters: 'Año, mes',
+      },
+      {
         href: '/reportes/mensual-empresa',
         title: 'Mensual por empresa',
         description: 'Resumen de actividad mensual por empresa con activaciones, facturacion e ingresos adicionales.',

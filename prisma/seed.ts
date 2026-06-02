@@ -74,11 +74,12 @@ async function main() {
   ].map((nombre) => [nombre, ['Estudio contable', 'AWS', 'Certificado AMENSG'].includes(nombre) ? 'FIJO' : 'VARIABLE'] as const)
 
   for (const [nombre, tipo] of conceptosGasto) {
-    await prisma.gastoConcepto.upsert({
-      where: { nombre },
-      update: { tipo },
-      create: { nombre, tipo },
-    })
+    const existing = await prisma.gastoConcepto.findFirst({ where: { nombre } })
+    if (existing) {
+      await prisma.gastoConcepto.update({ where: { id: existing.id }, data: { tipo } })
+    } else {
+      await prisma.gastoConcepto.create({ data: { nombre, tipo } })
+    }
   }
 
   for (const nombre of ['VOS', 'RELPONT', 'Phinternet', 'Ciudad Móvil']) {
