@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 
 import { requireApiAuth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -8,76 +8,27 @@ export const runtime = 'nodejs'
 const IVA_RATE = 0.22
 const NUM_FMT = '#,##0.00'
 
-// Colors
-const DARK_BLUE = '1F3864'
-const MID_BLUE  = '2E75B6'
-const LIGHT_BG  = 'D9E1F2'
-const ALT_BG    = 'EEF2FF'
-const WHITE     = 'FFFFFF'
+const COLOR_DARK_BLUE = '1F3864'
+const COLOR_MID_BLUE  = '2E75B6'
+const COLOR_LIGHT_BG  = 'D9E1F2'
+const COLOR_ALT_BG    = 'EEF2FF'
+const COLOR_WHITE     = 'FFFFFFFF'
 
-type CellStyle = {
-  font?: { bold?: boolean; sz?: number; color?: { rgb: string } }
-  fill?: { fgColor: { rgb: string }; patternType: 'solid' }
-  alignment?: { horizontal?: 'center' | 'left' | 'right'; vertical?: 'center' }
-  numFmt?: string
+type Fill   = ExcelJS.Fill
+type Font   = Partial<ExcelJS.Font>
+type Align  = Partial<ExcelJS.Alignment>
+
+function solidFill(argb: string): Fill {
+  return { type: 'pattern', pattern: 'solid', fgColor: { argb: argb.length === 6 ? `FF${argb}` : argb } }
 }
 
-function cell(v: string | number, s: CellStyle): XLSX.CellObject {
-  return { v, t: typeof v === 'number' ? 'n' : 's', s } as XLSX.CellObject
-}
-
-function bgStyle(rgb: string, extra: CellStyle = {}): CellStyle {
-  return {
-    fill: { fgColor: { rgb }, patternType: 'solid' },
-    ...extra,
-  }
-}
-
-function headerStyle(bgRgb: string): CellStyle {
-  return {
-    font: { bold: true, sz: 11, color: { rgb: WHITE } },
-    fill: { fgColor: { rgb: bgRgb }, patternType: 'solid' },
-    alignment: { horizontal: 'center', vertical: 'center' },
-  }
-}
-
-function titleStyle(): CellStyle {
-  return {
-    font: { bold: true, sz: 12, color: { rgb: WHITE } },
-    fill: { fgColor: { rgb: DARK_BLUE }, patternType: 'solid' },
-    alignment: { vertical: 'center' },
-  }
-}
-
-function totalStyle(): CellStyle {
-  return {
-    font: { bold: true, sz: 11 },
-    fill: { fgColor: { rgb: LIGHT_BG }, patternType: 'solid' },
-    alignment: { horizontal: 'center', vertical: 'center' },
-    numFmt: NUM_FMT,
-  }
-}
-
-function numStyle(bgRgb?: string): CellStyle {
-  return {
-    fill: bgRgb ? { fgColor: { rgb: bgRgb }, patternType: 'solid' } : undefined as never,
-    alignment: { horizontal: 'right' },
-    numFmt: NUM_FMT,
-  }
-}
-
-function setCell(ws: XLSX.WorkSheet, r: number, c: number, obj: XLSX.CellObject) {
-  const addr = XLSX.utils.encode_cell({ r, c })
-  ws[addr] = obj
-  const ref = ws['!ref']
-  if (ref) {
-    const range = XLSX.utils.decode_range(ref)
-    if (r > range.e.r) range.e.r = r
-    if (c > range.e.c) range.e.c = c
-    ws['!ref'] = XLSX.utils.encode_range(range)
-  } else {
-    ws['!ref'] = XLSX.utils.encode_range({ s: { r, c }, e: { r, c } })
-  }
+function applyHeader(row: ExcelJS.Row, bgArgb: string) {
+  row.eachCell({ includeEmpty: true }, (cell) => {
+    cell.fill = solidFill(bgArgb)
+    cell.font = { bold: true, size: 11, color: { argb: COLOR_WHITE } }
+    cell.alignment = { horizontal: 'center', vertical: 'middle' }
+  })
+  row.height = 18
 }
 
 export async function GET(request: Request) {
@@ -131,7 +82,14 @@ export async function GET(request: Request) {
     emp.fechas.set(dateKey, (emp.fechas.get(dateKey) ?? 0) + 1)
   }
 
-  const wb = XLSX.utils.book_new()
+  const wb = new ExcelJS.Workbook()
+  wb.creator = 'AMENSG'
+  wb.created = new Date()
+
+  if (empresaMap.size === 0) {
+    const ws = wb.addWorksheet('Sin datos')
+    ws.addRow(['Sin datos para el período'])
+  }
 
   for (const { nombre, fechas } of empresaMap.values()) {
     const detalle = Array.from(fechas.entries()).map(([dateKey, cantidad]) => {
@@ -145,81 +103,88 @@ export async function GET(request: Request) {
     const iva            = round2(totalSinIva * IVA_RATE)
     const totalConIva    = round2(totalSinIva + iva)
 
-    const ws: XLSX.WorkSheet = { '!ref': 'A1:F1' }
-
-    // Row 1 — title: empresa / mes / año
-    setCell(ws, 0, 0, cell(`Empresa: ${nombre}`, titleStyle()))
-    setCell(ws, 0, 1, cell('', bgStyle(DARK_BLUE, { font: { color: { rgb: WHITE } } })))
-    setCell(ws, 0, 2, cell(`Mes: ${mesLabel}`, titleStyle()))
-    setCell(ws, 0, 3, cell('', bgStyle(DARK_BLUE, { font: { color: { rgb: WHITE } } })))
-    setCell(ws, 0, 4, cell(`Año: ${anio}`, titleStyle()))
-    setCell(ws, 0, 5, cell('', bgStyle(DARK_BLUE, { font: { color: { rgb: WHITE } } })))
-
-    // Row 2 — empty
-    for (let c = 0; c < 6; c++) setCell(ws, 1, c, cell('', {}))
-
-    // Row 3 — "TOTALES DEL MES" merged A3:F3
-    setCell(ws, 2, 0, cell('TOTALES DEL MES', headerStyle(DARK_BLUE)))
-    for (let c = 1; c < 6; c++) setCell(ws, 2, c, cell('', bgStyle(DARK_BLUE)))
-
-    // Row 4 — summary headers
-    const summaryHeaders = ['Registros', '', 'Total S/IVA ($)', 'IVA ($)', 'Total C/IVA ($)', '']
-    for (let c = 0; c < 6; c++) setCell(ws, 3, c, cell(summaryHeaders[c]!, headerStyle(MID_BLUE)))
-
-    // Row 5 — summary totals
-    setCell(ws, 4, 0, cell(totalRegistros, { ...totalStyle(), numFmt: undefined }))
-    setCell(ws, 4, 1, cell('', bgStyle(LIGHT_BG)))
-    setCell(ws, 4, 2, cell(totalSinIva, totalStyle()))
-    setCell(ws, 4, 3, cell(iva,         totalStyle()))
-    setCell(ws, 4, 4, cell(totalConIva, totalStyle()))
-    setCell(ws, 4, 5, cell('', bgStyle(LIGHT_BG)))
-
-    // Row 6 — empty
-    for (let c = 0; c < 6; c++) setCell(ws, 5, c, cell('', {}))
-
-    // Row 7 — detail headers
-    const detailHeaders = ['Fecha', 'Tipo', 'Cantidad', 'Total S/IVA ($)', 'IVA ($)', 'Total C/IVA ($)']
-    for (let c = 0; c < 6; c++) setCell(ws, 6, c, cell(detailHeaders[c]!, headerStyle(MID_BLUE)))
-
-    // Data rows — alternating background
-    detalle.forEach((d, i) => {
-      const r   = 7 + i
-      const bg  = i % 2 === 0 ? undefined : ALT_BG
-      const nst = numStyle(bg)
-      setCell(ws, r, 0, cell(d.fecha,        { fill: bg ? { fgColor: { rgb: bg }, patternType: 'solid' } : undefined as never, alignment: { horizontal: 'center' } }))
-      setCell(ws, r, 1, cell('Activaciones', { fill: bg ? { fgColor: { rgb: bg }, patternType: 'solid' } : undefined as never }))
-      setCell(ws, r, 2, cell(d.cantidad,     { ...nst, numFmt: undefined, alignment: { horizontal: 'center' } }))
-      setCell(ws, r, 3, cell(d.totalSinIva,  nst))
-      setCell(ws, r, 4, cell(d.iva,          nst))
-      setCell(ws, r, 5, cell(d.totalConIva,  nst))
-    })
-
-    // Merges
-    ws['!merges'] = [
-      { s: { r: 2, c: 0 }, e: { r: 2, c: 5 } }, // TOTALES DEL MES
-    ]
+    const ws = wb.addWorksheet(nombre.slice(0, 31))
 
     // Column widths
-    ws['!cols'] = [
-      { wch: 14 }, { wch: 16 }, { wch: 12 }, { wch: 16 }, { wch: 12 }, { wch: 16 },
+    ws.columns = [
+      { key: 'a', width: 14 },
+      { key: 'b', width: 16 },
+      { key: 'c', width: 12 },
+      { key: 'd', width: 16 },
+      { key: 'e', width: 12 },
+      { key: 'f', width: 16 },
     ]
 
-    // Row heights
-    ws['!rows'] = [{ hpt: 22 }, {}, { hpt: 20 }, { hpt: 18 }, { hpt: 18 }, {}, { hpt: 18 }]
+    // Row 1 — title
+    const row1 = ws.addRow([`Empresa: ${nombre}`, '', `Mes: ${mesLabel}`, '', `Año: ${anio}`, ''])
+    row1.height = 22
+    row1.eachCell({ includeEmpty: true }, (cell) => {
+      cell.fill = solidFill(COLOR_DARK_BLUE)
+      cell.font = { bold: true, size: 12, color: { argb: COLOR_WHITE } }
+      cell.alignment = { vertical: 'middle' }
+    })
 
-    const sheetName = nombre.slice(0, 31)
-    XLSX.utils.book_append_sheet(wb, ws, sheetName)
+    // Row 2 — empty
+    ws.addRow([])
+
+    // Row 3 — "TOTALES DEL MES" (merged A3:F3)
+    const row3 = ws.addRow(['TOTALES DEL MES', '', '', '', '', ''])
+    row3.height = 20
+    ws.mergeCells('A3:F3')
+    row3.eachCell({ includeEmpty: true }, (cell) => {
+      cell.fill = solidFill(COLOR_DARK_BLUE)
+      cell.font = { bold: true, size: 12, color: { argb: COLOR_WHITE } }
+      cell.alignment = { horizontal: 'center', vertical: 'middle' }
+    })
+
+    // Row 4 — summary headers
+    const row4 = ws.addRow(['Registros', '', 'Total S/IVA ($)', 'IVA ($)', 'Total C/IVA ($)', ''])
+    applyHeader(row4, COLOR_MID_BLUE)
+
+    // Row 5 — summary totals
+    const row5 = ws.addRow([totalRegistros, '', totalSinIva, iva, totalConIva, ''])
+    row5.height = 18
+    row5.eachCell({ includeEmpty: true }, (cell) => {
+      cell.fill = solidFill(COLOR_LIGHT_BG)
+      cell.font = { bold: true, size: 11 }
+      cell.alignment = { horizontal: 'center', vertical: 'middle' }
+      if (typeof cell.value === 'number' && cell.value !== totalRegistros) {
+        cell.numFmt = NUM_FMT
+      }
+    })
+
+    // Row 6 — empty
+    ws.addRow([])
+
+    // Row 7 — detail headers
+    const row7 = ws.addRow(['Fecha', 'Tipo', 'Cantidad', 'Total S/IVA ($)', 'IVA ($)', 'Total C/IVA ($)'])
+    applyHeader(row7, COLOR_MID_BLUE)
+
+    // Data rows
+    detalle.forEach((d, i) => {
+      const values = [d.fecha, 'Activaciones', d.cantidad, d.totalSinIva, d.iva, d.totalConIva]
+      const dataRow = ws.addRow(values)
+      const useAlt = i % 2 !== 0
+      values.forEach((_, colIdx) => {
+        const cell = dataRow.getCell(colIdx + 1)
+        if (useAlt) cell.fill = solidFill(COLOR_ALT_BG)
+        if (typeof cell.value === 'number') {
+          if (colIdx >= 2) {
+            // col 3+ (0-indexed 2+): monetary or quantity
+            cell.numFmt = colIdx >= 3 ? NUM_FMT : undefined as never
+            cell.alignment = { horizontal: colIdx >= 3 ? 'right' : 'center', vertical: 'middle' }
+          }
+        } else {
+          cell.alignment = { vertical: 'middle' }
+        }
+      })
+    })
   }
 
-  if (wb.SheetNames.length === 0) {
-    const ws = XLSX.utils.aoa_to_sheet([['Sin datos para el período']])
-    XLSX.utils.book_append_sheet(wb, ws, 'Sin datos')
-  }
-
-  const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx', cellStyles: true })
+  const buffer = await wb.xlsx.writeBuffer()
   const filename = `facturacion-empresas-${anio}-${mesStr}.xlsx`
 
-  return new Response(buffer, {
+  return new Response(buffer as unknown as BodyInit, {
     headers: {
       'Content-Disposition': `attachment; filename="${filename}"`,
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
