@@ -2,7 +2,7 @@ import Link from 'next/link'
 import {
   LayoutDashboard, Upload, Zap, FileText, CreditCard, Building2,
   Receipt, PlusCircle, Calculator, Lock, BarChart2, Settings,
-  Users, UserCog, Shield, LogOut, type LucideIcon
+  Users, UserCog, Shield, LogOut, Bug, FileCode2, type LucideIcon
 } from 'lucide-react'
 
 import type { CurrentUser } from '@/lib/auth'
@@ -11,7 +11,7 @@ import { navigationItems } from '@/lib/navigation'
 const iconMap: Record<string, LucideIcon> = {
   LayoutDashboard, Upload, Zap, FileText, CreditCard, Building2,
   Receipt, PlusCircle, Calculator, Lock, BarChart2, Settings,
-  Users, UserCog, Shield
+  Users, UserCog, Shield, Bug, FileCode2
 }
 
 function LogoMark() {
@@ -33,7 +33,11 @@ function LogoMark() {
 }
 
 export function AppSidebar({ user }: { user: CurrentUser }) {
-  const allItems = navigationItems.filter((item) => user.rol === 'ADMIN' || !item.adminOnly)
+  const allItems = navigationItems.filter((item) => {
+    if (item.adminOnly) return user.rol === 'ADMIN'
+    if (user.rol === 'ISSUES') return item.issuesOnly === true
+    return true
+  })
   const regularItems = allItems.filter((item) => !item.adminOnly)
   const adminItems = allItems.filter((item) => item.adminOnly)
   const displayName = user.nombre || user.email

@@ -143,6 +143,7 @@ function Select({ label, name, defaultValue }: { label: string; name: string; de
       <select className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm" defaultValue={defaultValue} name={name}>
         <option value="ADMIN">ADMIN</option>
         <option value="OPERADOR">OPERADOR</option>
+        <option value="ISSUES">Gestión de Issues</option>
       </select>
     </label>
   )

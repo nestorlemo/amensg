@@ -9,7 +9,7 @@ import { canViewRouteForRole, isAdminRole } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
 
 export const SESSION_COOKIE = 'amensg_session'
-export const ROLES = ['ADMIN', 'OPERADOR'] as const
+export const ROLES = ['ADMIN', 'OPERADOR', 'ISSUES'] as const
 export type UserRole = (typeof ROLES)[number]
 
 export type CurrentUser = {

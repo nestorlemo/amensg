@@ -1,4 +1,4 @@
-export type NavItem = { href: string; label: string; icon: string; adminOnly?: boolean }
+export type NavItem = { href: string; label: string; icon: string; adminOnly?: boolean; issuesOnly?: boolean }
 
 export const navigationItems: NavItem[] = [
   { href: '/', label: 'Dashboard', icon: 'LayoutDashboard' },
@@ -12,6 +12,8 @@ export const navigationItems: NavItem[] = [
   { href: '/liquidaciones', label: 'Liquidaciones', icon: 'Calculator' },
   { href: '/cierres', label: 'Cierres', icon: 'Lock' },
   { href: '/reportes', label: 'Reportes', icon: 'BarChart2' },
+  { href: '/issues', label: 'Issues', icon: 'Bug', issuesOnly: true },
+  { href: '/issues/facturar', label: 'Facturar desarrollo', icon: 'FileCode2' },
   { href: '/parametros', label: 'Parametros', icon: 'Settings', adminOnly: true },
   { href: '/socios', label: 'Socios', icon: 'Users', adminOnly: true },
   { href: '/usuarios', label: 'Usuarios', icon: 'UserCog', adminOnly: true },
