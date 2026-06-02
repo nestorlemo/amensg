@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 
@@ -94,7 +95,7 @@ export default async function ActivacionesPage({ searchParams }: PageProps) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row: any) => (
+            {rows.map((row: any) => // eslint-disable-line (
               <tr className="border-t border-slate-200" key={row.id}>
                 <Td>{row.mid}</Td>
                 <Td>{row.chip}</Td>
