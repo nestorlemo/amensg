@@ -33,7 +33,13 @@ function LogoMark() {
 }
 
 export function AppSidebar({ user }: { user: CurrentUser }) {
-  const allItems = navigationItems.filter((item) => user.rol === 'ADMIN' || !item.adminOnly)
+  const allItems = navigationItems.filter((item) => {
+    if (item.adminOnly) return user.rol === 'ADMIN'
+    if (item.roles) return item.roles.includes(user.rol)
+    // No roles restriction — hide from ISSUES (they only see explicitly listed items)
+    if (user.rol === 'ISSUES') return false
+    return true
+  })
   const regularItems = allItems.filter((item) => !item.adminOnly)
   const adminItems = allItems.filter((item) => item.adminOnly)
   const displayName = user.nombre || user.email
