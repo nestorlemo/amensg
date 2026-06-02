@@ -176,6 +176,7 @@ export async function createGastoConcepto(body: Record<string, unknown>) {
 }
 
 export async function updateGastoConcepto(id: string, body: Record<string, unknown>) {
+  const nombre = requiredString(body, 'nombre')
   const tipo = requiredString(body, 'tipo')
   const activo = typeof body.activo === 'boolean' ? body.activo : undefined
   const montoRaw = body.monto !== undefined && body.monto !== '' ? body.monto : null
@@ -193,18 +194,23 @@ export async function updateGastoConcepto(id: string, body: Record<string, unkno
     }
   }
 
+  const current = await prisma.gastoConcepto.findUnique({ where: { id }, select: { nombre: true } })
+  const data: Prisma.GastoConceptoUpdateInput = {
+    tipo,
+    monto,
+    ...(activo === undefined ? {} : { activo }),
+    ...(nombre && nombre !== current?.nombre ? { nombre } : {}),
+  }
+
   const concepto = await prisma.$transaction(async (tx) => {
-    const updated = await tx.gastoConcepto.update({
-      where: { id },
-      data: { tipo, monto, ...(activo === undefined ? {} : { activo }) },
-    })
+    const updated = await tx.gastoConcepto.update({ where: { id }, data })
 
     await tx.auditoria.create({
       data: {
         entidad: 'GastoConcepto',
         entidadId: id,
         accion: 'EDITAR_CONCEPTO_GASTO',
-        detalle: { tipo, monto: monto?.toString() ?? null, activo },
+        detalle: { nombre, tipo, monto: monto?.toString() ?? null, activo },
       },
     })
 
