@@ -27,6 +27,9 @@ async function main() {
   const parametros: Array<[string, Prisma.Decimal, string]> = [
     ['precio_unitario_activacion', new Prisma.Decimal('4.00'), 'Precio unitario de activación usado para futuras importaciones.'],
     ['porcentaje_iva', new Prisma.Decimal('0.22'), 'Porcentaje de IVA aplicado a futuras facturaciones.'],
+    ['porcentaje_test_horas', new Prisma.Decimal('30'), 'Porcentaje de horas de test sobre horas de desarrollo (issues).'],
+    ['porcentaje_rework_horas', new Prisma.Decimal('15'), 'Porcentaje de horas de rework sobre horas de desarrollo (issues).'],
+    ['valor_hora_desarrollo_usd', new Prisma.Decimal('0'), 'Valor hora de desarrollo en USD para facturación de issues.'],
   ]
 
   for (const [clave, valor, descripcion] of parametros) {

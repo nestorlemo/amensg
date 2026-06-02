@@ -44,7 +44,6 @@ export async function POST(request: Request) {
   const mes       = parseInt(String(body.mes ?? ''), 10)
   const empresaId = typeof body.empresaId === 'string' ? body.empresaId : ''
   const tipoCambio = Number(body.tipoCambio)
-  const valorHoraUSD = Number(body.valorHoraUSD)
   const issueIds = Array.isArray(body.issueIds) ? (body.issueIds as string[]) : []
   const distribuciones = Array.isArray(body.distribuciones)
     ? (body.distribuciones as { socioId: string; porcentaje: number }[])
@@ -53,8 +52,12 @@ export async function POST(request: Request) {
   if (!anio || !mes) return NextResponse.json({ error: 'VALIDATION_ERROR', message: 'Año y mes son requeridos.' }, { status: 422 })
   if (!empresaId)    return NextResponse.json({ error: 'VALIDATION_ERROR', message: 'Empresa es requerida.' }, { status: 422 })
   if (!tipoCambio || tipoCambio <= 0) return NextResponse.json({ error: 'VALIDATION_ERROR', message: 'Tipo de cambio inválido.' }, { status: 422 })
-  if (!valorHoraUSD || valorHoraUSD <= 0) return NextResponse.json({ error: 'VALIDATION_ERROR', message: 'Valor hora USD inválido.' }, { status: 422 })
   if (issueIds.length === 0) return NextResponse.json({ error: 'VALIDATION_ERROR', message: 'Debe seleccionar al menos un issue.' }, { status: 422 })
+
+  // Read valor hora from parametros
+  const valorHoraParam = await prisma.parametro.findUnique({ where: { clave: 'valor_hora_desarrollo_usd' } })
+  const valorHoraUSD = valorHoraParam ? Number(valorHoraParam.valor) : 0
+  if (!valorHoraUSD || valorHoraUSD <= 0) return NextResponse.json({ error: 'VALIDATION_ERROR', message: 'El parámetro valor_hora_desarrollo_usd no está configurado. Configuralo en Parámetros.' }, { status: 422 })
 
   const totalPct = distribuciones.reduce((s, d) => s + d.porcentaje, 0)
   if (distribuciones.length > 0 && Math.abs(totalPct - 100) > 0.01) {
