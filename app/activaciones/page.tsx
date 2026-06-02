@@ -94,7 +94,7 @@ export default async function ActivacionesPage({ searchParams }: PageProps) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
+            {rows.map((row: any) => (
               <tr className="border-t border-slate-200" key={row.id}>
                 <Td>{row.mid}</Td>
                 <Td>{row.chip}</Td>
