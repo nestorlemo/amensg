@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 
 import { PageHeader } from '@/components/page-header'
 
-const ESTADOS = ['PENDIENTE', 'EN_DESARROLLO', 'EN_TEST', 'EN_PRODUCCION', 'CANCELADO', 'NO_HACER'] as const
+const ESTADOS = ['PENDIENTE', 'EN_DESARROLLO', 'EN_TEST', 'EN_PRODUCCION', 'FACTURADO', 'COBRADO', 'CANCELADO', 'NO_HACER'] as const
 const PRIORIDADES = ['ALTA', 'MEDIA', 'BAJA'] as const
 
 type Issue = {
@@ -30,6 +30,8 @@ const ESTADO_BADGE: Record<string, string> = {
   EN_DESARROLLO: 'bg-blue-100 text-blue-800',
   EN_TEST:       'bg-yellow-100 text-yellow-800',
   EN_PRODUCCION: 'bg-emerald-100 text-emerald-800',
+  FACTURADO:     'bg-purple-100 text-purple-800',
+  COBRADO:       'bg-emerald-700 text-white',
   CANCELADO:     'bg-red-100 text-red-700',
   NO_HACER:      'bg-slate-200 text-slate-600',
 }
