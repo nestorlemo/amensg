@@ -2,7 +2,7 @@ import Link from 'next/link'
 import {
   LayoutDashboard, Upload, Zap, FileText, CreditCard, Building2,
   Receipt, PlusCircle, Calculator, Lock, BarChart2, Settings,
-  Users, UserCog, Shield, LogOut, type LucideIcon
+  Users, UserCog, Shield, LogOut, Bug, FileCode2, Clock, type LucideIcon
 } from 'lucide-react'
 
 import type { CurrentUser } from '@/lib/auth'
@@ -11,7 +11,7 @@ import { navigationItems } from '@/lib/navigation'
 const iconMap: Record<string, LucideIcon> = {
   LayoutDashboard, Upload, Zap, FileText, CreditCard, Building2,
   Receipt, PlusCircle, Calculator, Lock, BarChart2, Settings,
-  Users, UserCog, Shield
+  Users, UserCog, Shield, Bug, FileCode2, Clock
 }
 
 function LogoMark() {
