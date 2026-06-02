@@ -252,8 +252,8 @@ export default function IssuesPage() {
   const [fEstado, setFEstado]       = useState('')
   const [fEmpresa, setFEmpresa]     = useState('')
   const [fPrioridad, setFPrioridad] = useState('')
-  const [fAnio, setFAnio]           = useState(String(now.getFullYear()))
-  const [fMes, setFMes]             = useState('')
+  const [fDesde, setFDesde]         = useState('')
+  const [fHasta, setFHasta]         = useState('')
 
   // Create form
   const [form, setForm] = useState({ ...EMPTY_FORM, fecha: todayISO })
@@ -275,17 +275,17 @@ export default function IssuesPage() {
       .catch(() => null)
   }, [])
 
-  useEffect(() => { void fetchAll() }, [fEstado, fEmpresa, fPrioridad, fAnio, fMes]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void fetchAll() }, [fEstado, fEmpresa, fPrioridad, fDesde, fHasta]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function fetchAll() {
     setLoading(true)
     try {
       const qs = new URLSearchParams()
-      if (fEstado)    qs.set('estado',    fEstado)
-      if (fEmpresa)   qs.set('empresaId', fEmpresa)
-      if (fPrioridad) qs.set('prioridad', fPrioridad)
-      if (fAnio)      qs.set('anio',      fAnio)
-      if (fMes)       qs.set('mes',       fMes)
+      if (fEstado)    qs.set('estado',      fEstado)
+      if (fEmpresa)   qs.set('empresaId',   fEmpresa)
+      if (fPrioridad) qs.set('prioridad',   fPrioridad)
+      if (fDesde)     qs.set('fechaDesde',  fDesde)
+      if (fHasta)     qs.set('fechaHasta',  fHasta)
       const res  = await fetch(`/api/issues?${qs}`)
       const data = await res.json()
       setIssues(data.issues ?? [])
@@ -369,8 +369,8 @@ export default function IssuesPage() {
             <option value="">Todas</option>
             {PRIORIDADES.map((p) => <option key={p} value={p}>{p}</option>)}
           </Select>
-          <Input label="Año"  value={fAnio} onChange={setFAnio} placeholder="2026" width="w-20" />
-          <Input label="Mes"  value={fMes}  onChange={setFMes}  placeholder="Todos" width="w-16" />
+          <Input label="Fecha prod. desde" type="date" value={fDesde} onChange={setFDesde} width="w-40" />
+          <Input label="Fecha prod. hasta" type="date" value={fHasta} onChange={setFHasta} width="w-40" />
           <button
             className="h-9 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white"
             onClick={() => void fetchAll()}
