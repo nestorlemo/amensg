@@ -13,12 +13,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  console.log('middleware url:', request.nextUrl.toString(), 'host:', request.headers.get('host'))
   if (!request.cookies.get(SESSION_COOKIE)?.value) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    url.searchParams.set('next', pathname)
-    return NextResponse.redirect(url)
+    const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || 'localhost:3000'
+    const proto = request.headers.get('x-forwarded-proto') || 'https'
+    const redirectUrl = new URL('/login', `${proto}://${host}`)
+    redirectUrl.searchParams.set('next', pathname)
+    return NextResponse.redirect(redirectUrl)
   }
 
   // Redirect ISSUES users away from routes they can't access
