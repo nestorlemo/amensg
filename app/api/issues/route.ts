@@ -60,7 +60,7 @@ export async function POST(request: Request) {
   return NextResponse.json(serializeIssue(issue), { status: 201 })
 }
 
-export function parseIssueBody(body: Record<string, unknown>) {
+function parseIssueBody(body: Record<string, unknown>) {
   const descripcion = typeof body.descripcion === 'string' ? body.descripcion.trim() : ''
   if (!descripcion) return { error: { error: 'VALIDATION_ERROR', message: 'La descripción es requerida.' } }
 
@@ -107,7 +107,7 @@ export function parseIssueBody(body: Record<string, unknown>) {
   }
 }
 
-export function serializeIssue(issue: {
+function serializeIssue(issue: {
   id: string
   fecha: Date
   descripcion: string
