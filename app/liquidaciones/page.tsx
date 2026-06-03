@@ -196,24 +196,37 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
               <tr>
                 <Th>Empresa</Th>
                 <Th align="right">Horas</Th>
-                <Th align="right">Total UYU s/IVA</Th>
-                <Th align="right">IVA</Th>
-                <Th align="right">Total c/IVA</Th>
+                <Th align="right">Total USD s/IVA</Th>
+                <Th align="right">IVA USD</Th>
+                <Th align="right">Total c/IVA USD</Th>
+                <Th align="right">Tipo cambio</Th>
+                <Th align="right">Total c/IVA UYU</Th>
               </tr>
             </thead>
             <tbody>
-              {preview.ingresos.desarrolloFacturas.map((f) => (
-                <tr className="border-t border-slate-200" key={f.id}>
-                  <Td>{f.empresa}</Td>
-                  <Td align="right">{f.totalHoras}</Td>
-                  <Td align="right">{formatMoney(f.totalUYU)}</Td>
-                  <Td align="right">{formatMoney(f.ivaUYU)}</Td>
-                  <Td align="right">{formatMoney(f.totalConIvaUYU)}</Td>
-                </tr>
-              ))}
               {preview.ingresos.desarrolloFacturas.length === 0 ? (
-                <EmptyRow colSpan={5} message="No hay facturas de desarrollo para este periodo." />
+                <EmptyRow colSpan={7} message="No hay facturas de desarrollo para este periodo." />
               ) : null}
+              {preview.ingresos.desarrolloFacturas.map((f) => (
+                <>
+                  <tr className="border-t border-slate-200" key={f.id}>
+                    <Td>{f.empresa}</Td>
+                    <Td align="right">{f.totalHoras}</Td>
+                    <Td align="right">{formatMoney(f.totalUSD)}</Td>
+                    <Td align="right">{formatMoney(f.ivaUSD)}</Td>
+                    <Td align="right">{formatMoney(f.totalConIvaUSD)}</Td>
+                    <Td align="right">{formatMoney(f.tipoCambio)}</Td>
+                    <Td align="right">{formatMoney(f.totalConIvaUYU)}</Td>
+                  </tr>
+                  {f.distribuciones.map((d) => (
+                    <tr key={d.id} className="bg-slate-50 text-xs text-slate-500">
+                      <td className="px-4 py-1.5 pl-8 italic" colSpan={2}>{d.socioNombre} · {formatPercent(d.porcentaje)}</td>
+                      <td className="px-4 py-1.5 text-right tabular-nums" colSpan={3}>{formatMoney(d.montoUSD)} USD</td>
+                      <td className="px-4 py-1.5 text-right tabular-nums" colSpan={2}>{formatMoney(d.montoUYU)} UYU</td>
+                    </tr>
+                  ))}
+                </>
+              ))}
             </tbody>
           </table>
         </div>
