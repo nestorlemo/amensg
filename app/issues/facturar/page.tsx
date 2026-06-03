@@ -71,16 +71,14 @@ export default function FacturarDesarrolloPage() {
     setSearched(false)
     setGroups([])
     try {
-      // Always fetch EN_PRODUCCION issues; facturado is a derived field from FacturaIssue
+      // Fetch EN_PRODUCCION issues filtered server-side by FacturaIssue existence
       const qs = new URLSearchParams({ estado: 'EN_PRODUCCION', includeFacturado: 'true', fechaDesde, fechaHasta })
       if (fEmpresa) qs.set('empresaId', fEmpresa)
+      if (fEstadoFact === 'sin_facturar') qs.set('estadoFacturacion', 'sin_facturar')
+      else if (fEstadoFact === 'facturados') qs.set('estadoFacturacion', 'facturado')
       const res = await fetch(`/api/issues?${qs}`)
       const data = await res.json()
-      let issues: Issue[] = (data.issues as Issue[]) ?? []
-
-      // Filter by billing status client-side using the derived `facturado` field
-      if (fEstadoFact === 'sin_facturar') issues = issues.filter((i) => !i.facturado)
-      else if (fEstadoFact === 'facturados') issues = issues.filter((i) => i.facturado)
+      const issues: Issue[] = (data.issues as Issue[]) ?? []
 
       const map = new Map<string, EmpresaGroup>()
       for (const issue of issues) {
