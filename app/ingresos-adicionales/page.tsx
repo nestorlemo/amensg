@@ -56,13 +56,8 @@ export default async function IngresosAdicionalesPage({ searchParams }: PageProp
               <Th>Periodo</Th>
               <Th>Fecha facturacion</Th>
               <Th>Moneda</Th>
-              <Th>Monto origen</Th>
-              <Th>Tipo cambio</Th>
               <Th>Monto sin IVA</Th>
-              <Th>IVA %</Th>
-              <Th>IVA</Th>
               <Th>Monto con IVA</Th>
-              <Th>Observaciones</Th>
               <Th>Acciones</Th>
             </tr>
           </thead>
@@ -74,18 +69,13 @@ export default async function IngresosAdicionalesPage({ searchParams }: PageProp
                 <Td>{formatPeriod(row.anio, row.mes)}</Td>
                 <Td>{formatDate(row.fechaFacturacion)}</Td>
                 <Td>{row.moneda}</Td>
-                <Td>{row.montoOrigen}</Td>
-                <Td>{row.tipoCambioAplicado ?? 'No aplica'}</Td>
                 <Td>{row.montoSinIva}</Td>
-                <Td>{row.porcentajeIva}</Td>
-                <Td>{row.iva}</Td>
                 <Td>{row.montoConIva}</Td>
-                <Td>{row.observaciones ?? 'Sin observaciones'}</Td>
-                <Td><IngresoRowActions disabled={periodoCerrado} empresas={empresas} ingreso={row} /></Td>
+                <Td><IngresoRowActions disabled={periodoCerrado} ingreso={row} /></Td>
               </tr>
             ))}
             {rows.length === 0 ? (
-              <tr><Td colSpan={13}>No hay ingresos adicionales para los filtros seleccionados.</Td></tr>
+              <tr><Td colSpan={8}>No hay ingresos adicionales para los filtros seleccionados.</Td></tr>
             ) : null}
           </tbody>
         </table>

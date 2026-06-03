@@ -20,6 +20,8 @@ type EmpresaGroup = {
 
 type Distribucion = { socioId: string; nombre: string; porcentaje: string }
 
+type EmpresaOption = { id: string; nombre: string }
+
 export default function FacturarDesarrolloPage() {
   const now = new Date()
   const firstOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
@@ -27,6 +29,8 @@ export default function FacturarDesarrolloPage() {
 
   const [fechaDesde, setFechaDesde] = useState(firstOfMonth)
   const [fechaHasta, setFechaHasta] = useState(today)
+  const [fEmpresa, setFEmpresa] = useState('')
+  const [empresasOpts, setEmpresasOpts] = useState<EmpresaOption[]>([])
   const [groups, setGroups]     = useState<EmpresaGroup[]>([])
   const [socios, setSocios]     = useState<Socio[]>([])
   const [valorHora, setValorHora] = useState(0)
@@ -34,7 +38,6 @@ export default function FacturarDesarrolloPage() {
   const [searched, setSearched] = useState(false)
 
   // Per-empresa form state
-  const [tipoCambios, setTipoCambios]     = useState<Record<string, string>>({})
   const [distribuciones, setDistribuciones] = useState<Record<string, Distribucion[]>>({})
   const [selectedIssues, setSelectedIssues] = useState<Record<string, Set<string>>>({})
   const [saving, setSaving]   = useState<Record<string, boolean>>({})
@@ -49,6 +52,10 @@ export default function FacturarDesarrolloPage() {
       .then((r) => r.json())
       .then((d: { valorHoraUSD: number }) => setValorHora(d.valorHoraUSD ?? 0))
       .catch(() => null)
+    fetch('/api/empresas?activo=true')
+      .then((r) => r.json())
+      .then((d: { empresas?: EmpresaOption[]; data?: EmpresaOption[] }) => setEmpresasOpts(d.empresas ?? d.data ?? []))
+      .catch(() => null)
   }, [])
 
   async function handleBuscar(e: React.FormEvent) {
@@ -58,6 +65,7 @@ export default function FacturarDesarrolloPage() {
     setGroups([])
     try {
       const qs = new URLSearchParams({ estado: 'EN_PRODUCCION', fechaDesde, fechaHasta })
+      if (fEmpresa) qs.set('empresaId', fEmpresa)
       const res = await fetch(`/api/issues?${qs}`)
       const data = await res.json()
       const issues: Issue[] = data.issues ?? []
@@ -77,15 +85,12 @@ export default function FacturarDesarrolloPage() {
       setGroups(gs)
 
       // Init state per empresa
-      const initTc: Record<string, string> = {}
       const initSel: Record<string, Set<string>> = {}
       const initDist: Record<string, Distribucion[]> = {}
       for (const g of gs) {
-        initTc[g.empresaId] = ''
         initSel[g.empresaId] = new Set(g.issues.map((i) => i.id))
         initDist[g.empresaId] = socios.map((s) => ({ socioId: s.id, nombre: s.nombre, porcentaje: '' }))
       }
-      setTipoCambios(initTc)
       setSelectedIssues(initSel)
       setDistribuciones(initDist)
       setSearched(true)
@@ -95,8 +100,6 @@ export default function FacturarDesarrolloPage() {
   }
 
   async function handleFacturar(g: EmpresaGroup) {
-    const tc = Number(tipoCambios[g.empresaId])
-    if (!tc || tc <= 0) { setResults((r) => ({ ...r, [g.empresaId]: { ok: false, msg: 'Ingresá el tipo de cambio.' } })); return }
     if (valorHora <= 0) { setResults((r) => ({ ...r, [g.empresaId]: { ok: false, msg: 'No hay valor hora registrado.' } })); return }
 
     const dist = distribuciones[g.empresaId]?.filter((d) => d.porcentaje !== '') ?? []
@@ -121,7 +124,7 @@ export default function FacturarDesarrolloPage() {
           fechaDesde,
           fechaHasta,
           empresaId: g.empresaId,
-          tipoCambio: tc,
+          tipoCambio: 1,
           valorHoraUSD: valorHora,
           issueIds,
           distribuciones: dist.map((d) => ({ socioId: d.socioId, porcentaje: Number(d.porcentaje) })),
@@ -131,7 +134,7 @@ export default function FacturarDesarrolloPage() {
       if (!res.ok) {
         setResults((r) => ({ ...r, [g.empresaId]: { ok: false, msg: data.message ?? 'Error al facturar.' } }))
       } else {
-        setResults((r) => ({ ...r, [g.empresaId]: { ok: true, msg: `Factura creada. Ingreso adicional registrado. Total: $${data.totalConIva?.toFixed(2)} UYU` } }))
+        setResults((r) => ({ ...r, [g.empresaId]: { ok: true, msg: `Factura creada. Ingreso adicional registrado. Total: $${data.totalConIva?.toFixed(2)} USD` } }))
       }
     } finally {
       setSaving((s) => ({ ...s, [g.empresaId]: false }))
@@ -167,6 +170,15 @@ export default function FacturarDesarrolloPage() {
             Fecha prod. hasta
             <input className="mt-1 block h-9 w-40 rounded-md border border-slate-300 px-3 text-sm" type="date" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} required />
           </label>
+          <label className="block text-sm font-medium text-slate-700">
+            Empresa
+            <select className="mt-1 block h-9 w-48 rounded-md border border-slate-300 px-3 text-sm" value={fEmpresa} onChange={(e) => setFEmpresa(e.target.value)}>
+              <option value="">Todas</option>
+              {empresasOpts.map((emp) => (
+                <option key={emp.id} value={emp.id}>{emp.nombre}</option>
+              ))}
+            </select>
+          </label>
           <button className="h-9 rounded-md bg-slate-950 px-5 text-sm font-semibold text-white disabled:opacity-50" disabled={loading} type="submit">
             {loading ? 'Buscando…' : 'Buscar issues'}
           </button>
@@ -186,11 +198,9 @@ export default function FacturarDesarrolloPage() {
         const selIds  = selectedIssues[g.empresaId] ?? new Set()
         const selIssues = g.issues.filter((i) => selIds.has(i.id))
         const selHoras  = selIssues.reduce((s, i) => s + i.totalHoras, 0)
-        const tc        = Number(tipoCambios[g.empresaId] ?? 0)
         const totalUSD  = Math.round(selHoras * valorHora * 100) / 100
-        const totalUYU  = Math.round(totalUSD * tc * 100) / 100
-        const iva       = Math.round(totalUYU * 0.22 * 100) / 100
-        const totalCI   = Math.round((totalUYU + iva) * 100) / 100
+        const ivaUSD    = Math.round(totalUSD * 0.22 * 100) / 100
+        const totalConIvaUSD = Math.round((totalUSD + ivaUSD) * 100) / 100
         const res       = results[g.empresaId]
 
         return (
@@ -232,22 +242,16 @@ export default function FacturarDesarrolloPage() {
                 <p className="text-xl font-bold text-slate-950">{selHoras.toFixed(2)}h</p>
               </div>
               <div className="rounded-md border border-slate-100 bg-slate-50 p-3 text-center">
-                <p className="text-xs text-slate-500">Total USD</p>
+                <p className="text-xs text-slate-500">Total USD s/IVA</p>
                 <p className="text-xl font-bold text-blue-700">${totalUSD.toFixed(2)}</p>
               </div>
-              <label className="block text-sm font-medium text-slate-700">
-                Tipo de cambio
-                <input
-                  className="mt-1 block h-9 w-full rounded-md border border-slate-300 px-3 text-sm"
-                  type="number" step="0.01" placeholder="ej: 40.50"
-                  value={tipoCambios[g.empresaId] ?? ''}
-                  onChange={(e) => setTipoCambios((t) => ({ ...t, [g.empresaId]: e.target.value }))}
-                />
-              </label>
+              <div className="rounded-md border border-slate-100 bg-slate-50 p-3 text-center">
+                <p className="text-xs text-slate-500">IVA (22%) USD</p>
+                <p className="text-xl font-bold text-slate-700">${ivaUSD.toFixed(2)}</p>
+              </div>
               <div className="rounded-md border border-emerald-100 bg-emerald-50 p-3 text-center">
-                <p className="text-xs text-slate-500">Total c/IVA (UYU)</p>
-                <p className="text-xl font-bold text-emerald-700">{tc > 0 ? `$${totalCI.toFixed(2)}` : '—'}</p>
-                {tc > 0 && <p className="text-xs text-slate-400">S/IVA: ${totalUYU.toFixed(2)} + IVA: ${iva.toFixed(2)}</p>}
+                <p className="text-xs text-slate-500">Total c/IVA USD</p>
+                <p className="text-xl font-bold text-emerald-700">${totalConIvaUSD.toFixed(2)}</p>
               </div>
             </div>
 
@@ -265,8 +269,8 @@ export default function FacturarDesarrolloPage() {
                         value={d.porcentaje}
                         onChange={(e) => setDist(g.empresaId, d.socioId, e.target.value)}
                       />
-                      {tc > 0 && d.porcentaje ? (
-                        <span className="block text-xs text-slate-400">${(totalCI * Number(d.porcentaje) / 100).toFixed(2)}</span>
+                      {d.porcentaje ? (
+                        <span className="block text-xs text-slate-400">${(totalConIvaUSD * Number(d.porcentaje) / 100).toFixed(2)} USD</span>
                       ) : null}
                     </label>
                   ))}

@@ -14,9 +14,11 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url)
   const empresaId = searchParams.get('empresaId') ?? undefined
+  const ingresoAdicionalId = searchParams.get('ingresoAdicionalId') ?? undefined
 
   const where: Record<string, unknown> = {}
   if (empresaId) where.empresaId = empresaId
+  if (ingresoAdicionalId) where.ingresoAdicionalId = ingresoAdicionalId
 
   const facturas = await prisma.facturaDesarrollo.findMany({
     where,
