@@ -29,6 +29,14 @@ export default function FacturarDesarrolloPage() {
 
   const [fechaDesde, setFechaDesde] = useState(firstOfMonth)
   const [fechaHasta, setFechaHasta] = useState(today)
+
+  function isoToDisplay(iso: string) {
+    const [y, m, d] = iso.split('-')
+    return d && m && y ? `${d}/${m}/${y}` : iso
+  }
+
+  const [displayDesde, setDisplayDesde] = useState(() => isoToDisplay(firstOfMonth))
+  const [displayHasta, setDisplayHasta] = useState(() => isoToDisplay(today))
   const [fEmpresa, setFEmpresa] = useState('')
   const [empresasOpts, setEmpresasOpts] = useState<EmpresaOption[]>([])
   const [groups, setGroups]     = useState<EmpresaGroup[]>([])
@@ -164,11 +172,29 @@ export default function FacturarDesarrolloPage() {
         <form className="flex flex-wrap items-end gap-4" onSubmit={(e) => void handleBuscar(e)}>
           <label className="block text-sm font-medium text-slate-700">
             Fecha prod. desde
-            <input className="mt-1 block h-9 w-40 rounded-md border border-slate-300 px-3 text-sm" type="date" lang="es-UY" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} required />
+            <input
+              className="mt-1 block h-9 w-40 rounded-md border border-slate-300 px-3 text-sm"
+              type="text" placeholder="dd/mm/yyyy" pattern="\d{2}/\d{2}/\d{4}"
+              value={displayDesde}
+              onChange={(e) => {
+                setDisplayDesde(e.target.value)
+                const [d, m, y] = e.target.value.split('/')
+                if (d && m && y && y.length === 4) setFechaDesde(`${y}-${m}-${d}`)
+              }}
+            />
           </label>
           <label className="block text-sm font-medium text-slate-700">
             Fecha prod. hasta
-            <input className="mt-1 block h-9 w-40 rounded-md border border-slate-300 px-3 text-sm" type="date" lang="es-UY" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} required />
+            <input
+              className="mt-1 block h-9 w-40 rounded-md border border-slate-300 px-3 text-sm"
+              type="text" placeholder="dd/mm/yyyy" pattern="\d{2}/\d{2}/\d{4}"
+              value={displayHasta}
+              onChange={(e) => {
+                setDisplayHasta(e.target.value)
+                const [d, m, y] = e.target.value.split('/')
+                if (d && m && y && y.length === 4) setFechaHasta(`${y}-${m}-${d}`)
+              }}
+            />
           </label>
           <label className="block text-sm font-medium text-slate-700">
             Empresa
