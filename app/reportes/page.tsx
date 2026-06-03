@@ -77,6 +77,16 @@ export default function ReportesPage() {
         description="Seleccione un reporte para revisar una vista previa filtrada antes de exportar el CSV."
       />
 
+      <Link href="/reportes/graficos" className="block rounded-xl border-2 border-[#1769E0] bg-[#EEF4FF] p-5 hover:bg-[#dce9ff]">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">📊</span>
+          <div>
+            <p className="font-semibold text-[#1769E0]">Reportes y Gráficos</p>
+            <p className="text-sm text-slate-600">KPIs, evolución mensual, distribución por socio y más.</p>
+          </div>
+        </div>
+      </Link>
+
       {reportGroups.map((group) => (
         <section className="space-y-3" key={group.title}>
           <div>
