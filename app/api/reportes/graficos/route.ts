@@ -89,30 +89,29 @@ export async function GET(req: NextRequest) {
     resultadoMensual.push({ mes, ingresos, gastos, resultado: ingresos - gastos })
   }
 
-  // 3. distribucionSocios & tipoCambioMensual
-  const cierresAnio = await prisma.cierreMensual.findMany({
-    where: { anio },
-    select: { mes: true, snapshot: true },
+  // 3. distribucionSocios: DistribucionFactura (desarrollo) + distribución proporcional de activaciones
+  const distribDesarrollo = await prisma.distribucionFactura.findMany({
+    where: { factura: { anio } },
+    select: { socio: { select: { nombre: true } }, montoUYU: true },
   })
 
   const socioMap = new Map<string, number>()
-  const tipoCambioMensual: Array<{ mes: number; tc: number }> = []
-
-  for (const cierre of cierresAnio) {
-    const snap = cierre.snapshot as Record<string, unknown>
-    const socios = snap?.socios
-    if (Array.isArray(socios)) {
-      for (const s of socios) {
-        const nombre: string = (s?.socioNombre ?? s?.nombre ?? 'Desconocido') as string
-        const monto = Number(s?.montoPesos ?? 0)
-        socioMap.set(nombre, (socioMap.get(nombre) ?? 0) + monto)
-      }
-    }
-    const tc = Number(snap?.tipoCambioUsd ?? 0)
-    if (tc > 0) tipoCambioMensual.push({ mes: cierre.mes, tc })
+  for (const d of distribDesarrollo) {
+    const nombre = d.socio.nombre
+    socioMap.set(nombre, (socioMap.get(nombre) ?? 0) + Number(d.montoUYU))
   }
 
-  const distribucionSocios = Array.from(socioMap.entries()).map(([socio, monto]) => ({ socio, monto }))
+  // Add activaciones distribution: resultadoMensual × porcentajeParticipacion
+  const socios = await prisma.socio.findMany({ where: { activo: true }, select: { nombre: true, porcentajeParticipacion: true } })
+  const totalResultado = resultadoMensual.reduce((s, r) => s + r.resultado, 0)
+  for (const socio of socios) {
+    const monto = totalResultado * Number(socio.porcentajeParticipacion)
+    socioMap.set(socio.nombre, (socioMap.get(socio.nombre) ?? 0) + monto)
+  }
+
+  const distribucionSocios = Array.from(socioMap.entries())
+    .map(([socio, monto]) => ({ socio, monto }))
+    .sort((a, b) => b.monto - a.monto)
 
   // 4. issuesPorEstado
   const issuesGrouped = await prisma.issue.groupBy({
@@ -151,7 +150,6 @@ export async function GET(req: NextRequest) {
     facturacionPorMesEmpresa,
     resultadoMensual,
     distribucionSocios,
-    tipoCambioMensual,
     issuesPorEstado,
     horasDesarrolloPorMes,
     facturacionDesarrolloPorMes,

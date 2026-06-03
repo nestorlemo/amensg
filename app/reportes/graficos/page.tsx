@@ -7,6 +7,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  ComposedChart,
   Legend,
   Line,
   LineChart,
@@ -28,7 +29,7 @@ const EMPRESA_COLORS: Record<string, string> = {
   VOS: '#F0B840',
   'Ciudad Móvil': '#a78bfa',
 }
-const EMPRESA_COLOR_LIST = ['#1769E0', '#20E0B2', '#F0B840', '#a78bfa', '#f87171', '#34d399']
+const EMPRESA_FALLBACK = '#19C3FF'
 
 const ESTADO_COLORS: Record<string, string> = {
   PENDIENTE: '#94a3b8',
@@ -38,12 +39,15 @@ const ESTADO_COLORS: Record<string, string> = {
   CANCELADO: '#f87171',
 }
 
+function empresaColor(nombre: string) {
+  return EMPRESA_COLORS[nombre] ?? EMPRESA_FALLBACK
+}
+
 type GraficosData = {
   activacionesPorMesEmpresa: { mes: number; empresa: string; cantidad: number }[]
   facturacionPorMesEmpresa: { mes: number; empresa: string; totalSinIva: number }[]
   resultadoMensual: { mes: number; ingresos: number; gastos: number; resultado: number }[]
   distribucionSocios: { socio: string; monto: number }[]
-  tipoCambioMensual: { mes: number; tc: number }[]
   issuesPorEstado: { estado: string; count: number }[]
   horasDesarrolloPorMes: { mes: number; horas: number }[]
   facturacionDesarrolloPorMes: { mes: number; totalUSD: number; acumulado: number }[]
@@ -101,7 +105,7 @@ function Skeleton() {
         ))}
       </div>
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {[...Array(9)].map((_, i) => (
+        {[...Array(8)].map((_, i) => (
           <div key={i} className="h-[300px] animate-pulse rounded-xl bg-slate-100" />
         ))}
       </div>
@@ -111,9 +115,9 @@ function Skeleton() {
 
 function pivotByEmpresa(rows: { mes: number; empresa: string; [k: string]: number | string }[], valueKey: string) {
   const empresas = [...new Set(rows.map(r => r.empresa))]
-  const byMes = new Map<number, Record<string, number>>()
+  const byMes = new Map<number, Record<string, number | string>>()
+  for (let m = 1; m <= 12; m++) byMes.set(m, { mes: m })
   for (const row of rows) {
-    if (!byMes.has(row.mes)) byMes.set(row.mes, { mes: row.mes })
     byMes.get(row.mes)![row.empresa] = Number(row[valueKey])
   }
   return { data: Array.from(byMes.values()).sort((a, b) => Number(a.mes) - Number(b.mes)), empresas }
@@ -154,12 +158,7 @@ export default function GraficosPage() {
     return Array.from(map.entries()).map(([name, value]) => ({ name, value }))
   })() : []
 
-  const resultadoData = data?.resultadoMensual.map(r => ({
-    ...r,
-    mes: MESES[r.mes - 1],
-  })) ?? []
-
-  const tcData = data?.tipoCambioMensual.map(r => ({ ...r, mes: MESES[r.mes - 1] })) ?? []
+  const resultadoData = data?.resultadoMensual.map(r => ({ ...r, mes: MESES[r.mes - 1] })) ?? []
   const horasData = data?.horasDesarrolloPorMes.map(r => ({ ...r, mes: MESES[r.mes - 1] })) ?? []
   const acumuladoData = data?.facturacionDesarrolloPorMes.map(r => ({ ...r, mes: MESES[r.mes - 1] })) ?? []
 
@@ -199,21 +198,23 @@ export default function GraficosPage() {
           <section className="space-y-4">
             <SectionTitle title="Activaciones" color="#1769E0" />
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              {/* Chart 1: BarChart agrupado activaciones */}
               <ChartCard title="Evolución mensual de activaciones">
                 <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={activData.map(d => ({ ...d, mes: MESES[Number(d.mes) - 1] }))}>
+                  <BarChart data={activData.map(d => ({ ...d, mes: MESES[Number(d.mes) - 1] }))}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend />
-                    {activEmpresas.map((emp, i) => (
-                      <Line key={emp} type="monotone" dataKey={emp} stroke={EMPRESA_COLORS[emp] ?? EMPRESA_COLOR_LIST[i]} strokeWidth={2} dot={false} />
+                    {activEmpresas.map((emp) => (
+                      <Bar key={emp} dataKey={emp} fill={empresaColor(emp)} />
                     ))}
-                  </LineChart>
+                  </BarChart>
                 </ResponsiveContainer>
               </ChartCard>
 
+              {/* Chart 2: BarChart apilado facturación */}
               <ChartCard title="Facturación por empresa (UYU s/IVA)">
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={facturData.map(d => ({ ...d, mes: MESES[Number(d.mes) - 1] }))}>
@@ -222,19 +223,20 @@ export default function GraficosPage() {
                     <YAxis tick={{ fontSize: 11 }} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend />
-                    {facturEmpresas.map((emp, i) => (
-                      <Bar key={emp} dataKey={emp} fill={EMPRESA_COLORS[emp] ?? EMPRESA_COLOR_LIST[i]} />
+                    {facturEmpresas.map((emp) => (
+                      <Bar key={emp} dataKey={emp} stackId="stack" fill={empresaColor(emp)} />
                     ))}
                   </BarChart>
                 </ResponsiveContainer>
               </ChartCard>
 
-              <ChartCard title="Mix de activaciones por empresa">
+              {/* Chart 3: PieChart mix */}
+              <ChartCard title="Activaciones por empresa (año completo)">
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
-                    <Pie data={pieActivData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                      {pieActivData.map((entry, i) => (
-                        <Cell key={entry.name} fill={EMPRESA_COLORS[entry.name] ?? EMPRESA_COLOR_LIST[i]} />
+                    <Pie data={pieActivData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label={({ name, percent }) => `${name} ${((percent as number) * 100).toFixed(0)}%`}>
+                      {pieActivData.map((entry) => (
+                        <Cell key={entry.name} fill={empresaColor(entry.name)} />
                       ))}
                     </Pie>
                     <Tooltip formatter={(v: number) => fmt(v)} />
@@ -248,42 +250,32 @@ export default function GraficosPage() {
           <section className="space-y-4">
             <SectionTitle title="Financiero" color="#20E0B2" />
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              {/* Chart 4: ComposedChart resultado mensual */}
               <ChartCard title="Resultado mensual (UYU)">
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={resultadoData}>
+                  <ComposedChart data={resultadoData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend />
-                    <Bar dataKey="ingresos" name="Ingresos" fill="#1769E0" />
-                    <Bar dataKey="gastos" name="Gastos" fill="#f87171" />
-                    <Bar dataKey="resultado" name="Resultado" fill="#20E0B2" />
-                  </BarChart>
+                    <Bar dataKey="ingresos" name="Ingresos" stackId="stack" fill="#93c5fd" />
+                    <Bar dataKey="gastos" name="Gastos" stackId="stack" fill="#fca5a5" />
+                    <Line type="monotone" dataKey="resultado" name="Resultado" stroke="#20E0B2" strokeWidth={2} dot />
+                  </ComposedChart>
                 </ResponsiveContainer>
               </ChartCard>
 
+              {/* Chart 5: BarChart horizontal distribución socios */}
               <ChartCard title="Distribución acumulada por socio (UYU)">
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={data.distribucionSocios} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis type="number" tick={{ fontSize: 11 }} />
-                    <YAxis type="category" dataKey="socio" tick={{ fontSize: 11 }} width={100} />
+                    <YAxis type="category" dataKey="socio" tick={{ fontSize: 11 }} width={110} />
                     <Tooltip content={<CustomTooltip />} />
                     <Bar dataKey="monto" name="Monto" fill="#1769E0" />
                   </BarChart>
-                </ResponsiveContainer>
-              </ChartCard>
-
-              <ChartCard title="Tipo de cambio USD por mes">
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={tcData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} domain={['auto', 'auto']} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Line type="monotone" dataKey="tc" name="TC USD" stroke="#1769E0" strokeWidth={2} dot />
-                  </LineChart>
                 </ResponsiveContainer>
               </ChartCard>
             </div>
@@ -293,6 +285,7 @@ export default function GraficosPage() {
           <section className="space-y-4">
             <SectionTitle title="Desarrollo" color="#F0B840" />
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              {/* Chart 6: PieChart issues por estado */}
               <ChartCard title="Issues por estado">
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
@@ -306,6 +299,7 @@ export default function GraficosPage() {
                 </ResponsiveContainer>
               </ChartCard>
 
+              {/* Chart 7: BarChart horas */}
               <ChartCard title="Horas de desarrollo por mes">
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={horasData}>
@@ -318,6 +312,7 @@ export default function GraficosPage() {
                 </ResponsiveContainer>
               </ChartCard>
 
+              {/* Chart 8: LineChart facturación acumulada */}
               <ChartCard title="Facturación desarrollo acumulada (USD)">
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={acumuladoData}>
