@@ -220,7 +220,7 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
                   </tr>
                   {f.distribuciones.map((d) => (
                     <tr key={d.id} className="bg-slate-50 text-xs text-slate-500">
-                      <td className="px-4 py-1.5 pl-8 italic" colSpan={2}>{d.socioNombre} · {formatPercent(d.porcentaje)}</td>
+                      <td className="px-4 py-1.5 pl-8 italic" colSpan={2}>{d.socioNombre} · {d.porcentaje}%</td>
                       <td className="px-4 py-1.5 text-right tabular-nums" colSpan={3}>{formatMoney(d.montoUSD)} USD</td>
                       <td className="px-4 py-1.5 text-right tabular-nums" colSpan={2}>{formatMoney(d.montoUYU)} UYU</td>
                     </tr>

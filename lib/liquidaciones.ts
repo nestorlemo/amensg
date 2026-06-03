@@ -230,13 +230,16 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
           totalConIvaUSD: money(f.totalConIva),
           tipoCambio: money(f.tipoCambio),
           totalConIvaUYU: money(totalConIvaUYU),
-          distribuciones: f.distribuciones.map(d => ({
-            id: d.id,
-            socioNombre: d.socio.nombre,
-            porcentaje: d.porcentaje.toString(),
-            montoUYU: money(d.montoUYU),
-            montoUSD: money(d.montoUYU.div(f.tipoCambio).toDecimalPlaces(2)),
-          })),
+          distribuciones: f.distribuciones.map(d => {
+            const pct = d.porcentaje.div(100)
+            return {
+              id: d.id,
+              socioNombre: d.socio.nombre,
+              porcentaje: d.porcentaje.toDecimalPlaces(2).toString(),
+              montoUSD: money(f.totalUSD.mul(pct).toDecimalPlaces(2)),
+              montoUYU: money(f.totalUYU.mul(pct).toDecimalPlaces(2)),
+            }
+          }),
         }
       }),
     },
