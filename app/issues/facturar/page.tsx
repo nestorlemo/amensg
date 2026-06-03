@@ -164,11 +164,11 @@ export default function FacturarDesarrolloPage() {
         <form className="flex flex-wrap items-end gap-4" onSubmit={(e) => void handleBuscar(e)}>
           <label className="block text-sm font-medium text-slate-700">
             Fecha prod. desde
-            <input className="mt-1 block h-9 w-40 rounded-md border border-slate-300 px-3 text-sm" type="date" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} required />
+            <input className="mt-1 block h-9 w-40 rounded-md border border-slate-300 px-3 text-sm" type="date" lang="es-UY" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} required />
           </label>
           <label className="block text-sm font-medium text-slate-700">
             Fecha prod. hasta
-            <input className="mt-1 block h-9 w-40 rounded-md border border-slate-300 px-3 text-sm" type="date" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} required />
+            <input className="mt-1 block h-9 w-40 rounded-md border border-slate-300 px-3 text-sm" type="date" lang="es-UY" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} required />
           </label>
           <label className="block text-sm font-medium text-slate-700">
             Empresa
@@ -214,6 +214,7 @@ export default function FacturarDesarrolloPage() {
                   <tr>
                     <th className="px-3 py-2 text-center">✓</th>
                     <th className="px-3 py-2 text-left">Fecha</th>
+                    <th className="px-3 py-2 text-left">Empresa</th>
                     <th className="px-3 py-2 text-left">Descripción</th>
                     <th className="px-3 py-2 text-right">Horas</th>
                   </tr>
@@ -225,6 +226,7 @@ export default function FacturarDesarrolloPage() {
                         <input type="checkbox" checked={selIds.has(issue.id)} onChange={() => toggleIssue(g.empresaId, issue.id)} />
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 text-slate-600">{issue.fecha}</td>
+                      <td className="whitespace-nowrap px-3 py-2 text-slate-600">{issue.empresa?.nombre ?? '—'}</td>
                       <td className="px-3 py-2 text-slate-700">
                         <span title={issue.descripcion}>{issue.descripcion.length > 80 ? issue.descripcion.slice(0, 80) + '…' : issue.descripcion}</span>
                       </td>
