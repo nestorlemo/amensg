@@ -64,8 +64,7 @@ export function AppSidebar({ user }: { user: CurrentUser }) {
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-[#EEF4FF] hover:text-[#1769E0]"
-                  style={{ color: '#5a6a82' }}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[#5a6a82] transition-colors hover:bg-[#EEF4FF] hover:text-[#1769E0]"
                 >
                   {Icon ? <Icon size={16} className="shrink-0" /> : null}
                   {item.label}
@@ -94,8 +93,7 @@ export function AppSidebar({ user }: { user: CurrentUser }) {
                   <li key={item.href}>
                     <Link
                       href={item.href}
-                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-[#EEF4FF] hover:text-[#1769E0]"
-                      style={{ color: '#5a6a82' }}
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[#5a6a82] transition-colors hover:bg-[#EEF4FF] hover:text-[#1769E0]"
                     >
                       {Icon ? <Icon size={16} className="shrink-0" /> : null}
                       {item.label}
