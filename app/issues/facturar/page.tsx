@@ -19,11 +19,12 @@ type EmpresaGroup = {
   totalHoras: number
 }
 
-type Distribucion = { socioId: string; nombre: string; porcentaje: string }
-
 type EmpresaOption = { id: string; nombre: string }
 
 type EstadoFact = 'sin_facturar' | 'facturados' | 'todos'
+
+// distribuciones: empresaId -> socioId -> porcentaje string
+type DistMap = Record<string, Record<string, string>>
 
 export default function FacturarDesarrolloPage() {
   const now = new Date()
@@ -42,7 +43,8 @@ export default function FacturarDesarrolloPage() {
   const [searched, setSearched] = useState(false)
 
   // Per-empresa form state
-  const [distribuciones, setDistribuciones] = useState<Record<string, Distribucion[]>>({})
+  // distribuciones: empresaId -> { socioId -> porcentaje }
+  const [distribuciones, setDistribuciones] = useState<DistMap>({})
   const [selectedIssues, setSelectedIssues] = useState<Record<string, Set<string>>>({})
   const [saving, setSaving]   = useState<Record<string, boolean>>({})
   const [results, setResults] = useState<Record<string, { ok: boolean; msg: string }>>({})
@@ -50,7 +52,7 @@ export default function FacturarDesarrolloPage() {
   useEffect(() => {
     fetch('/api/socios')
       .then((r) => r.json())
-      .then((d) => setSocios(d.socios ?? []))
+      .then((d: { socios?: Socio[] }) => setSocios(d.socios ?? []))
       .catch(() => null)
     fetch('/api/issues/config')
       .then((r) => r.json())
@@ -80,9 +82,8 @@ export default function FacturarDesarrolloPage() {
       }
       const res = await fetch(`/api/issues?${qs}`)
       const data = await res.json()
-      const issues: Issue[] = data.issues ?? []
+      const issues: Issue[] = (data.issues as Issue[]) ?? []
 
-      // Group by empresa
       const map = new Map<string, EmpresaGroup>()
       for (const issue of issues) {
         const eId = issue.empresa?.id ?? 'sin-empresa'
@@ -96,15 +97,17 @@ export default function FacturarDesarrolloPage() {
       const gs = Array.from(map.values())
       setGroups(gs)
 
-      // Init state per empresa — only pre-select issues that are NOT already FACTURADO
       const initSel: Record<string, Set<string>> = {}
-      const initDist: Record<string, Distribucion[]> = {}
       for (const g of gs) {
         initSel[g.empresaId] = new Set(g.issues.filter((i) => i.estado !== 'FACTURADO').map((i) => i.id))
-        initDist[g.empresaId] = socios.map((s) => ({ socioId: s.id, nombre: s.nombre, porcentaje: '' }))
       }
       setSelectedIssues(initSel)
-      setDistribuciones(initDist)
+      // Reset distribuciones — keep existing values if re-searching
+      setDistribuciones((prev) => {
+        const next: DistMap = {}
+        for (const g of gs) next[g.empresaId] = prev[g.empresaId] ?? {}
+        return next
+      })
       setSearched(true)
     } finally {
       setLoading(false)
@@ -123,8 +126,11 @@ export default function FacturarDesarrolloPage() {
       return
     }
 
-    const dist = distribuciones[g.empresaId]?.filter((d) => d.porcentaje !== '') ?? []
-    const totalPct = dist.reduce((s, d) => s + Number(d.porcentaje), 0)
+    const pcts = distribuciones[g.empresaId] ?? {}
+    const distEntries = socios
+      .map((s) => ({ socioId: s.id, porcentaje: Number(pcts[s.id] || 0) }))
+      .filter((d) => d.porcentaje > 0)
+    const totalPct = distEntries.reduce((s, d) => s + d.porcentaje, 0)
     if (socios.length > 0 && Math.abs(totalPct - 100) > 0.01) {
       setResults((r) => ({ ...r, [g.empresaId]: { ok: false, msg: 'Los porcentajes de distribución deben sumar 100%.' } }))
       return
@@ -142,15 +148,14 @@ export default function FacturarDesarrolloPage() {
           tipoCambio: 1,
           valorHoraUSD: valorHora,
           issueIds,
-          distribuciones: dist.map((d) => ({ socioId: d.socioId, porcentaje: Number(d.porcentaje) })),
+          distribuciones: distEntries,
         }),
       })
       const data = await res.json()
       if (!res.ok) {
-        setResults((r) => ({ ...r, [g.empresaId]: { ok: false, msg: data.message ?? 'Error al facturar.' } }))
+        setResults((r) => ({ ...r, [g.empresaId]: { ok: false, msg: (data as { message?: string }).message ?? 'Error al facturar.' } }))
       } else {
-        setResults((r) => ({ ...r, [g.empresaId]: { ok: true, msg: `Factura creada. Total: $${(data.totalConIva as number)?.toFixed(2)} USD` } }))
-        // Mark included issues as FACTURADO in local state
+        setResults((r) => ({ ...r, [g.empresaId]: { ok: true, msg: `Factura creada. Total: $${((data as { totalConIva?: number }).totalConIva ?? 0).toFixed(2)} USD` } }))
         setGroups((prev) => prev.map((grp) =>
           grp.empresaId !== g.empresaId ? grp : {
             ...grp,
@@ -172,10 +177,10 @@ export default function FacturarDesarrolloPage() {
     })
   }
 
-  function setDist(eId: string, socioId: string, pct: string) {
+  function setPct(eId: string, socioId: string, pct: string) {
     setDistribuciones((prev) => ({
       ...prev,
-      [eId]: (prev[eId] ?? []).map((d) => d.socioId === socioId ? { ...d, porcentaje: pct } : d),
+      [eId]: { ...(prev[eId] ?? {}), [socioId]: pct },
     }))
   }
 
@@ -226,16 +231,16 @@ export default function FacturarDesarrolloPage() {
       )}
 
       {groups.map((g) => {
-        const selIds      = selectedIssues[g.empresaId] ?? new Set()
-        const selIssues   = g.issues.filter((i) => selIds.has(i.id))
-        const selHoras    = selIssues.reduce((s, i) => s + i.totalHoras, 0)
-        const totalUSD    = Math.round(selHoras * valorHora * 100) / 100
-        const ivaUSD      = Math.round(totalUSD * 0.22 * 100) / 100
+        const selIds         = selectedIssues[g.empresaId] ?? new Set()
+        const selIssues      = g.issues.filter((i) => selIds.has(i.id))
+        const selHoras       = selIssues.reduce((s, i) => s + i.totalHoras, 0)
+        const totalUSD       = Math.round(selHoras * valorHora * 100) / 100
+        const ivaUSD         = Math.round(totalUSD * 0.22 * 100) / 100
         const totalConIvaUSD = Math.round((totalUSD + ivaUSD) * 100) / 100
-        const dist        = distribuciones[g.empresaId] ?? []
-        const totalPct    = dist.reduce((s, d) => s + Number(d.porcentaje || 0), 0)
-        const distOk      = socios.length === 0 || Math.abs(totalPct - 100) < 0.01
-        const res         = results[g.empresaId]
+        const pcts           = distribuciones[g.empresaId] ?? {}
+        const totalPct       = socios.reduce((s, sc) => s + Number(pcts[sc.id] || 0), 0)
+        const distOk         = socios.length === 0 || Math.abs(totalPct - 100) < 0.01
+        const res            = results[g.empresaId]
 
         return (
           <section key={g.empresaId} className="rounded-xl border border-slate-200 bg-white p-6">
@@ -285,8 +290,8 @@ export default function FacturarDesarrolloPage() {
               </table>
             </div>
 
-            {/* Cálculo */}
-            <div className="mb-4 grid gap-3 md:grid-cols-4">
+            {/* Totales */}
+            <div className="mb-6 grid gap-3 md:grid-cols-4">
               <div className="rounded-md border border-slate-100 bg-slate-50 p-3 text-center">
                 <p className="text-xs text-slate-500">Total horas</p>
                 <p className="text-xl font-bold text-slate-950">{selHoras.toFixed(2)}h</p>
@@ -305,33 +310,41 @@ export default function FacturarDesarrolloPage() {
               </div>
             </div>
 
-            {/* Distribución entre socios */}
+            {/* Distribución entre socios — always rendered when there are socios */}
             {socios.length > 0 && (
-              <div className="mb-4">
-                <h3 className="mb-2 text-sm font-semibold text-slate-700">Distribución entre socios</h3>
-                <div className="flex flex-wrap items-end gap-4">
-                  {dist.map((d) => (
-                    <label key={d.socioId} className="block text-sm font-medium text-slate-700">
-                      {d.nombre} (%)
-                      <input
-                        className="mt-1 block h-9 w-24 rounded-md border border-slate-300 px-3 text-sm"
-                        type="number" step="0.01" min="0" max="100" placeholder="0"
-                        value={d.porcentaje}
-                        onChange={(e) => setDist(g.empresaId, d.socioId, e.target.value)}
-                      />
-                      {d.porcentaje ? (
-                        <span className="block text-xs text-slate-400">${(totalConIvaUSD * Number(d.porcentaje) / 100).toFixed(2)} USD</span>
-                      ) : null}
-                    </label>
-                  ))}
-                  <div className="pb-2">
-                    <span className={`text-sm font-semibold ${distOk ? 'text-emerald-700' : 'text-red-600'}`}>
-                      Total: {totalPct.toFixed(1)}%
-                    </span>
-                    {!distOk && totalPct > 0 && (
-                      <p className="mt-0.5 text-xs text-red-600">Debe sumar 100%</p>
-                    )}
-                  </div>
+              <div className="mb-6 rounded-lg border border-slate-200 p-4">
+                <h3 className="mb-3 text-sm font-semibold text-slate-700">Distribución entre socios</h3>
+                <div className="space-y-2">
+                  {socios.map((socio) => {
+                    const pct = pcts[socio.id] ?? ''
+                    const monto = totalConIvaUSD * Number(pct || 0) / 100
+                    return (
+                      <div key={socio.id} className="flex items-center gap-3">
+                        <span className="w-40 text-sm text-slate-700">{socio.nombre}</span>
+                        <input
+                          className="h-9 w-24 rounded-md border border-slate-300 px-3 text-right text-sm"
+                          type="number" step="0.01" min="0" max="100" placeholder="0"
+                          value={pct}
+                          onChange={(e) => setPct(g.empresaId, socio.id, e.target.value)}
+                        />
+                        <span className="text-sm text-slate-500">%</span>
+                        <span className="w-28 text-right text-sm font-semibold text-slate-800">
+                          {pct ? `$${monto.toFixed(2)} USD` : '—'}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+                <div className="mt-3 flex items-center gap-2">
+                  <span className={`text-sm font-semibold ${distOk ? 'text-emerald-700' : totalPct > 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                    Total: {totalPct.toFixed(1)}%
+                  </span>
+                  {!distOk && totalPct > 0 && (
+                    <span className="text-xs text-red-600">— debe sumar 100%</span>
+                  )}
+                  {distOk && socios.length > 0 && (
+                    <span className="text-xs text-emerald-600">✓ OK</span>
+                  )}
                 </div>
               </div>
             )}
