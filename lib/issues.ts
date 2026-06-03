@@ -85,3 +85,41 @@ function parseDecimal(v: unknown): number | null {
   const n = Number(v)
   return isNaN(n) ? null : Math.round(n * 100) / 100
 }
+
+export function serializeFactura(f: {
+  id: string; anio: number; mes: number; creadoEn: Date
+  totalHoras: { toString(): string }; valorHoraUSD: { toString(): string }
+  totalUSD: { toString(): string }; tipoCambio: { toString(): string }
+  totalUYU: { toString(): string }; iva: { toString(): string }; totalConIva: { toString(): string }
+  ingresoAdicionalId: string | null
+  empresa: { id: string; nombre: string }
+  distribuciones: { id: string; porcentaje: { toString(): string }; montoUYU: { toString(): string }; socio: { id: string; nombre: string } }[]
+  facturaIssues: { issue: { id: string; descripcion: string; totalHoras: { toString(): string } } }[]
+}) {
+  return {
+    id: f.id,
+    anio: f.anio,
+    mes: f.mes,
+    empresa: f.empresa,
+    totalHoras: Number(f.totalHoras),
+    valorHoraUSD: Number(f.valorHoraUSD),
+    totalUSD: Number(f.totalUSD),
+    tipoCambio: Number(f.tipoCambio),
+    totalUYU: Number(f.totalUYU),
+    iva: Number(f.iva),
+    totalConIva: Number(f.totalConIva),
+    ingresoAdicionalId: f.ingresoAdicionalId,
+    creadoEn: f.creadoEn.toISOString(),
+    distribuciones: f.distribuciones.map((d) => ({
+      id: d.id,
+      socio: d.socio,
+      porcentaje: Number(d.porcentaje),
+      montoUYU: Number(d.montoUYU),
+    })),
+    issues: f.facturaIssues.map((fi) => ({
+      id: fi.issue.id,
+      descripcion: fi.issue.descripcion,
+      totalHoras: Number(fi.issue.totalHoras),
+    })),
+  }
+}

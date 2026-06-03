@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { requireApiAuth } from '@/lib/auth'
+import { serializeFactura } from '@/lib/issues'
 import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
@@ -12,13 +13,9 @@ export async function GET(request: Request) {
   if ('error' in auth) return auth.error
 
   const { searchParams } = new URL(request.url)
-  const anio      = searchParams.get('anio')      ? parseInt(searchParams.get('anio')!) : undefined
-  const mes       = searchParams.get('mes')       ? parseInt(searchParams.get('mes')!)  : undefined
   const empresaId = searchParams.get('empresaId') ?? undefined
 
   const where: Record<string, unknown> = {}
-  if (anio)      where.anio      = anio
-  if (mes)       where.mes       = mes
   if (empresaId) where.empresaId = empresaId
 
   const facturas = await prisma.facturaDesarrollo.findMany({
@@ -40,19 +37,24 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => ({})) as Record<string, unknown>
 
-  const anio      = parseInt(String(body.anio ?? ''), 10)
-  const mes       = parseInt(String(body.mes ?? ''), 10)
-  const empresaId = typeof body.empresaId === 'string' ? body.empresaId : ''
+  const fechaDesde = typeof body.fechaDesde === 'string' ? body.fechaDesde : ''
+  const fechaHasta = typeof body.fechaHasta === 'string' ? body.fechaHasta : ''
+  const empresaId  = typeof body.empresaId  === 'string' ? body.empresaId  : ''
   const tipoCambio = Number(body.tipoCambio)
-  const issueIds = Array.isArray(body.issueIds) ? (body.issueIds as string[]) : []
+  const issueIds   = Array.isArray(body.issueIds) ? (body.issueIds as string[]) : []
   const distribuciones = Array.isArray(body.distribuciones)
     ? (body.distribuciones as { socioId: string; porcentaje: number }[])
     : []
 
-  if (!anio || !mes) return NextResponse.json({ error: 'VALIDATION_ERROR', message: 'Año y mes son requeridos.' }, { status: 422 })
-  if (!empresaId)    return NextResponse.json({ error: 'VALIDATION_ERROR', message: 'Empresa es requerida.' }, { status: 422 })
+  if (!fechaDesde || !fechaHasta) return NextResponse.json({ error: 'VALIDATION_ERROR', message: 'Fecha desde y hasta son requeridas.' }, { status: 422 })
+  if (!empresaId)                 return NextResponse.json({ error: 'VALIDATION_ERROR', message: 'Empresa es requerida.' }, { status: 422 })
   if (!tipoCambio || tipoCambio <= 0) return NextResponse.json({ error: 'VALIDATION_ERROR', message: 'Tipo de cambio inválido.' }, { status: 422 })
-  if (issueIds.length === 0) return NextResponse.json({ error: 'VALIDATION_ERROR', message: 'Debe seleccionar al menos un issue.' }, { status: 422 })
+  if (issueIds.length === 0)      return NextResponse.json({ error: 'VALIDATION_ERROR', message: 'Debe seleccionar al menos un issue.' }, { status: 422 })
+
+  // Derive anio/mes from fechaDesde for record-keeping
+  const [anioStr, mesStr] = fechaDesde.split('-')
+  const anio = parseInt(anioStr ?? '', 10)
+  const mes  = parseInt(mesStr  ?? '', 10)
 
   // Read valor hora from parametros
   const valorHoraParam = await prisma.parametro.findUnique({ where: { clave: 'valor_hora_desarrollo_usd' } })
@@ -66,19 +68,17 @@ export async function POST(request: Request) {
 
   // Get issues and calc hours
   const issues = await prisma.issue.findMany({ where: { id: { in: issueIds } } })
-  const totalHoras = issues.reduce((s, i) => s + Number(i.totalHoras), 0)
-  const totalUSD   = Math.round(totalHoras * valorHoraUSD * 100) / 100
-  const totalUYU   = Math.round(totalUSD * tipoCambio * 100) / 100
-  const iva        = Math.round(totalUYU * IVA * 100) / 100
+  const totalHoras  = issues.reduce((s, i) => s + Number(i.totalHoras), 0)
+  const totalUSD    = Math.round(totalHoras * valorHoraUSD * 100) / 100
+  const totalUYU    = Math.round(totalUSD * tipoCambio * 100) / 100
+  const iva         = Math.round(totalUYU * IVA * 100) / 100
   const totalConIva = Math.round((totalUYU + iva) * 100) / 100
 
-  // Build ingreso adicional data
+  // Build ingreso adicional description
   const empresa = await prisma.empresa.findUnique({ where: { id: empresaId }, select: { nombre: true } })
-  const mesStr = String(mes).padStart(2, '0')
-  const concepto = `Desarrollo ${empresa?.nombre ?? ''} ${mesStr}/${anio}`
+  const concepto = `Desarrollo ${empresa?.nombre ?? ''} ${fechaDesde} / ${fechaHasta}`
 
   const factura = await prisma.$transaction(async (tx) => {
-    // Create IngresoAdicional
     const ingreso = await tx.ingresoAdicional.create({
       data: {
         concepto,
@@ -98,7 +98,6 @@ export async function POST(request: Request) {
       },
     })
 
-    // Create FacturaDesarrollo
     const fd = await tx.facturaDesarrollo.create({
       data: {
         anio,
@@ -134,42 +133,4 @@ export async function POST(request: Request) {
   })
 
   return NextResponse.json(serializeFactura(factura), { status: 201 })
-}
-
-export function serializeFactura(f: {
-  id: string; anio: number; mes: number; creadoEn: Date
-  totalHoras: { toString(): string }; valorHoraUSD: { toString(): string }
-  totalUSD: { toString(): string }; tipoCambio: { toString(): string }
-  totalUYU: { toString(): string }; iva: { toString(): string }; totalConIva: { toString(): string }
-  ingresoAdicionalId: string | null
-  empresa: { id: string; nombre: string }
-  distribuciones: { id: string; porcentaje: { toString(): string }; montoUYU: { toString(): string }; socio: { id: string; nombre: string } }[]
-  facturaIssues: { issue: { id: string; descripcion: string; totalHoras: { toString(): string } } }[]
-}) {
-  return {
-    id: f.id,
-    anio: f.anio,
-    mes: f.mes,
-    empresa: f.empresa,
-    totalHoras: Number(f.totalHoras),
-    valorHoraUSD: Number(f.valorHoraUSD),
-    totalUSD: Number(f.totalUSD),
-    tipoCambio: Number(f.tipoCambio),
-    totalUYU: Number(f.totalUYU),
-    iva: Number(f.iva),
-    totalConIva: Number(f.totalConIva),
-    ingresoAdicionalId: f.ingresoAdicionalId,
-    creadoEn: f.creadoEn.toISOString(),
-    distribuciones: f.distribuciones.map((d) => ({
-      id: d.id,
-      socio: d.socio,
-      porcentaje: Number(d.porcentaje),
-      montoUYU: Number(d.montoUYU),
-    })),
-    issues: f.facturaIssues.map((fi) => ({
-      id: fi.issue.id,
-      descripcion: fi.issue.descripcion,
-      totalHoras: Number(fi.issue.totalHoras),
-    })),
-  }
 }

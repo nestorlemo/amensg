@@ -22,8 +22,11 @@ type Distribucion = { socioId: string; nombre: string; porcentaje: string }
 
 export default function FacturarDesarrolloPage() {
   const now = new Date()
-  const [anio, setAnio] = useState(String(now.getFullYear()))
-  const [mes,  setMes]  = useState(String(now.getMonth() + 1))
+  const firstOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+  const today = now.toISOString().split('T')[0]!
+
+  const [fechaDesde, setFechaDesde] = useState(firstOfMonth)
+  const [fechaHasta, setFechaHasta] = useState(today)
   const [groups, setGroups]     = useState<EmpresaGroup[]>([])
   const [socios, setSocios]     = useState<Socio[]>([])
   const [valorHora, setValorHora] = useState(0)
@@ -54,7 +57,7 @@ export default function FacturarDesarrolloPage() {
     setSearched(false)
     setGroups([])
     try {
-      const qs = new URLSearchParams({ estado: 'EN_PRODUCCION', anio, mes })
+      const qs = new URLSearchParams({ estado: 'EN_PRODUCCION', fechaDesde, fechaHasta })
       const res = await fetch(`/api/issues?${qs}`)
       const data = await res.json()
       const issues: Issue[] = data.issues ?? []
@@ -115,8 +118,8 @@ export default function FacturarDesarrolloPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          anio: Number(anio),
-          mes: Number(mes),
+          fechaDesde,
+          fechaHasta,
           empresaId: g.empresaId,
           tipoCambio: tc,
           valorHoraUSD: valorHora,
@@ -157,12 +160,12 @@ export default function FacturarDesarrolloPage() {
       <section className="rounded-xl border border-slate-200 bg-white p-5">
         <form className="flex flex-wrap items-end gap-4" onSubmit={(e) => void handleBuscar(e)}>
           <label className="block text-sm font-medium text-slate-700">
-            Año
-            <input className="mt-1 block h-9 w-24 rounded-md border border-slate-300 px-3 text-sm" type="number" value={anio} onChange={(e) => setAnio(e.target.value)} required />
+            Fecha prod. desde
+            <input className="mt-1 block h-9 w-40 rounded-md border border-slate-300 px-3 text-sm" type="date" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} required />
           </label>
           <label className="block text-sm font-medium text-slate-700">
-            Mes
-            <input className="mt-1 block h-9 w-16 rounded-md border border-slate-300 px-3 text-sm" type="number" min="1" max="12" value={mes} onChange={(e) => setMes(e.target.value)} required />
+            Fecha prod. hasta
+            <input className="mt-1 block h-9 w-40 rounded-md border border-slate-300 px-3 text-sm" type="date" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} required />
           </label>
           <button className="h-9 rounded-md bg-slate-950 px-5 text-sm font-semibold text-white disabled:opacity-50" disabled={loading} type="submit">
             {loading ? 'Buscando…' : 'Buscar issues'}
@@ -175,7 +178,7 @@ export default function FacturarDesarrolloPage() {
 
       {searched && groups.length === 0 && (
         <p className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
-          No hay issues EN_PRODUCCION para el período seleccionado.
+          No hay issues EN_PRODUCCION para el rango de fechas seleccionado.
         </p>
       )}
 
