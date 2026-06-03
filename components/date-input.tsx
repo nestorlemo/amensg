@@ -54,9 +54,7 @@ export function DateInput({ className, placeholder = 'dd/mm/yyyy', required, dis
   if (isControlled) {
     const { value, onChange } = rest as ControlledProps
     const expectedDisplay = isoToDisplay(value)
-    if (expectedDisplay && display !== expectedDisplay && displayToIso(display) !== value) {
-      setDisplay(expectedDisplay)
-    }
+    // Solo sincronizar si el valor externo cambió programáticamente (no por el usuario escribiendo)
     return (
       <input
         className={className}
