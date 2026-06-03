@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -21,13 +22,21 @@ model Usuario {
 
 model Empresa {
   id              String                 @id @default(uuid()) @db.Uuid
-  nombre          String
+  nombre          String                 @unique
+  razonSocial     String?
+  rut             String?
+  direccion       String?
+  contacto        String?
+  mail            String?
+  telefono        String?
   activa          Boolean                @default(true)
   creadaEn        DateTime               @default(now())
   activaciones    ActivacionImportada[]
   facturaciones   FacturacionMensual[]
   ingresosAdicionales IngresoAdicional[]
   cierresSocio    CierreSocio[]
+  issues          Issue[]
+  facturasDesarrollo FacturaDesarrollo[]
 }
 
 model Socio {
@@ -38,6 +47,7 @@ model Socio {
   activo       Boolean        @default(true)
   creadoEn     DateTime       @default(now())
   cierresSocio CierreSocio[]
+  distribuciones DistribucionFactura[]
 }
 
 model Parametro {
@@ -70,6 +80,7 @@ model ImportacionActivacion {
   activaciones         ActivacionImportada[]
   facturaciones        FacturacionMensual[]
   @@index([anio, mes])
+  @@index([estado])
 }
 
 model ActivacionImportada {
@@ -124,11 +135,13 @@ model FacturacionMensual {
 }
 
 model GastoConcepto {
-  id      String         @id @default(uuid()) @db.Uuid
-  nombre  String         @unique
-  tipo    String         @default("VARIABLE")
-  activo  Boolean        @default(true)
-  gastos  GastoMensual[]
+  id       String         @id @default(uuid()) @db.Uuid
+  nombre   String
+  tipo     String         @default("VARIABLE")
+  monto    Decimal?       @db.Decimal(12, 2)
+  activo   Boolean        @default(true)
+  creadoEn DateTime       @default(now())
+  gastos   GastoMensual[]
 }
 
 model GastoMensual {
@@ -196,6 +209,84 @@ model CierreSocio {
   empresa         Empresa?       @relation(fields: [empresaId], references: [id])
 
   @@unique([cierreMensualId, socioId, empresaId])
+}
+
+model Issue {
+  id                String    @id @default(uuid()) @db.Uuid
+  fecha             DateTime
+  descripcion       String
+  horasDesarrollo   Decimal   @db.Decimal(8, 2)
+  horasTest         Decimal   @default(0) @db.Decimal(8, 2)
+  horasRework       Decimal   @default(0) @db.Decimal(8, 2)
+  totalHoras        Decimal   @db.Decimal(8, 2)
+  estado            String
+  fechaProduccion   DateTime?
+  reportadoPor      String
+  prioridad         String
+  empresaId         String?   @db.Uuid
+  empresa           Empresa?  @relation(fields: [empresaId], references: [id])
+  facturaIssues     FacturaIssue[]
+  creadoEn          DateTime  @default(now())
+  actualizadoEn     DateTime  @updatedAt
+
+  @@index([empresaId])
+  @@index([estado])
+  @@index([fecha])
+  @@index([fechaProduccion])
+  @@index([estado, empresaId])
+  @@index([estado, fechaProduccion])
+}
+
+model ValorHoraDesarrollo {
+  id            String   @id @default(uuid()) @db.Uuid
+  valorUSD      Decimal  @db.Decimal(10, 2)
+  vigenciaDesde DateTime
+  creadoEn      DateTime @default(now())
+}
+
+model FacturaDesarrollo {
+  id                 String   @id @default(uuid()) @db.Uuid
+  anio               Int
+  mes                Int
+  empresaId          String   @db.Uuid
+  empresa            Empresa  @relation(fields: [empresaId], references: [id])
+  totalHoras         Decimal  @db.Decimal(8, 2)
+  valorHoraUSD       Decimal  @db.Decimal(10, 2)
+  totalUSD           Decimal  @db.Decimal(12, 2)
+  tipoCambio         Decimal  @db.Decimal(10, 2)
+  totalUYU           Decimal  @db.Decimal(12, 2)
+  iva                Decimal  @db.Decimal(12, 2)
+  totalConIva        Decimal  @db.Decimal(12, 2)
+  distribuciones     DistribucionFactura[]
+  facturaIssues      FacturaIssue[]
+  ingresoAdicionalId String?  @db.Uuid
+  estado             String   @default("PENDIENTE") // PENDIENTE | COBRADO
+  creadoEn           DateTime @default(now())
+
+  @@index([empresaId, anio, mes])
+}
+
+model FacturaIssue {
+  facturaId String            @db.Uuid
+  issueId   String            @db.Uuid
+  factura   FacturaDesarrollo @relation(fields: [facturaId], references: [id])
+  issue     Issue             @relation(fields: [issueId], references: [id])
+
+  @@id([facturaId, issueId])
+  @@index([issueId])
+  @@index([facturaId])
+}
+
+model DistribucionFactura {
+  id        String            @id @default(uuid()) @db.Uuid
+  facturaId String            @db.Uuid
+  factura   FacturaDesarrollo @relation(fields: [facturaId], references: [id])
+  socioId   String            @db.Uuid
+  socio     Socio             @relation(fields: [socioId], references: [id])
+  porcentaje Decimal          @db.Decimal(5, 2)
+  montoUYU  Decimal           @db.Decimal(12, 2)
+
+  @@index([facturaId])
 }
 
 model Auditoria {
