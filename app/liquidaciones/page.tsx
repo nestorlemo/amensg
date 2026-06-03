@@ -207,8 +207,8 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
                   <Td>{f.empresa}</Td>
                   <Td align="right">{f.totalHoras}</Td>
                   <Td align="right">{formatMoney(f.totalUYU)}</Td>
-                  <Td align="right">{formatMoney(f.iva)}</Td>
-                  <Td align="right">{formatMoney(f.totalConIva)}</Td>
+                  <Td align="right">{formatMoney(f.ivaUYU)}</Td>
+                  <Td align="right">{formatMoney(f.totalConIvaUYU)}</Td>
                 </tr>
               ))}
               {preview.ingresos.desarrolloFacturas.length === 0 ? (

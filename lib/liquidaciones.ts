@@ -218,14 +218,18 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
         montoConIva: money(row.montoConIva),
       })),
       ingresosAdicionalesPurosSinIva: money(ingresosAdicionalesPurosSinIva),
-      desarrolloFacturas: facturaDesarrollo.map(f => ({
-        id: f.id,
-        empresa: f.empresa.nombre,
-        totalHoras: f.totalHoras.toString(),
-        totalUYU: money(f.totalUYU),
-        iva: money(f.iva),
-        totalConIva: money(f.totalConIva),
-      })),
+      desarrolloFacturas: facturaDesarrollo.map(f => {
+        const ivaUYU = f.totalUYU.mul('0.22').toDecimalPlaces(2)
+        const totalConIvaUYU = f.totalUYU.add(ivaUYU).toDecimalPlaces(2)
+        return {
+          id: f.id,
+          empresa: f.empresa.nombre,
+          totalHoras: f.totalHoras.toString(),
+          totalUYU: money(f.totalUYU),
+          ivaUYU: money(ivaUYU),
+          totalConIvaUYU: money(totalConIvaUYU),
+        }
+      }),
     },
     gastos: {
       totalGastos: money(totalGastos),
