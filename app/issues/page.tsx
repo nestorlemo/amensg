@@ -349,7 +349,7 @@ export default function IssuesPage() {
   // Filters
   const [fEstado, setFEstado]           = useState('')
   const [fEmpresa, setFEmpresa]         = useState('')
-  const [fPrioridad, setFPrioridad]     = useState('')
+
   const [fDesde, setFDesde]             = useState('')
   const [fHasta, setFHasta]             = useState('')
   const [fFacturacion, setFFacturacion] = useState('')
@@ -374,7 +374,7 @@ export default function IssuesPage() {
       .catch(() => null)
   }, [])
 
-  useEffect(() => { void fetchAll() }, [fEstado, fEmpresa, fPrioridad, fDesde, fHasta, fFacturacion]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void fetchAll() }, [fEstado, fEmpresa, fDesde, fHasta, fFacturacion]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function fetchAll() {
     setLoading(true)
@@ -382,7 +382,6 @@ export default function IssuesPage() {
       const qs = new URLSearchParams()
       if (fEstado)      qs.set('estado',      fEstado)
       if (fEmpresa)     qs.set('empresaId',   fEmpresa)
-      if (fPrioridad)   qs.set('prioridad',   fPrioridad)
       if (fDesde)       qs.set('fechaDesde',  fDesde)
       if (fHasta)       qs.set('fechaHasta',  fHasta)
       if (fFacturacion) qs.set('facturacion', fFacturacion)
@@ -480,10 +479,6 @@ export default function IssuesPage() {
             <option value="">Todas</option>
             {empresas.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
           </Select>
-          <Select label="Prioridad" value={fPrioridad} onChange={setFPrioridad} width="w-28">
-            <option value="">Todas</option>
-            {PRIORIDADES.map((p) => <option key={p} value={p}>{p}</option>)}
-          </Select>
           <Select label="Facturación" value={fFacturacion} onChange={setFFacturacion} width="w-36">
             <option value="">Todos</option>
             <option value="sin_facturar">Sin facturar</option>
@@ -515,7 +510,6 @@ export default function IssuesPage() {
                 const qs = new URLSearchParams()
                 if (fEstado)      qs.set('estado',      fEstado)
                 if (fEmpresa)     qs.set('empresaId',   fEmpresa)
-                if (fPrioridad)   qs.set('prioridad',   fPrioridad)
                 if (fDesde)       qs.set('fechaDesde',  fDesde)
                 if (fHasta)       qs.set('fechaHasta',  fHasta)
                 if (fFacturacion) qs.set('facturacion', fFacturacion)
@@ -619,16 +613,16 @@ export default function IssuesPage() {
                 <Th>Horas</Th>
                 <Th>Estado</Th>
                 <Th>Facturación</Th>
-                <Th>Prioridad</Th>
+
                 <Th>Reportado por</Th>
                 <Th>Acciones</Th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td className="px-4 py-8 text-center text-slate-400" colSpan={9}>Cargando…</td></tr>
+                <tr><td className="px-4 py-8 text-center text-slate-400" colSpan={8}>Cargando…</td></tr>
               ) : issues.length === 0 ? (
-                <tr><td className="px-4 py-8 text-center text-slate-400" colSpan={9}>No hay issues para los filtros seleccionados.</td></tr>
+                <tr><td className="px-4 py-8 text-center text-slate-400" colSpan={8}>No hay issues para los filtros seleccionados.</td></tr>
               ) : issues.map((issue) => (
                 <tr key={issue.id} className="hover:bg-slate-50">
                   <Td>{issue.fechaProduccion ? issue.fechaProduccion.split('-').reverse().join('/') : '—'}</Td>
@@ -667,11 +661,6 @@ export default function IssuesPage() {
                       ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">Facturado</span>
                       : <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">Sin facturar</span>
                     }
-                  </Td>
-                  <Td>
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${PRIORIDAD_BADGE[issue.prioridad] ?? ''}`}>
-                      {issue.prioridad}
-                    </span>
                   </Td>
                   <Td>{issue.reportadoPor}</Td>
                   <Td>
