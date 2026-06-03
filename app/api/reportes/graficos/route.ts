@@ -1,0 +1,159 @@
+import { NextRequest, NextResponse } from 'next/server'
+
+import { requireApiAuth } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+
+export const runtime = 'nodejs'
+
+export async function GET(req: NextRequest) {
+  const auth = await requireApiAuth()
+  if ('error' in auth) return auth.error
+
+  const { searchParams } = new URL(req.url)
+  const anio = parseInt(searchParams.get('anio') ?? String(new Date().getFullYear()), 10)
+
+  // 1. activacionesPorMesEmpresa & facturacionPorMesEmpresa
+  const facturacionRows = await prisma.facturacionMensual.findMany({
+    where: {
+      anio,
+      estadoCobro: { nombre: { not: 'ANULADO' } },
+    },
+    select: {
+      mes: true,
+      empresa: { select: { nombre: true } },
+      cantidadActivaciones: true,
+      totalSinIva: true,
+    },
+  })
+
+  const actMap = new Map<string, { cantidad: number; totalSinIva: number }>()
+  for (const row of facturacionRows) {
+    const key = `${row.mes}__${row.empresa.nombre}`
+    const existing = actMap.get(key) ?? { cantidad: 0, totalSinIva: 0 }
+    existing.cantidad += row.cantidadActivaciones
+    existing.totalSinIva += Number(row.totalSinIva)
+    actMap.set(key, existing)
+  }
+
+  const activacionesPorMesEmpresa: Array<{ mes: number; empresa: string; cantidad: number }> = []
+  const facturacionPorMesEmpresa: Array<{ mes: number; empresa: string; totalSinIva: number }> = []
+  for (const [key, val] of actMap.entries()) {
+    const [mesStr, empresa] = key.split('__')
+    const mes = parseInt(mesStr, 10)
+    activacionesPorMesEmpresa.push({ mes, empresa, cantidad: val.cantidad })
+    facturacionPorMesEmpresa.push({ mes, empresa, totalSinIva: val.totalSinIva })
+  }
+
+  // 2. resultadoMensual
+  const gastosRows = await prisma.gastoMensual.findMany({
+    where: { anio },
+    select: { mes: true, importe: true },
+  })
+  const gastosConceptoFijo = await prisma.gastoConcepto.findMany({
+    where: { tipo: 'FIJO', activo: true },
+    select: { monto: true },
+  })
+  const gastoFijoTotal = gastosConceptoFijo.reduce((sum, g) => sum + Number(g.monto ?? 0), 0)
+
+  const ingresosAdicRows = await prisma.ingresoAdicional.findMany({
+    where: { anio },
+    select: { mes: true, montoSinIva: true },
+  })
+
+  const facturacionTotalRows = await prisma.facturacionMensual.findMany({
+    where: {
+      anio,
+      estadoCobro: { nombre: { not: 'ANULADO' } },
+    },
+    select: { mes: true, totalSinIva: true },
+  })
+
+  const mesSet = new Set<number>()
+  for (const r of facturacionTotalRows) mesSet.add(r.mes)
+  for (const r of gastosRows) mesSet.add(r.mes)
+  for (const r of ingresosAdicRows) mesSet.add(r.mes)
+
+  const resultadoMensual: Array<{ mes: number; ingresos: number; gastos: number; resultado: number }> = []
+  for (const mes of Array.from(mesSet).sort((a, b) => a - b)) {
+    const ingresosFact = facturacionTotalRows
+      .filter((r) => r.mes === mes)
+      .reduce((s, r) => s + Number(r.totalSinIva), 0)
+    const ingresosAdic = ingresosAdicRows
+      .filter((r) => r.mes === mes)
+      .reduce((s, r) => s + Number(r.montoSinIva), 0)
+    const ingresos = ingresosFact + ingresosAdic
+    const gastosVar = gastosRows
+      .filter((r) => r.mes === mes)
+      .reduce((s, r) => s + Number(r.importe), 0)
+    const gastos = gastosVar + gastoFijoTotal
+    resultadoMensual.push({ mes, ingresos, gastos, resultado: ingresos - gastos })
+  }
+
+  // 3. distribucionSocios & tipoCambioMensual
+  const cierresAnio = await prisma.cierreMensual.findMany({
+    where: { anio },
+    select: { mes: true, snapshot: true },
+  })
+
+  const socioMap = new Map<string, number>()
+  const tipoCambioMensual: Array<{ mes: number; tc: number }> = []
+
+  for (const cierre of cierresAnio) {
+    const snap = cierre.snapshot as Record<string, unknown>
+    const socios = snap?.socios
+    if (Array.isArray(socios)) {
+      for (const s of socios) {
+        const nombre: string = (s?.socioNombre ?? s?.nombre ?? 'Desconocido') as string
+        const monto = Number(s?.montoPesos ?? 0)
+        socioMap.set(nombre, (socioMap.get(nombre) ?? 0) + monto)
+      }
+    }
+    const tc = Number(snap?.tipoCambioUsd ?? 0)
+    if (tc > 0) tipoCambioMensual.push({ mes: cierre.mes, tc })
+  }
+
+  const distribucionSocios = Array.from(socioMap.entries()).map(([socio, monto]) => ({ socio, monto }))
+
+  // 4. issuesPorEstado
+  const issuesGrouped = await prisma.issue.groupBy({
+    by: ['estado'],
+    _count: { _all: true },
+  })
+  const issuesPorEstado = issuesGrouped.map((g) => ({ estado: g.estado, count: g._count._all }))
+
+  // 5. horasDesarrolloPorMes & facturacionDesarrolloPorMes
+  const facturasDesarrollo = await prisma.facturaDesarrollo.findMany({
+    where: { anio },
+    select: { mes: true, totalHoras: true, totalUSD: true },
+  })
+
+  const horasMap = new Map<number, number>()
+  const usdMap = new Map<number, number>()
+  for (const f of facturasDesarrollo) {
+    horasMap.set(f.mes, (horasMap.get(f.mes) ?? 0) + Number(f.totalHoras))
+    usdMap.set(f.mes, (usdMap.get(f.mes) ?? 0) + Number(f.totalUSD))
+  }
+
+  const horasDesarrolloPorMes = Array.from(horasMap.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([mes, horas]) => ({ mes, horas }))
+
+  const mesesUsd = Array.from(usdMap.keys()).sort((a, b) => a - b)
+  let acumulado = 0
+  const facturacionDesarrolloPorMes = mesesUsd.map((mes) => {
+    const totalUSD = usdMap.get(mes) ?? 0
+    acumulado += totalUSD
+    return { mes, totalUSD, acumulado }
+  })
+
+  return NextResponse.json({
+    activacionesPorMesEmpresa,
+    facturacionPorMesEmpresa,
+    resultadoMensual,
+    distribucionSocios,
+    tipoCambioMensual,
+    issuesPorEstado,
+    horasDesarrolloPorMes,
+    facturacionDesarrolloPorMes,
+  })
+}
