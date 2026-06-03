@@ -50,18 +50,10 @@ export function DashboardMain() {
           Resumen operativo
         </h2>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard label="Cobros pendientes"      value={stats?.pendingCobros    ?? null} accent="amber">
-            <CreditCard size={18} />
-          </StatCard>
-          <StatCard label="Importaciones activas"  value={stats?.activeImports    ?? null}>
-            <Upload size={18} />
-          </StatCard>
-          <StatCard label="Importaciones este mes" value={stats?.importsThisMonth ?? null} accent="green">
-            <Zap size={18} />
-          </StatCard>
-          <StatCard label="Empresas activas"       value={stats?.activeEmpresas   ?? null}>
-            <Building2 size={18} />
-          </StatCard>
+          <StatCard label="Cobros pendientes"      value={stats?.pendingCobros    ?? null} accent="amber" icon={CreditCard} />
+          <StatCard label="Importaciones activas"  value={stats?.activeImports    ?? null}               icon={Upload} />
+          <StatCard label="Importaciones este mes" value={stats?.importsThisMonth ?? null} accent="green" icon={Zap} />
+          <StatCard label="Empresas activas"       value={stats?.activeEmpresas   ?? null}               icon={Building2} />
         </div>
       </section>
 

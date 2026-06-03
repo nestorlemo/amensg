@@ -91,7 +91,7 @@ export default async function ImportacionDetailPage({ params }: PageProps) {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-slate-950">Facturacion generada</h2>
+        <h2 className="text-lg font-semibold text-slate-950">Facturación generada</h2>
         <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
           <table className="min-w-full text-sm">
             <thead className="bg-slate-100 text-left text-xs uppercase text-slate-600">

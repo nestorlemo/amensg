@@ -41,7 +41,7 @@ export default async function FacturacionPage({ searchParams }: PageProps) {
             ))}
           </select>
         </label>
-        <FilterInput label="Importacion ID" name="importacionId" value={stringValue(params.importacionId)} />
+        <FilterInput label="Importación ID" name="importacionId" value={stringValue(params.importacionId)} />
         <label className="space-y-1 text-sm font-medium text-slate-700">
           Estado cobro
           <select
