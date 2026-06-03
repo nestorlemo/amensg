@@ -256,6 +256,7 @@ model FacturaDesarrollo {
   distribuciones     DistribucionFactura[]
   facturaIssues      FacturaIssue[]
   ingresoAdicionalId String?  @db.Uuid
+  estado             String   @default("PENDIENTE") // PENDIENTE | COBRADO
   creadoEn           DateTime @default(now())
 
   @@index([empresaId, anio, mes])

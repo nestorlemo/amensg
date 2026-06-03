@@ -92,6 +92,7 @@ export function serializeFactura(f: {
   totalUSD: { toString(): string }; tipoCambio: { toString(): string }
   totalUYU: { toString(): string }; iva: { toString(): string }; totalConIva: { toString(): string }
   ingresoAdicionalId: string | null
+  estado: string
   empresa: { id: string; nombre: string }
   distribuciones: { id: string; porcentaje: { toString(): string }; montoUYU: { toString(): string }; socio: { id: string; nombre: string } }[]
   facturaIssues: { issue: { id: string; descripcion: string; totalHoras: { toString(): string } } }[]
@@ -109,6 +110,7 @@ export function serializeFactura(f: {
     iva: Number(f.iva),
     totalConIva: Number(f.totalConIva),
     ingresoAdicionalId: f.ingresoAdicionalId,
+    estado: f.estado,
     creadoEn: f.creadoEn.toISOString(),
     distribuciones: f.distribuciones.map((d) => ({
       id: d.id,

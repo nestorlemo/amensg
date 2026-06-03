@@ -35,6 +35,21 @@ export async function PUT(request: Request, { params }: Params) {
   if (!factura) return NextResponse.json({ error: 'NOT_FOUND', message: 'Factura no encontrada.' }, { status: 404 })
 
   const body = await request.json().catch(() => ({})) as Record<string, unknown>
+
+  // If body has estado, update only estado
+  if (typeof body.estado === 'string') {
+    const updated = await prisma.facturaDesarrollo.update({
+      where: { id },
+      data: { estado: body.estado },
+      include: {
+        empresa: { select: { id: true, nombre: true } },
+        distribuciones: { include: { socio: { select: { id: true, nombre: true } } } },
+        facturaIssues: { include: { issue: true } },
+      },
+    })
+    return NextResponse.json(serializeFactura(updated))
+  }
+
   const distribuciones = Array.isArray(body.distribuciones)
     ? (body.distribuciones as { socioId: string; porcentaje: number }[])
     : []
@@ -69,4 +84,24 @@ export async function PUT(request: Request, { params }: Params) {
   })
 
   return NextResponse.json(serializeFactura(updated))
+}
+
+export async function DELETE(_req: Request, { params }: Params) {
+  const auth = await requireApiAuth()
+  if ('error' in auth) return auth.error
+
+  const { id } = await params
+  const factura = await prisma.facturaDesarrollo.findUnique({ where: { id }, select: { ingresoAdicionalId: true } })
+  if (!factura) return NextResponse.json({ error: 'NOT_FOUND' }, { status: 404 })
+
+  await prisma.$transaction(async (tx) => {
+    await tx.facturaIssue.deleteMany({ where: { facturaId: id } })
+    await tx.distribucionFactura.deleteMany({ where: { facturaId: id } })
+    await tx.facturaDesarrollo.delete({ where: { id } })
+    if (factura.ingresoAdicionalId) {
+      await tx.ingresoAdicional.delete({ where: { id: factura.ingresoAdicionalId } })
+    }
+  })
+
+  return NextResponse.json({ ok: true })
 }

@@ -24,6 +24,24 @@ type EmpresaOption = { id: string; nombre: string }
 
 type EstadoFact = 'sin_facturar' | 'facturados' | 'todos'
 
+type FacturaHistorial = {
+  id: string
+  anio: number
+  mes: number
+  creadoEn: string
+  empresa: { id: string; nombre: string }
+  totalHoras: number
+  totalUSD: number
+  iva: number
+  totalConIva: number
+  estado: string
+  ingresoAdicionalId: string | null
+  distribuciones: { id: string; porcentaje: number; montoUYU: number; socio: { id: string; nombre: string } }[]
+  issues: { id: string; descripcion: string; totalHoras: number }[]
+}
+
+const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+
 // distribuciones: empresaId -> socioId -> porcentaje string
 type DistMap = Record<string, Record<string, string>>
 
@@ -50,6 +68,35 @@ export default function FacturarDesarrolloPage() {
   const [saving, setSaving]   = useState<Record<string, boolean>>({})
   const [results, setResults] = useState<Record<string, { ok: boolean; msg: string }>>({})
 
+  const [facturas, setFacturas] = useState<FacturaHistorial[]>([])
+  const [loadingFacturas, setLoadingFacturas] = useState(false)
+
+  async function fetchFacturas() {
+    setLoadingFacturas(true)
+    try {
+      const r = await fetch('/api/facturas-desarrollo')
+      const d = await r.json()
+      setFacturas((d as { facturas?: FacturaHistorial[] }).facturas ?? [])
+    } finally {
+      setLoadingFacturas(false)
+    }
+  }
+
+  async function marcarCobrado(facturaId: string) {
+    await fetch(`/api/facturas-desarrollo/${facturaId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ estado: 'COBRADO' })
+    })
+    await fetchFacturas()
+  }
+
+  async function eliminarFactura(facturaId: string) {
+    if (!confirm('¿Eliminar esta factura y su ingreso adicional asociado?')) return
+    await fetch(`/api/facturas-desarrollo/${facturaId}`, { method: 'DELETE' })
+    await fetchFacturas()
+  }
+
   useEffect(() => {
     fetch('/api/socios')
       .then((r) => r.json())
@@ -63,6 +110,7 @@ export default function FacturarDesarrolloPage() {
       .then((r) => r.json())
       .then((d: { empresas?: EmpresaOption[]; data?: EmpresaOption[] }) => setEmpresasOpts(d.empresas ?? d.data ?? []))
       .catch(() => null)
+    void fetchFacturas()
   }, [])
 
   async function handleBuscar(e: React.FormEvent) {
@@ -152,6 +200,7 @@ export default function FacturarDesarrolloPage() {
         setResults((r) => ({ ...r, [g.empresaId]: { ok: false, msg: (data as { message?: string }).message ?? 'Error al facturar.' } }))
       } else {
         setResults((r) => ({ ...r, [g.empresaId]: { ok: true, msg: `Factura creada. Total: $${((data as { totalConIva?: number }).totalConIva ?? 0).toFixed(2)} USD` } }))
+        void fetchFacturas()
         setGroups((prev) => prev.map((grp) =>
           grp.empresaId !== g.empresaId ? grp : {
             ...grp,
@@ -217,6 +266,70 @@ export default function FacturarDesarrolloPage() {
         </form>
         {valorHora > 0 && (
           <p className="mt-2 text-sm text-slate-500">Valor hora actual: <span className="font-semibold text-slate-800">${valorHora.toFixed(2)} USD</span></p>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white">
+        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+          <h2 className="text-sm font-semibold text-slate-950">Historial de facturas</h2>
+          <button onClick={() => void fetchFacturas()} className="text-xs text-slate-500 hover:text-slate-700">↻ Actualizar</button>
+        </div>
+        {loadingFacturas ? (
+          <p className="p-6 text-sm text-slate-400">Cargando…</p>
+        ) : facturas.length === 0 ? (
+          <p className="p-6 text-sm text-slate-400">No hay facturas generadas aún.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
+                <tr>
+                  <th className="px-4 py-3 text-left">Período</th>
+                  <th className="px-4 py-3 text-left">Empresa</th>
+                  <th className="px-4 py-3 text-right">Horas</th>
+                  <th className="px-4 py-3 text-right">USD s/IVA</th>
+                  <th className="px-4 py-3 text-right">IVA</th>
+                  <th className="px-4 py-3 text-right">Total c/IVA</th>
+                  <th className="px-4 py-3 text-left">Distribución</th>
+                  <th className="px-4 py-3 text-left">Estado</th>
+                  <th className="px-4 py-3 text-left">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {facturas.map((f) => (
+                  <tr key={f.id}>
+                    <td className="px-4 py-3 whitespace-nowrap">{MESES[f.mes - 1]} {f.anio}</td>
+                    <td className="px-4 py-3">{f.empresa.nombre}</td>
+                    <td className="px-4 py-3 text-right">{f.totalHoras}h</td>
+                    <td className="px-4 py-3 text-right">${f.totalUSD.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right">${f.iva.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right font-semibold">${f.totalConIva.toFixed(2)}</td>
+                    <td className="px-4 py-3">
+                      {f.distribuciones.length === 0 ? '—' : f.distribuciones.map(d => (
+                        <div key={d.id} className="text-xs">{d.socio.nombre}: {d.porcentaje}% · ${d.montoUYU.toFixed(2)}</div>
+                      ))}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${f.estado === 'COBRADO' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                        {f.estado}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2">
+                        {f.estado !== 'COBRADO' && (
+                          <button onClick={() => void marcarCobrado(f.id)} className="rounded border border-emerald-300 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50">
+                            Marcar cobrado
+                          </button>
+                        )}
+                        <button onClick={() => void eliminarFactura(f.id)} className="rounded border border-red-300 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50">
+                          Eliminar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 
