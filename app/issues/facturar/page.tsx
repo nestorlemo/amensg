@@ -232,6 +232,20 @@ export default function FacturarDesarrolloPage() {
     }))
   }
 
+  const filteredFacturas = facturas.filter((f) => {
+    if (fEstadoCobro && f.estado !== fEstadoCobro) return false
+    if (fEmpresa && f.empresa.id !== fEmpresa) return false
+    if (fechaDesde) {
+      const [y, m] = fechaDesde.split('-').map(Number)
+      if (f.anio * 100 + f.mes < (y ?? 0) * 100 + (m ?? 0)) return false
+    }
+    if (fechaHasta) {
+      const [y, m] = fechaHasta.split('-').map(Number)
+      if (f.anio * 100 + f.mes > (y ?? 0) * 100 + (m ?? 0)) return false
+    }
+    return true
+  })
+
   return (
     <div className="space-y-6">
       <PageHeader section="DESARROLLO" title="Facturación de desarrollo" description="Generá facturas de desarrollo por empresa a partir de issues en producción." />
@@ -263,6 +277,14 @@ export default function FacturarDesarrolloPage() {
               <option value="todos">Todos</option>
             </select>
           </label>
+          <label className="block text-sm font-medium text-slate-700">
+            Estado cobro
+            <select className="mt-1 block h-9 w-36 rounded-md border border-slate-300 px-3 text-sm" value={fEstadoCobro} onChange={(e) => setFEstadoCobro(e.target.value)}>
+              <option value="">Todos</option>
+              <option value="PENDIENTE">Pendiente</option>
+              <option value="COBRADO">Cobrado</option>
+            </select>
+          </label>
           <button className="h-9 rounded-md bg-slate-950 px-5 text-sm font-semibold text-white disabled:opacity-50" disabled={loading} type="submit">
             {loading ? 'Buscando…' : 'Buscar issues'}
           </button>
@@ -275,22 +297,12 @@ export default function FacturarDesarrolloPage() {
       <section className="rounded-xl border border-slate-200 bg-white">
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
           <h2 className="text-sm font-semibold text-slate-950">Historial de facturas</h2>
-          <div className="flex items-center gap-3">
-            <label className="flex items-center gap-2 text-xs text-slate-600">
-              Estado cobro
-              <select className="h-7 rounded-md border border-slate-300 px-2 text-xs" value={fEstadoCobro} onChange={(e) => setFEstadoCobro(e.target.value)}>
-                <option value="">Todos</option>
-                <option value="PENDIENTE">Pendiente</option>
-                <option value="COBRADO">Cobrado</option>
-              </select>
-            </label>
-            <button onClick={() => void fetchFacturas()} className="text-xs text-slate-500 hover:text-slate-700">↻ Actualizar</button>
-          </div>
+          <button onClick={() => void fetchFacturas()} className="text-xs text-slate-500 hover:text-slate-700">↻ Actualizar</button>
         </div>
         {loadingFacturas ? (
           <p className="p-6 text-sm text-slate-400">Cargando…</p>
-        ) : facturas.length === 0 ? (
-          <p className="p-6 text-sm text-slate-400">No hay facturas generadas aún.</p>
+        ) : filteredFacturas.length === 0 ? (
+          <p className="p-6 text-sm text-slate-400">No hay facturas para los filtros seleccionados.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
@@ -308,7 +320,7 @@ export default function FacturarDesarrolloPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {facturas.filter((f) => !fEstadoCobro || f.estado === fEstadoCobro).map((f) => (
+                {filteredFacturas.map((f) => (
                   <tr key={f.id}>
                     <td className="px-4 py-3 whitespace-nowrap">{MESES[f.mes - 1]} {f.anio}</td>
                     <td className="px-4 py-3">{f.empresa.nombre}</td>
