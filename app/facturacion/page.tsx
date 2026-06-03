@@ -75,7 +75,7 @@ export default async function FacturacionPage({ searchParams }: PageProps) {
               <h2 className="mt-1 text-lg font-semibold text-slate-950">
                 {selectedFacturacion.empresa} - {formatPeriod(selectedFacturacion.anio, selectedFacturacion.mes)}
               </h2>
-              <p className="mt-1 text-sm text-slate-600">Total: {selectedFacturacion.total}</p>
+              <p className="mt-1 text-sm text-slate-600">Total C/IVA: {selectedFacturacion.total}</p>
               {selectedFacturacion.periodoCerrado ? (
                 <p className="mt-2 text-sm font-medium text-amber-700">
                   El período ya está cerrado. No se puede modificar el estado de cobro.
@@ -112,9 +112,9 @@ export default async function FacturacionPage({ searchParams }: PageProps) {
               <Th>Periodo</Th>
               <Th align="right">Cantidad facturable</Th>
               <Th align="right">Precio unitario</Th>
-              <Th align="right">Subtotal</Th>
+              <Th align="right">Monto S/IVA</Th>
               <Th align="right">IVA</Th>
-              <Th align="right">Total</Th>
+              <Th align="right">Monto C/IVA</Th>
               <Th>Estado cobro</Th>
               <Th>Fecha cobro</Th>
               <Th>Acciones</Th>

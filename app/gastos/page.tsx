@@ -68,7 +68,7 @@ export default async function GastosPage({ searchParams }: PageProps) {
                 <Th>Concepto</Th>
                 <Th>Período</Th>
                 <Th>Fecha</Th>
-                <Th>Importe</Th>
+                <Th>Importe S/IVA</Th>
                 <Th>Observaciones</Th>
                 <Th>Acciones</Th>
               </tr>

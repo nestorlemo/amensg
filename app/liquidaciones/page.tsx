@@ -63,10 +63,10 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
       ) : null}
 
       <section className="grid min-w-0 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <Metric label="Total ingresos sin IVA" value={preview.ingresos.totalIngresosSinIva} />
+        <Metric label="Total ingresos S/IVA" value={preview.ingresos.totalIngresosSinIva} />
         <Metric label="IVA total" value={preview.ingresos.totalIva} />
-        <Metric label="Total ingresos con IVA" value={preview.ingresos.ingresosConIva} />
-        <Metric label="Total gastos" value={preview.gastos.totalGastos} />
+        <Metric label="Total ingresos C/IVA" value={preview.ingresos.ingresosConIva} />
+        <Metric label="Total gastos S/IVA" value={preview.gastos.totalGastos} />
         <Metric label="Resultado distribuible" value={preview.resultado.resultadoDistribuible} />
         <Metric label="Tipo cambio USD" value={preview.resultado.tipoCambioUsd ?? 'Sin configurar'} />
       </section>
@@ -90,9 +90,9 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
             <thead className="bg-slate-100 text-left text-xs uppercase text-slate-600">
               <tr>
                 <Th>Concepto</Th>
-                <Th align="right">Sin IVA</Th>
+                <Th align="right">Monto S/IVA</Th>
                 <Th align="right">IVA</Th>
-                <Th align="right">Con IVA</Th>
+                <Th align="right">Monto C/IVA</Th>
               </tr>
             </thead>
             <tbody>
@@ -131,9 +131,9 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
               <tr>
                 <Th>Empresa</Th>
                 <Th align="right">Activaciones</Th>
-                <Th align="right">Sin IVA</Th>
+                <Th align="right">Monto S/IVA</Th>
                 <Th align="right">IVA</Th>
-                <Th align="right">Total</Th>
+                <Th align="right">Monto C/IVA</Th>
               </tr>
             </thead>
             <tbody>
@@ -165,9 +165,9 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
               <tr>
                 <Th>Concepto</Th>
                 <Th>Empresa</Th>
-                <Th align="right">Sin IVA</Th>
+                <Th align="right">Monto S/IVA</Th>
                 <Th align="right">IVA</Th>
-                <Th align="right">Total</Th>
+                <Th align="right">Monto C/IVA</Th>
               </tr>
             </thead>
             <tbody>
@@ -240,7 +240,7 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
               <tr>
                 <Th>Concepto</Th>
                 <Th>Tipo</Th>
-                <Th align="right">Importe</Th>
+                <Th align="right">Importe S/IVA</Th>
               </tr>
             </thead>
             <tbody>
@@ -255,7 +255,7 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
                 <EmptyRow colSpan={3} message="No hay gastos cargados para este periodo." />
               ) : null}
               <tr className="border-t border-slate-300 bg-slate-50 font-semibold text-slate-950">
-                <Td colSpan={2}>Total gastos</Td>
+                <Td colSpan={2}>Total gastos S/IVA</Td>
                 <Td align="right">{formatMoney(preview.gastos.totalGastos)}</Td>
               </tr>
             </tbody>
@@ -277,7 +277,7 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
                 <Th align="right">Activaciones</Th>
                 <Th align="right">Adicionales</Th>
                 <Th align="right">Desarrollo</Th>
-                <Th align="right">Total pesos</Th>
+                <Th align="right">Total UYU</Th>
                 <Th align="right">Total USD</Th>
               </tr>
             </thead>

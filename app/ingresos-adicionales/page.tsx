@@ -56,8 +56,8 @@ export default async function IngresosAdicionalesPage({ searchParams }: PageProp
               <Th>Periodo</Th>
               <Th>Fecha facturacion</Th>
               <Th>Moneda</Th>
-              <Th>Monto sin IVA</Th>
-              <Th>Monto con IVA</Th>
+              <Th>Monto S/IVA</Th>
+              <Th>Monto C/IVA</Th>
               <Th>Acciones</Th>
             </tr>
           </thead>

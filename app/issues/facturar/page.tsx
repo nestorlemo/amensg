@@ -303,9 +303,9 @@ export default function FacturarDesarrolloPage() {
                   <th className="px-4 py-3 text-left">Período</th>
                   <th className="px-4 py-3 text-left">Empresa</th>
                   <th className="px-4 py-3 text-right">Horas</th>
-                  <th className="px-4 py-3 text-right">USD s/IVA</th>
-                  <th className="px-4 py-3 text-right">IVA</th>
-                  <th className="px-4 py-3 text-right">Total c/IVA</th>
+                  <th className="px-4 py-3 text-right">USD S/IVA</th>
+                  <th className="px-4 py-3 text-right">IVA USD</th>
+                  <th className="px-4 py-3 text-right">Total C/IVA USD</th>
                   <th className="px-4 py-3 text-left">Distribución</th>
                   <th className="px-4 py-3 text-left">Estado cobro</th>
                   <th className="px-4 py-3 text-left">Acciones</th>
@@ -317,9 +317,9 @@ export default function FacturarDesarrolloPage() {
                     <td className="px-4 py-3 whitespace-nowrap">{MESES[f.mes - 1]} {f.anio}</td>
                     <td className="px-4 py-3">{f.empresa.nombre}</td>
                     <td className="px-4 py-3 text-right">{f.totalHoras}h</td>
-                    <td className="px-4 py-3 text-right">${f.totalUSD.toFixed(2)}</td>
-                    <td className="px-4 py-3 text-right">${f.iva.toFixed(2)}</td>
-                    <td className="px-4 py-3 text-right font-semibold">${f.totalConIva.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right">${f.totalUSD.toFixed(2)} USD</td>
+                    <td className="px-4 py-3 text-right">${f.iva.toFixed(2)} USD</td>
+                    <td className="px-4 py-3 text-right font-semibold">${f.totalConIva.toFixed(2)} USD</td>
                     <td className="px-4 py-3">
                       {f.distribuciones.length === 0 ? '—' : f.distribuciones.map(d => (
                         <div key={d.id} className="text-xs">{d.socio.nombre}: {d.porcentaje}% · ${(f.totalConIva * d.porcentaje / 100).toFixed(2)} USD</div>
@@ -425,16 +425,16 @@ export default function FacturarDesarrolloPage() {
                 <p className="text-xl font-bold text-slate-950">{selHoras.toFixed(2)}h</p>
               </div>
               <div className="rounded-md border border-slate-100 bg-slate-50 p-3 text-center">
-                <p className="text-xs text-slate-500">Total USD s/IVA</p>
-                <p className="text-xl font-bold text-blue-700">${totalUSD.toFixed(2)}</p>
+                <p className="text-xs text-slate-500">Total S/IVA USD</p>
+                <p className="text-xl font-bold text-blue-700">${totalUSD.toFixed(2)} USD</p>
               </div>
               <div className="rounded-md border border-slate-100 bg-slate-50 p-3 text-center">
                 <p className="text-xs text-slate-500">IVA (22%) USD</p>
-                <p className="text-xl font-bold text-slate-700">${ivaUSD.toFixed(2)}</p>
+                <p className="text-xl font-bold text-slate-700">${ivaUSD.toFixed(2)} USD</p>
               </div>
               <div className="rounded-md border border-emerald-100 bg-emerald-50 p-3 text-center">
-                <p className="text-xs text-slate-500">Total c/IVA USD</p>
-                <p className="text-xl font-bold text-emerald-700">${totalConIvaUSD.toFixed(2)}</p>
+                <p className="text-xs text-slate-500">Total C/IVA USD</p>
+                <p className="text-xl font-bold text-emerald-700">${totalConIvaUSD.toFixed(2)} USD</p>
               </div>
             </div>
 

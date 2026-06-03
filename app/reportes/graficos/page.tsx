@@ -199,8 +199,8 @@ export default function GraficosPage() {
             <SectionTitle title="KPIs del año" color="#1769E0" />
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
               <KpiCard label="Total activaciones" value={fmt(kpis!.activaciones)} />
-              <KpiCard label="Facturado activaciones (UYU)" value={fmt(kpis!.facturadoActivaciones)} />
-              <KpiCard label="Facturado desarrollo (USD)" value={fmt(kpis!.facturadoDesarrollo)} />
+              <KpiCard label="Facturado activaciones S/IVA (UYU)" value={fmt(kpis!.facturadoActivaciones)} />
+              <KpiCard label="Facturado desarrollo S/IVA (USD)" value={fmt(kpis!.facturadoDesarrollo)} />
               <KpiCard label="Resultado distribuible (UYU)" value={fmt(kpis!.resultado)} />
             </div>
           </section>
@@ -294,9 +294,9 @@ export default function GraficosPage() {
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={fmtShort} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend />
-                    <Bar dataKey="ingresos" name="Ingresos" stackId="stack" fill="#93c5fd" />
-                    <Bar dataKey="gastos" name="Gastos" stackId="stack" fill="#fca5a5" />
-                    <Line type="monotone" dataKey="resultado" name="Resultado" stroke="#20E0B2" strokeWidth={2} dot />
+                    <Bar dataKey="ingresos" name="Ingresos S/IVA (UYU)" stackId="stack" fill="#93c5fd" />
+                    <Bar dataKey="gastos" name="Gastos S/IVA (UYU)" stackId="stack" fill="#fca5a5" />
+                    <Line type="monotone" dataKey="resultado" name="Resultado (UYU)" stroke="#20E0B2" strokeWidth={2} dot />
                   </ComposedChart>
                 </ResponsiveContainer>
               </ChartCard>
@@ -310,11 +310,11 @@ export default function GraficosPage() {
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={fmtShort} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend />
-                    <Bar dataKey="ingresosActivaciones" name="Activaciones" stackId="ing" fill="#1769E0" />
-                    <Bar dataKey="ingresosAdicionales" name="Adicionales" stackId="ing" fill="#19C3FF" />
-                    <Bar dataKey="desarrolloUYU" name="Desarrollo" stackId="ing" fill="#20E0B2" />
-                    <Bar dataKey="gastos" name="Gastos" fill="#f87171" />
-                    <Line type="monotone" dataKey="resultado" name="Resultado" stroke="#0B6B3A" strokeWidth={3} dot={{ r: 4 }} />
+                    <Bar dataKey="ingresosActivaciones" name="Activaciones S/IVA (UYU)" stackId="ing" fill="#1769E0" />
+                    <Bar dataKey="ingresosAdicionales" name="Adicionales S/IVA (UYU)" stackId="ing" fill="#19C3FF" />
+                    <Bar dataKey="desarrolloUYU" name="Desarrollo (UYU)" stackId="ing" fill="#20E0B2" />
+                    <Bar dataKey="gastos" name="Gastos S/IVA (UYU)" fill="#f87171" />
+                    <Line type="monotone" dataKey="resultado" name="Resultado (UYU)" stroke="#0B6B3A" strokeWidth={3} dot={{ r: 4 }} />
                   </ComposedChart>
                 </ResponsiveContainer>
               </ChartCard>
@@ -327,7 +327,7 @@ export default function GraficosPage() {
                     <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={fmtShort} />
                     <YAxis type="category" dataKey="socio" tick={{ fontSize: 11 }} width={110} />
                     <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="monto" name="Monto" fill="#1769E0" />
+                    <Bar dataKey="monto" name="Monto (UYU)" fill="#1769E0" />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartCard>
@@ -374,8 +374,8 @@ export default function GraficosPage() {
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={fmtShort} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend />
-                    <Line type="monotone" dataKey="totalUSD" name="USD mes" stroke="#F0B840" strokeWidth={2} dot />
-                    <Line type="monotone" dataKey="acumulado" name="Acumulado" stroke="#1769E0" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="totalUSD" name="S/IVA USD mes" stroke="#F0B840" strokeWidth={2} dot />
+                    <Line type="monotone" dataKey="acumulado" name="Acumulado S/IVA USD" stroke="#1769E0" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </ChartCard>

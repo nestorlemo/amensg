@@ -65,8 +65,8 @@ export default async function CobrosPage({ searchParams }: PageProps) {
       </form>
 
       <section className="grid gap-3 md:grid-cols-4">
-        <StatCard label="Pendiente sin IVA" value={resumen.totalPendienteSinIva} />
-        <StatCard label="Pendiente con IVA" value={resumen.totalPendienteConIva} />
+        <StatCard label="Pendiente S/IVA" value={resumen.totalPendienteSinIva} />
+        <StatCard label="Pendiente C/IVA" value={resumen.totalPendienteConIva} />
         <StatCard label="Empresas con deuda" value={resumen.empresasConDeuda} />
         <StatCard label="Periodos pendientes" value={resumen.periodosPendientes} />
       </section>
@@ -77,8 +77,8 @@ export default async function CobrosPage({ searchParams }: PageProps) {
             <tr>
               <TableTh>Empresa</TableTh>
               <TableTh>Periodo</TableTh>
-              <TableTh>Total sin IVA</TableTh>
-              <TableTh>Total con IVA</TableTh>
+              <TableTh>Total S/IVA</TableTh>
+              <TableTh>Total C/IVA</TableTh>
               <TableTh>Estado</TableTh>
               <TableTh>Fecha cobro</TableTh>
               <TableTh>Acciones</TableTh>

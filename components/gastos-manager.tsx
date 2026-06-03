@@ -48,9 +48,9 @@ export function GastosResumen({
 
   return (
     <div className="grid gap-3 sm:grid-cols-3">
-      <SummaryCard label="Gastos fijos del mes" value={fmt(totalFijos)} accent="#1769E0" />
-      <SummaryCard label="Gastos variables del mes" value={fmt(totalVariables)} accent="#5a6a82" />
-      <SummaryCard label="Total gastos" value={fmt(total)} accent="#0B1F3A" bold />
+      <SummaryCard label="Gastos fijos del mes S/IVA" value={fmt(totalFijos)} accent="#1769E0" />
+      <SummaryCard label="Gastos variables del mes S/IVA" value={fmt(totalVariables)} accent="#5a6a82" />
+      <SummaryCard label="Total gastos S/IVA" value={fmt(total)} accent="#0B1F3A" bold />
     </div>
   )
 }
@@ -127,7 +127,7 @@ export function GastosFijosManager({ conceptos }: { conceptos: Concepto[] }) {
             <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-4 py-3">Nombre</th>
-                <th className="px-4 py-3 text-right">Monto mensual</th>
+                <th className="px-4 py-3 text-right">Monto mensual S/IVA</th>
                 <th className="px-4 py-3">Estado</th>
                 <th className="px-4 py-3">Acciones</th>
               </tr>
