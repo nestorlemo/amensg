@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { AccessDenied } from '@/components/access-denied'
+import { DateInput } from '@/components/date-input'
 import { PageHeader } from '@/components/page-header'
 import { requireAdminPage } from '@/lib/auth'
 import { getAuditoria } from '@/lib/auditoria'
@@ -27,8 +28,14 @@ export default async function AuditoriaPage({ searchParams }: PageProps) {
       />
 
       <form className="grid min-w-0 gap-3 rounded-md border border-slate-200 bg-white p-4 md:grid-cols-2 xl:grid-cols-6" method="get">
-        <FilterInput label="Fecha desde" name="fechaDesde" type="date" value={stringValue(params.fechaDesde)} />
-        <FilterInput label="Fecha hasta" name="fechaHasta" type="date" value={stringValue(params.fechaHasta)} />
+        <label className="min-w-0 space-y-1 text-sm font-medium text-slate-700">
+          Fecha desde
+          <DateInput className="h-10 w-full min-w-0 rounded-md border border-slate-300 px-3 text-sm" name="fechaDesde" defaultValue={stringValue(params.fechaDesde)} />
+        </label>
+        <label className="min-w-0 space-y-1 text-sm font-medium text-slate-700">
+          Fecha hasta
+          <DateInput className="h-10 w-full min-w-0 rounded-md border border-slate-300 px-3 text-sm" name="fechaHasta" defaultValue={stringValue(params.fechaHasta)} />
+        </label>
         <FilterInput label="Entidad" name="entidad" placeholder="Parametro" value={stringValue(params.entidad)} />
         <FilterInput label="Accion" name="accion" placeholder="ACTUALIZAR" value={stringValue(params.accion)} />
         <FilterInput label="Usuario" name="usuario" placeholder="Sistema" value={stringValue(params.usuario)} />

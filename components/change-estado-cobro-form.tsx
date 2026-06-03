@@ -5,6 +5,7 @@ import type { FormEvent } from 'react'
 import { useState } from 'react'
 
 import { AlertError, AlertWarning } from '@/components/alerts'
+import { DateInput } from '@/components/date-input'
 import { requestJson } from '@/lib/client-api'
 
 type EstadoCobroOption = {
@@ -93,11 +94,10 @@ export function ChangeEstadoCobroForm({
           </option>
         ))}
       </select>
-      <input
+      <DateInput
         className="h-9 rounded-md border border-slate-300 px-2 text-sm"
         disabled={disabled}
-        onChange={(event) => setSelectedFechaCobro(event.target.value)}
-        type="date"
+        onChange={setSelectedFechaCobro}
         value={selectedFechaCobro}
       />
       <input

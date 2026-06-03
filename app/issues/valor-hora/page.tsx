@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
+import { DateInput } from '@/components/date-input'
 import { PageHeader } from '@/components/page-header'
 
 type ValorHora = { id: string; valorUSD: number; vigenciaDesde: string; creadoEn: string }
@@ -81,10 +82,10 @@ export default function ValorHoraPage() {
           </label>
           <label className="block text-sm font-medium text-slate-700">
             Vigente desde
-            <input
+            <DateInput
               className="mt-1 block h-9 w-40 rounded-md border border-slate-300 px-3 text-sm"
-              type="date" required
-              value={vigencia} onChange={(e) => setVigencia(e.target.value)}
+              required
+              value={vigencia} onChange={setVigencia}
             />
           </label>
           <button className="h-9 rounded-md bg-blue-600 px-5 text-sm font-semibold text-white disabled:opacity-50" disabled={saving} type="submit">

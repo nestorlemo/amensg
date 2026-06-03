@@ -5,6 +5,7 @@ import type { FormEvent } from 'react'
 import { useState } from 'react'
 
 import { AlertError } from '@/components/alerts'
+import { DateInput } from '@/components/date-input'
 import { requestJson } from '@/lib/client-api'
 
 type Concepto = {
@@ -263,7 +264,10 @@ export function GastosVariablesManager({
         <ConceptSelect conceptos={variables} />
         <Field label="Año" name="anio" placeholder="2026" required />
         <Field label="Mes" name="mes" placeholder="6" required />
-        <Field label="Fecha" name="fecha" required type="date" />
+        <label className="space-y-1 text-sm font-medium text-slate-700">
+          Fecha
+          <DateInput className="block h-9 w-full min-w-[120px] rounded-md border border-slate-300 px-2 text-sm" name="fecha" required />
+        </label>
         <Field label="Importe" min="0" name="importe" required step="0.01" type="number" />
         <Field label="Observaciones" name="observaciones" />
         <div className="flex items-end">
@@ -320,7 +324,7 @@ export function GastoRowActions({
       <ConceptSelect conceptos={variables} defaultValue={gasto.conceptoId} disabled={disabled} compact />
       <input className="h-9 rounded-md border border-slate-300 px-2 text-sm disabled:bg-slate-100" defaultValue={gasto.anio} disabled={disabled} name="anio" />
       <input className="h-9 rounded-md border border-slate-300 px-2 text-sm disabled:bg-slate-100" defaultValue={gasto.mes} disabled={disabled} name="mes" />
-      <input className="h-9 rounded-md border border-slate-300 px-2 text-sm disabled:bg-slate-100" defaultValue={gasto.fecha?.slice(0, 10)} disabled={disabled} name="fecha" type="date" />
+      <DateInput className="h-9 rounded-md border border-slate-300 px-2 text-sm disabled:bg-slate-100" defaultValue={gasto.fecha?.slice(0, 10)} disabled={disabled} name="fecha" />
       <input className="h-9 rounded-md border border-slate-300 px-2 text-sm disabled:bg-slate-100" defaultValue={gasto.importe} disabled={disabled} name="importe" />
       <input className="h-9 rounded-md border border-slate-300 px-2 text-sm disabled:bg-slate-100" defaultValue={gasto.observaciones ?? ''} disabled={disabled} name="observaciones" placeholder="Observaciones" />
       <button className="rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={disabled} type="submit">Guardar</button>

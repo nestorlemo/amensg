@@ -5,6 +5,7 @@ import type { FormEvent } from 'react'
 import { useState } from 'react'
 
 import { AlertError } from '@/components/alerts'
+import { DateInput } from '@/components/date-input'
 import { requestJson } from '@/lib/client-api'
 
 type Empresa = {
@@ -343,15 +344,14 @@ function IngresoCurrencyFields({
           required
           value={montoOrigen}
         />
-        <input
+        <DateInput
           className={inputClass}
           disabled={disabled}
-          name="fechaFacturacion"
-          onChange={(event) => setFechaFacturacion(event.currentTarget.value)}
-          required
-          type="date"
           value={fechaFacturacion}
+          onChange={setFechaFacturacion}
+          required
         />
+        <input type="hidden" name="fechaFacturacion" value={fechaFacturacion} />
         {moneda === 'USD' ? (
           <>
             <input
@@ -413,15 +413,14 @@ function IngresoCurrencyFields({
         </label>
         <label className="min-w-0 space-y-1 text-sm font-medium text-slate-700">
           Fecha facturacion
-          <input
+          <DateInput
             className={inputClass}
             disabled={disabled}
-            name="fechaFacturacion"
-            onChange={(event) => setFechaFacturacion(event.currentTarget.value)}
-            required
-            type="date"
             value={fechaFacturacion}
+            onChange={setFechaFacturacion}
+            required
           />
+          <input type="hidden" name="fechaFacturacion" value={fechaFacturacion} />
         </label>
         <label className="min-w-0 space-y-1 text-sm font-medium text-slate-700">
           Porcentaje IVA

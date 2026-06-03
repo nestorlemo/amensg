@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
+import { DateInput } from '@/components/date-input'
 import { PageHeader } from '@/components/page-header'
 
 const ESTADOS = ['PENDIENTE', 'EN_DESARROLLO', 'EN_TEST', 'EN_PRODUCCION', 'FACTURADO', 'COBRADO', 'CANCELADO', 'NO_HACER'] as const
@@ -151,7 +152,10 @@ function EditModal({
         {/* Form */}
         <form className="space-y-4 px-6 py-5" onSubmit={(e) => void handleSave(e)}>
           <div className="grid gap-3 md:grid-cols-2">
-            <MInput label="Fecha" type="date" value={form.fecha} onChange={set('fecha')} required />
+            <label className="block text-sm font-medium text-slate-700">
+              Fecha
+              <DateInput className="mt-1 block h-9 w-full rounded-md border border-slate-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" value={form.fecha} onChange={set('fecha')} required />
+            </label>
             <MSelect label="Estado" value={form.estado} onChange={set('estado')}>
               {ESTADOS.map((e) => <option key={e} value={e}>{e.replace(/_/g, ' ')}</option>)}
             </MSelect>
@@ -202,12 +206,10 @@ function EditModal({
 
           {/* fechaProduccion — only when EN_PRODUCCION */}
           {form.estado === 'EN_PRODUCCION' ? (
-            <MInput
-              label="Fecha en producción"
-              type="date"
-              value={form.fechaProduccion}
-              onChange={set('fechaProduccion')}
-            />
+            <label className="block text-sm font-medium text-slate-700">
+              Fecha en producción
+              <DateInput className="mt-1 block h-9 w-full rounded-md border border-slate-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" value={form.fechaProduccion} onChange={set('fechaProduccion')} />
+            </label>
           ) : null}
 
           {error ? (
@@ -371,8 +373,14 @@ export default function IssuesPage() {
             <option value="">Todas</option>
             {PRIORIDADES.map((p) => <option key={p} value={p}>{p}</option>)}
           </Select>
-          <Input label="Fecha prod. desde" type="date" value={fDesde} onChange={setFDesde} width="w-40" />
-          <Input label="Fecha prod. hasta" type="date" value={fHasta} onChange={setFHasta} width="w-40" />
+          <label className="block text-sm font-medium text-slate-700">
+            Fecha prod. desde
+            <DateInput className="mt-1 block h-9 w-40 rounded-md border border-slate-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" value={fDesde} onChange={setFDesde} />
+          </label>
+          <label className="block text-sm font-medium text-slate-700">
+            Fecha prod. hasta
+            <DateInput className="mt-1 block h-9 w-40 rounded-md border border-slate-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" value={fHasta} onChange={setFHasta} />
+          </label>
           <button
             className="h-9 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white"
             onClick={() => void fetchAll()}
@@ -407,7 +415,10 @@ export default function IssuesPage() {
         <section className="rounded-xl border border-blue-200 bg-blue-50 p-5">
           <h2 className="mb-4 text-sm font-semibold text-slate-950">Nuevo issue</h2>
           <form className="grid gap-3 md:grid-cols-3" onSubmit={(e) => void handleCreate(e)}>
-            <Input label="Fecha" type="date" value={form.fecha} onChange={(v) => setForm((f) => ({ ...f, fecha: v }))} required />
+            <label className="block text-sm font-medium text-slate-700">
+              Fecha
+              <DateInput className="mt-1 block h-9 w-full rounded-md border border-slate-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" value={form.fecha} onChange={(v) => setForm((f) => ({ ...f, fecha: v }))} required />
+            </label>
             <Select label="Empresa" value={form.empresaId} onChange={(v) => setForm((f) => ({ ...f, empresaId: v }))}>
               <option value="">Sin empresa</option>
               {empresas.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
