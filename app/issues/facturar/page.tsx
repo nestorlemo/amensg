@@ -53,7 +53,7 @@ export default function FacturarDesarrolloPage() {
   useEffect(() => {
     fetch('/api/socios')
       .then((r) => r.json())
-      .then((d: { socios?: Socio[] }) => setSocios(d.socios ?? []))
+      .then((d: Socio[]) => setSocios(Array.isArray(d) ? d : []))
       .catch(() => null)
     fetch('/api/issues/config')
       .then((r) => r.json())
