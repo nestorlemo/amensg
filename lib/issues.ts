@@ -27,9 +27,12 @@ export function parseIssueBody(body: Record<string, unknown>) {
   const totalHoras = horasDesarrollo + horasTest + horasRework
   const empresaId  = typeof body.empresaId === 'string' && body.empresaId ? body.empresaId : null
 
+  if (estado === 'EN_PRODUCCION' && !body.fechaProduccion) {
+    return { error: { error: 'VALIDATION_ERROR', message: 'La fecha en producción es requerida.' } }
+  }
   const fechaProduccion = estado === 'EN_PRODUCCION' && body.fechaProduccion
     ? new Date(body.fechaProduccion as string)
-    : estado === 'EN_PRODUCCION' ? new Date() : null
+    : null
 
   const motivoCancelacion = estado === 'CANCELADO'
     ? (typeof body.motivoCancelacion === 'string' ? body.motivoCancelacion.trim() : null)

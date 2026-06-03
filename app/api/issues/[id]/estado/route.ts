@@ -31,12 +31,21 @@ export async function PUT(request: Request, { params }: Params) {
     }
   }
 
-  const data: Record<string, unknown> = { estado }
-  if (estado === 'EN_PRODUCCION' && !existing.fechaProduccion) {
-    data.fechaProduccion = new Date()
+  if (estado === 'EN_PRODUCCION') {
+    const fp = typeof body.fechaProduccion === 'string' ? body.fechaProduccion.trim() : ''
+    if (!fp) {
+      return NextResponse.json({ error: 'VALIDATION_ERROR', message: 'La fecha en producción es requerida.' }, { status: 422 })
+    }
+    const fecha = new Date(fp)
+    if (isNaN(fecha.getTime())) {
+      return NextResponse.json({ error: 'VALIDATION_ERROR', message: 'Fecha en producción inválida.' }, { status: 422 })
+    }
   }
-  if (estado === 'CANCELADO') {
-    data.motivoCancelacion = (body.motivoCancelacion as string).trim()
+
+  const data: Record<string, unknown> = {
+    estado,
+    fechaProduccion: estado === 'EN_PRODUCCION' ? new Date(body.fechaProduccion as string) : null,
+    motivoCancelacion: estado === 'CANCELADO' ? (body.motivoCancelacion as string).trim() : null,
   }
 
   const updated = await prisma.issue.update({

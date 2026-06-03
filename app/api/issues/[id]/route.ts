@@ -34,11 +34,6 @@ export async function PUT(request: Request, { params }: Params) {
   const parsed = parseIssueBody(body)
   if ('error' in parsed) return NextResponse.json(parsed.error, { status: 422 })
 
-  // Auto-set fechaProduccion when transitioning to EN_PRODUCCION
-  if (parsed.data.estado === 'EN_PRODUCCION' && !existing.fechaProduccion) {
-    parsed.data.fechaProduccion = parsed.data.fechaProduccion ?? new Date()
-  }
-
   const updated = await prisma.issue.update({
     where: { id },
     data: parsed.data,

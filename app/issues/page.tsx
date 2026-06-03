@@ -63,6 +63,84 @@ function calcHoras(devStr: string, pctTest: number, pctRework: number) {
   return { dev, test, rework, total }
 }
 
+// ─── Produccion Modal ─────────────────────────────────────────────────────────
+
+function ProduccionModal({
+  issueId,
+  descripcion,
+  onConfirm,
+  onClose,
+}: {
+  issueId: string
+  descripcion: string
+  onConfirm: (id: string, fecha: string) => Promise<void>
+  onClose: () => void
+}) {
+  const [fecha, setFecha] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError]   = useState<string | null>(null)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!fecha) { setError('La fecha es requerida.'); return }
+    setSaving(true)
+    try {
+      await onConfirm(issueId, fecha)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between rounded-t-2xl border-b border-slate-200 bg-slate-50 px-6 py-4">
+          <h2 className="text-base font-semibold text-slate-950">Fecha en producción</h2>
+          <button className="rounded-md p-1 text-slate-400 hover:bg-slate-200" onClick={onClose} type="button">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
+        <form className="space-y-4 px-6 py-5" onSubmit={(e) => void handleSubmit(e)}>
+          <p className="text-sm text-slate-600">
+            Issue: <span className="font-medium text-slate-900">{descripcion.length > 80 ? `${descripcion.slice(0, 80)}…` : descripcion}</span>
+          </p>
+          <label className="block text-sm font-medium text-slate-700">
+            Fecha en producción <span className="text-red-500">*</span>
+            <DateInput
+              className="mt-1 block h-9 w-full rounded-md border border-slate-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              value={fecha}
+              onChange={(v) => { setFecha(v); setError(null) }}
+              required
+            />
+          </label>
+          {error ? <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
+          <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
+            <button
+              className="h-9 rounded-md border border-slate-300 px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              onClick={onClose}
+              type="button"
+            >
+              Volver
+            </button>
+            <button
+              className="h-9 rounded-md bg-emerald-600 px-5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+              disabled={saving}
+              type="submit"
+            >
+              {saving ? 'Guardando…' : 'Confirmar'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 // ─── Cancel Modal ─────────────────────────────────────────────────────────────
 
 function CancelModal({
@@ -181,6 +259,10 @@ function EditModal({
       setError('El motivo de cancelación es requerido.')
       return
     }
+    if (form.estado === 'EN_PRODUCCION' && !form.fechaProduccion) {
+      setError('La fecha en producción es requerida.')
+      return
+    }
     setSaving(true)
     try {
       const res = await fetch(`/api/issues/${issue.id}`, {
@@ -196,9 +278,7 @@ function EditModal({
           prioridad:        form.prioridad,
           estado:           form.estado,
           reportadoPor:     form.reportadoPor,
-          fechaProduccion:  form.estado === 'EN_PRODUCCION' && form.fechaProduccion
-                              ? form.fechaProduccion
-                              : undefined,
+          fechaProduccion:  form.estado === 'EN_PRODUCCION' ? form.fechaProduccion : null,
           motivoCancelacion: form.estado === 'CANCELADO' ? form.motivoCancelacion.trim() : undefined,
         }),
       })
@@ -211,6 +291,14 @@ function EditModal({
   }
 
   const set = (key: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [key]: v }))
+
+  function handleEstadoEdit(nuevoEstado: string) {
+    setForm((f) => ({
+      ...f,
+      estado: nuevoEstado,
+      fechaProduccion: nuevoEstado === 'EN_PRODUCCION' ? '' : '',
+    }))
+  }
 
   return (
     <div
@@ -238,7 +326,7 @@ function EditModal({
               Fecha
               <DateInput className="mt-1 block h-9 w-full rounded-md border border-slate-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" value={form.fecha} onChange={set('fecha')} required />
             </label>
-            <MSelect label="Estado" value={form.estado} onChange={set('estado')}>
+            <MSelect label="Estado" value={form.estado} onChange={handleEstadoEdit}>
               {ESTADOS.map((e) => <option key={e} value={e}>{e.replace(/_/g, ' ')}</option>)}
             </MSelect>
           </div>
@@ -287,8 +375,8 @@ function EditModal({
 
           {form.estado === 'EN_PRODUCCION' ? (
             <label className="block text-sm font-medium text-slate-700">
-              Fecha en producción
-              <DateInput className="mt-1 block h-9 w-full rounded-md border border-slate-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" value={form.fechaProduccion} onChange={set('fechaProduccion')} />
+              Fecha en producción <span className="text-red-500">*</span>
+              <DateInput className="mt-1 block h-9 w-full rounded-md border border-slate-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" value={form.fechaProduccion} onChange={set('fechaProduccion')} required />
             </label>
           ) : null}
 
@@ -344,7 +432,8 @@ export default function IssuesPage() {
   const [error, setError]       = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingIssue, setEditingIssue] = useState<Issue | null>(null)
-  const [cancelPending, setCancelPending] = useState<Issue | null>(null)
+  const [cancelPending, setCancelPending]       = useState<Issue | null>(null)
+  const [produccionPending, setProduccionPending] = useState<Issue | null>(null)
 
   // Filters
   const [fEstado, setFEstado]           = useState('')
@@ -425,11 +514,25 @@ export default function IssuesPage() {
       setCancelPending({ ...issue, estado: nuevoEstado })
       return
     }
+    if (nuevoEstado === 'EN_PRODUCCION') {
+      setProduccionPending({ ...issue, estado: nuevoEstado })
+      return
+    }
     await fetch(`/api/issues/${issue.id}/estado`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ estado: nuevoEstado }),
+      body: JSON.stringify({ estado: nuevoEstado, fechaProduccion: null }),
     })
+    void fetchAll()
+  }
+
+  async function handleConfirmProduccion(id: string, fechaProduccion: string) {
+    await fetch(`/api/issues/${id}/estado`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ estado: 'EN_PRODUCCION', fechaProduccion }),
+    })
+    setProduccionPending(null)
     void fetchAll()
   }
 
@@ -680,6 +783,16 @@ export default function IssuesPage() {
           </table>
         </div>
       </section>
+
+      {/* Produccion Modal */}
+      {produccionPending ? (
+        <ProduccionModal
+          issueId={produccionPending.id}
+          descripcion={produccionPending.descripcion}
+          onConfirm={handleConfirmProduccion}
+          onClose={() => setProduccionPending(null)}
+        />
+      ) : null}
 
       {/* Cancel Modal */}
       {cancelPending ? (
