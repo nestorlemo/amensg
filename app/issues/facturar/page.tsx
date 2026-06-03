@@ -226,7 +226,9 @@ export default function FacturarDesarrolloPage() {
 
       {searched && groups.length === 0 && (
         <p className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
-          No hay issues para los filtros seleccionados.
+          {fEstadoFact === 'sin_facturar'
+            ? 'No hay issues EN_PRODUCCION para los filtros seleccionados. Si ya fueron facturados, cambiá el filtro a "Facturados" o "Todos".'
+            : 'No hay issues para los filtros seleccionados.'}
         </p>
       )}
 
@@ -310,42 +312,48 @@ export default function FacturarDesarrolloPage() {
               </div>
             </div>
 
-            {/* Distribución entre socios — always rendered when there are socios */}
-            {socios.length > 0 && (
+            {/* Distribución entre socios — visible cuando hay issues seleccionados */}
+            {selIssues.length > 0 && (
               <div className="mb-6 rounded-lg border border-slate-200 p-4">
                 <h3 className="mb-3 text-sm font-semibold text-slate-700">Distribución entre socios</h3>
-                <div className="space-y-2">
-                  {socios.map((socio) => {
-                    const pct = pcts[socio.id] ?? ''
-                    const monto = totalConIvaUSD * Number(pct || 0) / 100
-                    return (
-                      <div key={socio.id} className="flex items-center gap-3">
-                        <span className="w-40 text-sm text-slate-700">{socio.nombre}</span>
-                        <input
-                          className="h-9 w-24 rounded-md border border-slate-300 px-3 text-right text-sm"
-                          type="number" step="0.01" min="0" max="100" placeholder="0"
-                          value={pct}
-                          onChange={(e) => setPct(g.empresaId, socio.id, e.target.value)}
-                        />
-                        <span className="text-sm text-slate-500">%</span>
-                        <span className="w-28 text-right text-sm font-semibold text-slate-800">
-                          {pct ? `$${monto.toFixed(2)} USD` : '—'}
-                        </span>
-                      </div>
-                    )
-                  })}
-                </div>
-                <div className="mt-3 flex items-center gap-2">
-                  <span className={`text-sm font-semibold ${distOk ? 'text-emerald-700' : totalPct > 0 ? 'text-red-600' : 'text-slate-400'}`}>
-                    Total: {totalPct.toFixed(1)}%
-                  </span>
-                  {!distOk && totalPct > 0 && (
-                    <span className="text-xs text-red-600">— debe sumar 100%</span>
-                  )}
-                  {distOk && socios.length > 0 && (
-                    <span className="text-xs text-emerald-600">✓ OK</span>
-                  )}
-                </div>
+                {socios.length === 0 ? (
+                  <p className="text-sm text-slate-400">Cargando socios…</p>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      {socios.map((socio) => {
+                        const pct = pcts[socio.id] ?? ''
+                        const monto = totalConIvaUSD * Number(pct || 0) / 100
+                        return (
+                          <div key={socio.id} className="flex items-center gap-3">
+                            <span className="w-40 text-sm text-slate-700">{socio.nombre}</span>
+                            <input
+                              className="h-9 w-24 rounded-md border border-slate-300 px-3 text-right text-sm"
+                              type="number" step="0.01" min="0" max="100" placeholder="0"
+                              value={pct}
+                              onChange={(e) => setPct(g.empresaId, socio.id, e.target.value)}
+                            />
+                            <span className="text-sm text-slate-500">%</span>
+                            <span className="w-28 text-right text-sm font-semibold text-slate-800">
+                              {pct ? `$${monto.toFixed(2)} USD` : '—'}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div className="mt-3 flex items-center gap-2">
+                      <span className={`text-sm font-semibold ${distOk ? 'text-emerald-700' : totalPct > 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                        Total asignado: {totalPct.toFixed(1)}%
+                      </span>
+                      {!distOk && totalPct > 0 && (
+                        <span className="text-xs text-red-600">⚠ Los porcentajes deben sumar 100%</span>
+                      )}
+                      {distOk && totalPct > 0 && (
+                        <span className="text-xs text-emerald-600">✓ OK</span>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
