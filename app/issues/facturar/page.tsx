@@ -54,6 +54,7 @@ export default function FacturarDesarrolloPage() {
   const [fechaHasta, setFechaHasta] = useState(today)
   const [fEmpresa, setFEmpresa] = useState('')
   const [fEstadoFact, setFEstadoFact] = useState<EstadoFact>('sin_facturar')
+  const [fEstadoCobro, setFEstadoCobro] = useState('')
   const [empresasOpts, setEmpresasOpts] = useState<EmpresaOption[]>([])
   const [groups, setGroups]     = useState<EmpresaGroup[]>([])
   const [socios, setSocios]     = useState<Socio[]>([])
@@ -237,11 +238,11 @@ export default function FacturarDesarrolloPage() {
         <form className="flex flex-wrap items-end gap-4" onSubmit={(e) => void handleBuscar(e)}>
           <label className="block text-sm font-medium text-slate-700">
             Fecha prod. desde
-            <DateInput className="mt-1 block h-9 w-40 rounded-md border border-slate-300 px-3 text-sm" value={fechaDesde} onChange={setFechaDesde} />
+            <DateInput className="mt-1 block h-9 w-32 rounded-md border border-slate-300 px-3 text-sm" value={fechaDesde} onChange={setFechaDesde} />
           </label>
           <label className="block text-sm font-medium text-slate-700">
             Fecha prod. hasta
-            <DateInput className="mt-1 block h-9 w-40 rounded-md border border-slate-300 px-3 text-sm" value={fechaHasta} onChange={setFechaHasta} />
+            <DateInput className="mt-1 block h-9 w-32 rounded-md border border-slate-300 px-3 text-sm" value={fechaHasta} onChange={setFechaHasta} />
           </label>
           <label className="block text-sm font-medium text-slate-700">
             Empresa
@@ -254,10 +255,18 @@ export default function FacturarDesarrolloPage() {
           </label>
           <label className="block text-sm font-medium text-slate-700">
             Estado de facturación
-            <select className="mt-1 block h-9 w-44 rounded-md border border-slate-300 px-3 text-sm" value={fEstadoFact} onChange={(e) => setFEstadoFact(e.target.value as EstadoFact)}>
+            <select className="mt-1 block h-9 w-40 rounded-md border border-slate-300 px-3 text-sm" value={fEstadoFact} onChange={(e) => setFEstadoFact(e.target.value as EstadoFact)}>
               <option value="sin_facturar">Sin facturar</option>
               <option value="facturados">Facturados</option>
               <option value="todos">Todos</option>
+            </select>
+          </label>
+          <label className="block text-sm font-medium text-slate-700">
+            Estado cobro
+            <select className="mt-1 block h-9 w-36 rounded-md border border-slate-300 px-3 text-sm" value={fEstadoCobro} onChange={(e) => setFEstadoCobro(e.target.value)}>
+              <option value="">Todos</option>
+              <option value="PENDIENTE">Pendiente</option>
+              <option value="COBRADO">Cobrado</option>
             </select>
           </label>
           <button className="h-9 rounded-md bg-slate-950 px-5 text-sm font-semibold text-white disabled:opacity-50" disabled={loading} type="submit">
@@ -290,12 +299,12 @@ export default function FacturarDesarrolloPage() {
                   <th className="px-4 py-3 text-right">IVA</th>
                   <th className="px-4 py-3 text-right">Total c/IVA</th>
                   <th className="px-4 py-3 text-left">Distribución</th>
-                  <th className="px-4 py-3 text-left">Estado</th>
+                  <th className="px-4 py-3 text-left">Estado cobro</th>
                   <th className="px-4 py-3 text-left">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {facturas.map((f) => (
+                {facturas.filter((f) => !fEstadoCobro || f.estado === fEstadoCobro).map((f) => (
                   <tr key={f.id}>
                     <td className="px-4 py-3 whitespace-nowrap">{MESES[f.mes - 1]} {f.anio}</td>
                     <td className="px-4 py-3">{f.empresa.nombre}</td>
