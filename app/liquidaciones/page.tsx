@@ -68,12 +68,12 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
         <Metric label="Total ingresos C/IVA (UYU)" value={preview.ingresos.ingresosConIva} />
         <Metric label="Total gastos S/IVA (UYU)" value={preview.gastos.totalGastos} />
         <Metric label="Resultado distribuible (UYU)" value={preview.resultado.resultadoDistribuible} />
-        <Metric label="Tipo cambio USD" value={preview.resultado.tipoCambioUsd ?? 'Sin configurar'} suffix={preview.resultado.tipoCambioUsd ? ' UYU/USD' : undefined} />
+        <Metric label="Tipo cambio USD" value={preview.resultado.tipoCambioUsd ?? 'Sin configurar'} />
       </section>
 
       <section className="grid min-w-0 gap-3 md:grid-cols-3">
         <Metric label="Resultado activaciones (UYU)" value={preview.resultado.resultadoActivaciones} />
-        <Metric label="Resultado adicionales (UYU)" value={preview.resultado.resultadoAdicionales} />
+        <Metric label="Resultado adicionales (USD)" value={preview.resultado.resultadoAdicionales} />
         <Metric label="Resultado desarrollo (USD)" value={preview.resultado.resultadoDesarrolloUSD} />
       </section>
 
@@ -307,11 +307,11 @@ function Metric({ label, value, suffix }: { label: string; value: string | numbe
   const isNumericValue = typeof value === 'number' || isFiniteMoney(value)
 
   return (
-    <div className="flex h-full min-h-32 flex-col justify-between rounded-md border border-slate-200 bg-white p-4">
-      <p className="min-h-10 text-xs font-semibold uppercase leading-5 text-slate-500">{label}</p>
+    <div className="flex h-full min-h-28 flex-col justify-between rounded-md border border-slate-200 bg-white p-4">
+      <p className="text-xs font-semibold uppercase leading-4 text-slate-500">{label}</p>
       <p
-        className={`mt-3 min-h-14 break-words font-semibold leading-tight text-slate-950 ${
-          isNumericValue ? 'text-2xl tabular-nums' : 'text-xl'
+        className={`mt-2 font-semibold leading-tight text-slate-950 ${
+          isNumericValue ? 'text-xl tabular-nums' : 'text-lg'
         }`}
       >
         {renderedValue}{suffix}
