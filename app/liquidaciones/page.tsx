@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { Fragment, type ReactNode } from 'react'
 
 import { CerrarLiquidacionButton } from '@/components/cerrar-liquidacion-button'
 import { PageHeader } from '@/components/page-header'
@@ -63,17 +63,17 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
       ) : null}
 
       <section className="grid min-w-0 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <Metric label="Total ingresos S/IVA" value={preview.ingresos.totalIngresosSinIva} />
-        <Metric label="IVA total" value={preview.ingresos.totalIva} />
-        <Metric label="Total ingresos C/IVA" value={preview.ingresos.ingresosConIva} />
-        <Metric label="Total gastos S/IVA" value={preview.gastos.totalGastos} />
-        <Metric label="Resultado distribuible" value={preview.resultado.resultadoDistribuible} />
-        <Metric label="Tipo cambio USD" value={preview.resultado.tipoCambioUsd ?? 'Sin configurar'} />
+        <Metric label="Total ingresos S/IVA" value={preview.ingresos.totalIngresosSinIva} suffix=" UYU" />
+        <Metric label="IVA total" value={preview.ingresos.totalIva} suffix=" UYU" />
+        <Metric label="Total ingresos C/IVA" value={preview.ingresos.ingresosConIva} suffix=" UYU" />
+        <Metric label="Total gastos S/IVA" value={preview.gastos.totalGastos} suffix=" UYU" />
+        <Metric label="Resultado distribuible" value={preview.resultado.resultadoDistribuible} suffix=" UYU" />
+        <Metric label="Tipo cambio USD" value={preview.resultado.tipoCambioUsd ?? 'Sin configurar'} suffix={preview.resultado.tipoCambioUsd ? ' UYU/USD' : undefined} />
       </section>
 
       <section className="grid min-w-0 gap-3 md:grid-cols-3">
-        <Metric label="Resultado activaciones" value={preview.resultado.resultadoActivaciones} />
-        <Metric label="Resultado adicionales" value={preview.resultado.resultadoAdicionales} />
+        <Metric label="Resultado activaciones" value={preview.resultado.resultadoActivaciones} suffix=" UYU" />
+        <Metric label="Resultado adicionales" value={preview.resultado.resultadoAdicionales} suffix=" UYU" />
         <Metric label="Resultado desarrollo" value={preview.resultado.resultadoDesarrolloUSD} suffix=" USD" />
       </section>
 
@@ -208,8 +208,8 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
                 <EmptyRow colSpan={7} message="No hay facturas de desarrollo para este periodo." />
               ) : null}
               {preview.ingresos.desarrolloFacturas.map((f) => (
-                <>
-                  <tr className="border-t border-slate-200" key={f.id}>
+                <Fragment key={f.id}>
+                  <tr className="border-t border-slate-200">
                     <Td>{f.empresa}</Td>
                     <Td align="right">{f.totalHoras}</Td>
                     <Td align="right">{formatMoney(f.totalUSD)}</Td>
@@ -225,7 +225,7 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
                       <td colSpan={4} />
                     </tr>
                   ))}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>
