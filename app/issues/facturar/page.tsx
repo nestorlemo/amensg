@@ -23,6 +23,8 @@ type Distribucion = { socioId: string; nombre: string; porcentaje: string }
 
 type EmpresaOption = { id: string; nombre: string }
 
+type EstadoFact = 'sin_facturar' | 'facturados' | 'todos'
+
 export default function FacturarDesarrolloPage() {
   const now = new Date()
   const firstOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
@@ -31,6 +33,7 @@ export default function FacturarDesarrolloPage() {
   const [fechaDesde, setFechaDesde] = useState(firstOfMonth)
   const [fechaHasta, setFechaHasta] = useState(today)
   const [fEmpresa, setFEmpresa] = useState('')
+  const [fEstadoFact, setFEstadoFact] = useState<EstadoFact>('sin_facturar')
   const [empresasOpts, setEmpresasOpts] = useState<EmpresaOption[]>([])
   const [groups, setGroups]     = useState<EmpresaGroup[]>([])
   const [socios, setSocios]     = useState<Socio[]>([])
@@ -65,8 +68,16 @@ export default function FacturarDesarrolloPage() {
     setSearched(false)
     setGroups([])
     try {
-      const qs = new URLSearchParams({ estado: 'EN_PRODUCCION', fechaDesde, fechaHasta })
+      const qs = new URLSearchParams({ fechaDesde, fechaHasta })
       if (fEmpresa) qs.set('empresaId', fEmpresa)
+      if (fEstadoFact === 'sin_facturar') {
+        qs.set('estado', 'EN_PRODUCCION')
+      } else if (fEstadoFact === 'facturados') {
+        qs.set('estado', 'FACTURADO')
+      } else {
+        qs.append('estadoIn', 'EN_PRODUCCION')
+        qs.append('estadoIn', 'FACTURADO')
+      }
       const res = await fetch(`/api/issues?${qs}`)
       const data = await res.json()
       const issues: Issue[] = data.issues ?? []
@@ -85,11 +96,11 @@ export default function FacturarDesarrolloPage() {
       const gs = Array.from(map.values())
       setGroups(gs)
 
-      // Init state per empresa
+      // Init state per empresa — only pre-select issues that are NOT already FACTURADO
       const initSel: Record<string, Set<string>> = {}
       const initDist: Record<string, Distribucion[]> = {}
       for (const g of gs) {
-        initSel[g.empresaId] = new Set(g.issues.map((i) => i.id))
+        initSel[g.empresaId] = new Set(g.issues.filter((i) => i.estado !== 'FACTURADO').map((i) => i.id))
         initDist[g.empresaId] = socios.map((s) => ({ socioId: s.id, nombre: s.nombre, porcentaje: '' }))
       }
       setSelectedIssues(initSel)
@@ -101,18 +112,21 @@ export default function FacturarDesarrolloPage() {
   }
 
   async function handleFacturar(g: EmpresaGroup) {
-    if (valorHora <= 0) { setResults((r) => ({ ...r, [g.empresaId]: { ok: false, msg: 'No hay valor hora registrado.' } })); return }
-
-    const dist = distribuciones[g.empresaId]?.filter((d) => d.porcentaje !== '') ?? []
-    const totalPct = dist.reduce((s, d) => s + Number(d.porcentaje), 0)
-    if (dist.length > 0 && Math.abs(totalPct - 100) > 0.01) {
-      setResults((r) => ({ ...r, [g.empresaId]: { ok: false, msg: 'Los porcentajes deben sumar 100%.' } }))
+    if (valorHora <= 0) {
+      setResults((r) => ({ ...r, [g.empresaId]: { ok: false, msg: 'No hay valor hora registrado.' } }))
       return
     }
 
     const issueIds = Array.from(selectedIssues[g.empresaId] ?? [])
     if (issueIds.length === 0) {
       setResults((r) => ({ ...r, [g.empresaId]: { ok: false, msg: 'Seleccioná al menos un issue.' } }))
+      return
+    }
+
+    const dist = distribuciones[g.empresaId]?.filter((d) => d.porcentaje !== '') ?? []
+    const totalPct = dist.reduce((s, d) => s + Number(d.porcentaje), 0)
+    if (socios.length > 0 && Math.abs(totalPct - 100) > 0.01) {
+      setResults((r) => ({ ...r, [g.empresaId]: { ok: false, msg: 'Los porcentajes de distribución deben sumar 100%.' } }))
       return
     }
 
@@ -135,17 +149,25 @@ export default function FacturarDesarrolloPage() {
       if (!res.ok) {
         setResults((r) => ({ ...r, [g.empresaId]: { ok: false, msg: data.message ?? 'Error al facturar.' } }))
       } else {
-        setResults((r) => ({ ...r, [g.empresaId]: { ok: true, msg: `Factura creada. Ingreso adicional registrado. Total: $${data.totalConIva?.toFixed(2)} USD` } }))
+        setResults((r) => ({ ...r, [g.empresaId]: { ok: true, msg: `Factura creada. Total: $${(data.totalConIva as number)?.toFixed(2)} USD` } }))
+        // Mark included issues as FACTURADO in local state
+        setGroups((prev) => prev.map((grp) =>
+          grp.empresaId !== g.empresaId ? grp : {
+            ...grp,
+            issues: grp.issues.map((i) => issueIds.includes(i.id) ? { ...i, estado: 'FACTURADO' } : i),
+          }
+        ))
       }
     } finally {
       setSaving((s) => ({ ...s, [g.empresaId]: false }))
     }
   }
 
-  function toggleIssue(eId: string, issueId: string) {
+  function toggleIssue(eId: string, issue: Issue) {
+    if (issue.estado === 'FACTURADO') return
     setSelectedIssues((prev) => {
       const next = new Set(prev[eId] ?? [])
-      if (next.has(issueId)) next.delete(issueId); else next.add(issueId)
+      if (next.has(issue.id)) next.delete(issue.id); else next.add(issue.id)
       return { ...prev, [eId]: next }
     })
   }
@@ -180,6 +202,14 @@ export default function FacturarDesarrolloPage() {
               ))}
             </select>
           </label>
+          <label className="block text-sm font-medium text-slate-700">
+            Estado de facturación
+            <select className="mt-1 block h-9 w-44 rounded-md border border-slate-300 px-3 text-sm" value={fEstadoFact} onChange={(e) => setFEstadoFact(e.target.value as EstadoFact)}>
+              <option value="sin_facturar">Sin facturar</option>
+              <option value="facturados">Facturados</option>
+              <option value="todos">Todos</option>
+            </select>
+          </label>
           <button className="h-9 rounded-md bg-slate-950 px-5 text-sm font-semibold text-white disabled:opacity-50" disabled={loading} type="submit">
             {loading ? 'Buscando…' : 'Buscar issues'}
           </button>
@@ -191,18 +221,21 @@ export default function FacturarDesarrolloPage() {
 
       {searched && groups.length === 0 && (
         <p className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
-          No hay issues EN_PRODUCCION para el rango de fechas seleccionado.
+          No hay issues para los filtros seleccionados.
         </p>
       )}
 
       {groups.map((g) => {
-        const selIds  = selectedIssues[g.empresaId] ?? new Set()
-        const selIssues = g.issues.filter((i) => selIds.has(i.id))
-        const selHoras  = selIssues.reduce((s, i) => s + i.totalHoras, 0)
-        const totalUSD  = Math.round(selHoras * valorHora * 100) / 100
-        const ivaUSD    = Math.round(totalUSD * 0.22 * 100) / 100
+        const selIds      = selectedIssues[g.empresaId] ?? new Set()
+        const selIssues   = g.issues.filter((i) => selIds.has(i.id))
+        const selHoras    = selIssues.reduce((s, i) => s + i.totalHoras, 0)
+        const totalUSD    = Math.round(selHoras * valorHora * 100) / 100
+        const ivaUSD      = Math.round(totalUSD * 0.22 * 100) / 100
         const totalConIvaUSD = Math.round((totalUSD + ivaUSD) * 100) / 100
-        const res       = results[g.empresaId]
+        const dist        = distribuciones[g.empresaId] ?? []
+        const totalPct    = dist.reduce((s, d) => s + Number(d.porcentaje || 0), 0)
+        const distOk      = socios.length === 0 || Math.abs(totalPct - 100) < 0.01
+        const res         = results[g.empresaId]
 
         return (
           <section key={g.empresaId} className="rounded-xl border border-slate-200 bg-white p-6">
@@ -218,22 +251,36 @@ export default function FacturarDesarrolloPage() {
                     <th className="px-3 py-2 text-left">Empresa</th>
                     <th className="px-3 py-2 text-left">Descripción</th>
                     <th className="px-3 py-2 text-right">Horas</th>
+                    <th className="px-3 py-2 text-left">Estado</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {g.issues.map((issue) => (
-                    <tr key={issue.id} className={selIds.has(issue.id) ? '' : 'opacity-50'}>
-                      <td className="px-3 py-2 text-center">
-                        <input type="checkbox" checked={selIds.has(issue.id)} onChange={() => toggleIssue(g.empresaId, issue.id)} />
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2 text-slate-600">{issue.fecha}</td>
-                      <td className="whitespace-nowrap px-3 py-2 text-slate-600">{issue.empresa?.nombre ?? '—'}</td>
-                      <td className="px-3 py-2 text-slate-700">
-                        <span title={issue.descripcion}>{issue.descripcion.length > 80 ? issue.descripcion.slice(0, 80) + '…' : issue.descripcion}</span>
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2 text-right font-medium">{issue.totalHoras}h</td>
-                    </tr>
-                  ))}
+                  {g.issues.map((issue) => {
+                    const isFacturado = issue.estado === 'FACTURADO'
+                    return (
+                      <tr key={issue.id} className={selIds.has(issue.id) ? '' : 'opacity-50'}>
+                        <td className="px-3 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selIds.has(issue.id)}
+                            disabled={isFacturado}
+                            onChange={() => toggleIssue(g.empresaId, issue)}
+                          />
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2 text-slate-600">{issue.fecha}</td>
+                        <td className="whitespace-nowrap px-3 py-2 text-slate-600">{issue.empresa?.nombre ?? '—'}</td>
+                        <td className="px-3 py-2 text-slate-700">
+                          <span title={issue.descripcion}>{issue.descripcion.length > 80 ? issue.descripcion.slice(0, 80) + '…' : issue.descripcion}</span>
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2 text-right font-medium">{issue.totalHoras}h</td>
+                        <td className="whitespace-nowrap px-3 py-2">
+                          {isFacturado && (
+                            <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800">Ya facturado</span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -258,12 +305,12 @@ export default function FacturarDesarrolloPage() {
               </div>
             </div>
 
-            {/* Distribución */}
+            {/* Distribución entre socios */}
             {socios.length > 0 && (
               <div className="mb-4">
                 <h3 className="mb-2 text-sm font-semibold text-slate-700">Distribución entre socios</h3>
-                <div className="flex flex-wrap gap-3">
-                  {(distribuciones[g.empresaId] ?? []).map((d) => (
+                <div className="flex flex-wrap items-end gap-4">
+                  {dist.map((d) => (
                     <label key={d.socioId} className="block text-sm font-medium text-slate-700">
                       {d.nombre} (%)
                       <input
@@ -277,13 +324,13 @@ export default function FacturarDesarrolloPage() {
                       ) : null}
                     </label>
                   ))}
-                  <div className="flex items-end pb-2">
-                    <span className={`text-sm font-semibold ${
-                      Math.abs((distribuciones[g.empresaId] ?? []).reduce((s, d) => s + Number(d.porcentaje || 0), 0) - 100) < 0.01
-                        ? 'text-emerald-700' : 'text-red-600'
-                    }`}>
-                      Total: {(distribuciones[g.empresaId] ?? []).reduce((s, d) => s + Number(d.porcentaje || 0), 0).toFixed(1)}%
+                  <div className="pb-2">
+                    <span className={`text-sm font-semibold ${distOk ? 'text-emerald-700' : 'text-red-600'}`}>
+                      Total: {totalPct.toFixed(1)}%
                     </span>
+                    {!distOk && totalPct > 0 && (
+                      <p className="mt-0.5 text-xs text-red-600">Debe sumar 100%</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -298,8 +345,9 @@ export default function FacturarDesarrolloPage() {
             {!res?.ok && (
               <button
                 className="h-9 rounded-md bg-blue-600 px-5 text-sm font-semibold text-white disabled:opacity-50"
-                disabled={saving[g.empresaId] || valorHora <= 0}
+                disabled={saving[g.empresaId] || valorHora <= 0 || !distOk || selIssues.length === 0}
                 onClick={() => void handleFacturar(g)}
+                title={!distOk ? 'Completá la distribución entre socios (debe sumar 100%)' : undefined}
               >
                 {saving[g.empresaId] ? 'Generando…' : 'Generar factura'}
               </button>

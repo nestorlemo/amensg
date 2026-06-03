@@ -12,13 +12,15 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url)
   const estado     = searchParams.get('estado')     ?? undefined
+  const estadoIn   = searchParams.getAll('estadoIn')
   const empresaId  = searchParams.get('empresaId')  ?? undefined
   const prioridad  = searchParams.get('prioridad')  ?? undefined
   const fechaDesde = searchParams.get('fechaDesde') ?? undefined
   const fechaHasta = searchParams.get('fechaHasta') ?? undefined
 
   const where: Record<string, unknown> = {}
-  if (estado)    where.estado    = estado
+  if (estadoIn.length > 0) where.estado = { in: estadoIn }
+  else if (estado) where.estado = estado
   if (empresaId) where.empresaId = empresaId
   if (prioridad) where.prioridad = prioridad
   if (fechaDesde || fechaHasta) {
