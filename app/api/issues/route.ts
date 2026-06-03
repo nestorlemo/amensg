@@ -34,13 +34,25 @@ export async function GET(request: Request) {
     where.fechaProduccion = range
   }
 
+  const includeFacturado = searchParams.get('includeFacturado') === 'true'
+
   const issues = await prisma.issue.findMany({
     where,
-    include: { empresa: { select: { id: true, nombre: true } } },
+    include: {
+      empresa: { select: { id: true, nombre: true } },
+      ...(includeFacturado ? { facturaIssues: { select: { facturaId: true } } } : {}),
+    },
     orderBy: [{ fecha: 'desc' }, { creadoEn: 'desc' }],
   })
 
-  return NextResponse.json({ issues: issues.map(serializeIssue) })
+  return NextResponse.json({
+    issues: issues.map((issue) => ({
+      ...serializeIssue(issue),
+      ...(includeFacturado && 'facturaIssues' in issue
+        ? { facturado: (issue.facturaIssues as { facturaId: string }[]).length > 0 }
+        : {}),
+    })),
+  })
 }
 
 export async function POST(request: Request) {

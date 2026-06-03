@@ -100,8 +100,6 @@ export async function POST(request: Request) {
       },
     })
 
-    await tx.issue.updateMany({ where: { id: { in: issueIds } }, data: { estado: 'FACTURADO' } })
-
     const fd = await tx.facturaDesarrollo.create({
       data: {
         anio,

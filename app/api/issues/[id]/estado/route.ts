@@ -6,7 +6,7 @@ import { serializeIssue } from '@/lib/issues'
 
 export const runtime = 'nodejs'
 
-const ESTADOS_VALIDOS = new Set(['PENDIENTE', 'EN_DESARROLLO', 'EN_TEST', 'EN_PRODUCCION', 'CANCELADO', 'NO_HACER', 'FACTURADO', 'COBRADO'])
+const ESTADOS_VALIDOS = new Set(['PENDIENTE', 'EN_DESARROLLO', 'EN_TEST', 'EN_PRODUCCION', 'COBRADO', 'CANCELADO', 'NO_HACER'])
 
 type Params = { params: Promise<{ id: string }> }
 

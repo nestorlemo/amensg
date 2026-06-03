@@ -466,6 +466,14 @@ export async function deleteIngresoAdicional(id: string) {
   if (closed) return { error: closedPeriodError('El período ya está cerrado. No se pueden modificar ingresos adicionales.'), status: 409 }
 
   await prisma.$transaction(async (tx) => {
+    // If this ingreso has an associated FacturaDesarrollo, remove FacturaIssue records
+    // so those issues appear as "sin facturar" again
+    const factura = await tx.facturaDesarrollo.findFirst({ where: { ingresoAdicionalId: id }, select: { id: true } })
+    if (factura) {
+      await tx.facturaIssue.deleteMany({ where: { facturaId: factura.id } })
+      await tx.distribucionFactura.deleteMany({ where: { facturaId: factura.id } })
+      await tx.facturaDesarrollo.delete({ where: { id: factura.id } })
+    }
     await tx.ingresoAdicional.delete({ where: { id } })
     await tx.auditoria.create({
       data: {

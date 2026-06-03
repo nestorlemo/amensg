@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/page-header'
 type Issue = {
   id: string; fecha: string; descripcion: string; totalHoras: number; estado: string
   empresa: { id: string; nombre: string } | null
+  facturado: boolean
 }
 
 type Socio = { id: string; nombre: string; porcentajeParticipacion: string }
@@ -70,19 +71,16 @@ export default function FacturarDesarrolloPage() {
     setSearched(false)
     setGroups([])
     try {
-      const qs = new URLSearchParams({ fechaDesde, fechaHasta })
+      // Always fetch EN_PRODUCCION issues; facturado is a derived field from FacturaIssue
+      const qs = new URLSearchParams({ estado: 'EN_PRODUCCION', includeFacturado: 'true', fechaDesde, fechaHasta })
       if (fEmpresa) qs.set('empresaId', fEmpresa)
-      if (fEstadoFact === 'sin_facturar') {
-        qs.set('estado', 'EN_PRODUCCION')
-      } else if (fEstadoFact === 'facturados') {
-        qs.set('estado', 'FACTURADO')
-      } else {
-        qs.append('estadoIn', 'EN_PRODUCCION')
-        qs.append('estadoIn', 'FACTURADO')
-      }
       const res = await fetch(`/api/issues?${qs}`)
       const data = await res.json()
-      const issues: Issue[] = (data.issues as Issue[]) ?? []
+      let issues: Issue[] = (data.issues as Issue[]) ?? []
+
+      // Filter by billing status client-side using the derived `facturado` field
+      if (fEstadoFact === 'sin_facturar') issues = issues.filter((i) => !i.facturado)
+      else if (fEstadoFact === 'facturados') issues = issues.filter((i) => i.facturado)
 
       const map = new Map<string, EmpresaGroup>()
       for (const issue of issues) {
@@ -99,7 +97,7 @@ export default function FacturarDesarrolloPage() {
 
       const initSel: Record<string, Set<string>> = {}
       for (const g of gs) {
-        initSel[g.empresaId] = new Set(g.issues.filter((i) => i.estado !== 'FACTURADO').map((i) => i.id))
+        initSel[g.empresaId] = new Set(g.issues.filter((i) => !i.facturado).map((i) => i.id))
       }
       setSelectedIssues(initSel)
       // Reset distribuciones — keep existing values if re-searching
@@ -159,7 +157,7 @@ export default function FacturarDesarrolloPage() {
         setGroups((prev) => prev.map((grp) =>
           grp.empresaId !== g.empresaId ? grp : {
             ...grp,
-            issues: grp.issues.map((i) => issueIds.includes(i.id) ? { ...i, estado: 'FACTURADO' } : i),
+            issues: grp.issues.map((i) => issueIds.includes(i.id) ? { ...i, facturado: true } : i),
           }
         ))
       }
@@ -169,7 +167,7 @@ export default function FacturarDesarrolloPage() {
   }
 
   function toggleIssue(eId: string, issue: Issue) {
-    if (issue.estado === 'FACTURADO') return
+    if (issue.facturado) return
     setSelectedIssues((prev) => {
       const next = new Set(prev[eId] ?? [])
       if (next.has(issue.id)) next.delete(issue.id); else next.add(issue.id)
@@ -263,7 +261,7 @@ export default function FacturarDesarrolloPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {g.issues.map((issue) => {
-                    const isFacturado = issue.estado === 'FACTURADO'
+                    const isFacturado = issue.facturado
                     return (
                       <tr key={issue.id} className={selIds.has(issue.id) ? '' : 'opacity-50'}>
                         <td className="px-3 py-2 text-center">

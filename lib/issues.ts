@@ -1,4 +1,4 @@
-const ESTADOS_VALIDOS   = new Set(['PENDIENTE', 'EN_DESARROLLO', 'EN_TEST', 'EN_PRODUCCION', 'FACTURADO', 'COBRADO', 'CANCELADO', 'NO_HACER'])
+const ESTADOS_VALIDOS   = new Set(['PENDIENTE', 'EN_DESARROLLO', 'EN_TEST', 'EN_PRODUCCION', 'COBRADO', 'CANCELADO', 'NO_HACER'])
 const PRIORIDADES_VALIDAS = new Set(['ALTA', 'MEDIA', 'BAJA'])
 
 export function parseIssueBody(body: Record<string, unknown>) {
