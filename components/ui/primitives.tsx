@@ -8,6 +8,7 @@ const accentConfig: Record<string, { border: string; iconBg: string; iconColor: 
   green:   { border: '#20E0B2', iconBg: 'rgba(32,224,178,0.12)', iconColor: '#20E0B2' },
   amber:   { border: '#f59e0b', iconBg: 'rgba(245,158,11,0.10)', iconColor: '#f59e0b' },
   red:     { border: '#ef4444', iconBg: 'rgba(239,68,68,0.10)',  iconColor: '#ef4444' },
+  purple:  { border: '#8b5cf6', iconBg: 'rgba(139,92,246,0.10)', iconColor: '#8b5cf6' },
 }
 
 export function StatCard({
@@ -17,9 +18,9 @@ export function StatCard({
   accent = 'default',
 }: {
   label: string
-  value: string | number
+  value: string | number | null
   icon?: LucideIcon
-  accent?: 'default' | 'green' | 'amber' | 'red'
+  accent?: 'default' | 'green' | 'amber' | 'red' | 'purple'
 }) {
   const cfg = accentConfig[accent]
   return (
@@ -45,9 +46,13 @@ export function StatCard({
       >
         {label}
       </p>
-      <p className="mt-2 text-2xl font-bold" style={{ color: '#0B1F3A' }}>
-        {value}
-      </p>
+      {value === null ? (
+        <div className="mt-2 h-8 w-16 animate-pulse rounded-lg" style={{ background: '#F5F7FA' }} />
+      ) : (
+        <p className="mt-2 text-2xl font-bold" style={{ color: '#0B1F3A' }}>
+          {value}
+        </p>
+      )}
     </div>
   )
 }

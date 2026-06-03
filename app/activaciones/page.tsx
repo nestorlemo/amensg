@@ -37,7 +37,7 @@ export default async function ActivacionesPage({ searchParams }: PageProps) {
             ))}
           </select>
         </label>
-        <FilterInput label="Importacion ID" name="importacionId" value={stringValue(params.importacionId)} />
+        <FilterInput label="Importación ID" name="importacionId" value={stringValue(params.importacionId)} />
         <FilterInput label="MID" name="mid" value={stringValue(params.mid)} />
         <FilterInput label="Chip" name="chip" value={stringValue(params.chip)} />
         <FilterInput label="Lote" name="lote" value={stringValue(params.lote)} />
