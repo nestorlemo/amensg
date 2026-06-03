@@ -74,7 +74,7 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
       <section className="grid min-w-0 gap-3 md:grid-cols-3">
         <Metric label="Resultado activaciones" value={preview.resultado.resultadoActivaciones} />
         <Metric label="Resultado adicionales" value={preview.resultado.resultadoAdicionales} />
-        <Metric label="Resultado desarrollo" value={preview.resultado.resultadoDesarrollo} />
+        <Metric label="Resultado desarrollo" value={preview.resultado.resultadoDesarrolloUSD} suffix=" USD" />
       </section>
 
       <section className="rounded-md border border-slate-200 bg-white p-4">
@@ -302,7 +302,7 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
   )
 }
 
-function Metric({ label, value }: { label: string; value: string | number }) {
+function Metric({ label, value, suffix }: { label: string; value: string | number; suffix?: string }) {
   const renderedValue = typeof value === 'number' ? String(value) : formatMoney(value)
   const isNumericValue = typeof value === 'number' || isFiniteMoney(value)
 
@@ -314,7 +314,7 @@ function Metric({ label, value }: { label: string; value: string | number }) {
           isNumericValue ? 'text-2xl tabular-nums' : 'text-xl'
         }`}
       >
-        {renderedValue}
+        {renderedValue}{suffix}
       </p>
     </div>
   )

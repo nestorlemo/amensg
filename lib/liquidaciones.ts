@@ -117,6 +117,7 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
   const resultadoAdicionales = ingresosAdicionalesPurosSinIva
   const desarrolloTotalUYU = sumDecimal(facturaDesarrollo.map(f => f.totalUYU))
   const resultadoDesarrollo = desarrolloTotalUYU
+  const resultadoDesarrolloUSD = sumDecimal(facturaDesarrollo.map(f => f.totalConIva))
   const resultadoDistribuible = resultadoActivaciones.add(resultadoAdicionales).add(resultadoDesarrollo)
   const tipoCambioSnapshot =
     cierreCerrado && cierrePeriodo ? decimalSnapshot(safeSnapshot(cierrePeriodo.snapshot), 'tipoCambioUsd') : null
@@ -267,6 +268,7 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
       resultadoActivaciones: money(resultadoActivaciones),
       resultadoAdicionales: money(resultadoAdicionales),
       resultadoDesarrollo: money(resultadoDesarrollo),
+      resultadoDesarrolloUSD: money(resultadoDesarrolloUSD),
       tipoCambioUsd: tipoCambioUsd ? rate(tipoCambioUsd) : null,
       totalActivaciones,
       totalEmpresas,
