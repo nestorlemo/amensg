@@ -63,18 +63,18 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
       ) : null}
 
       <section className="grid min-w-0 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <Metric label="Total ingresos S/IVA" value={preview.ingresos.totalIngresosSinIva} suffix=" UYU" />
-        <Metric label="IVA total" value={preview.ingresos.totalIva} suffix=" UYU" />
-        <Metric label="Total ingresos C/IVA" value={preview.ingresos.ingresosConIva} suffix=" UYU" />
-        <Metric label="Total gastos S/IVA" value={preview.gastos.totalGastos} suffix=" UYU" />
-        <Metric label="Resultado distribuible" value={preview.resultado.resultadoDistribuible} suffix=" UYU" />
+        <Metric label="Total ingresos S/IVA (UYU)" value={preview.ingresos.totalIngresosSinIva} />
+        <Metric label="IVA total (UYU)" value={preview.ingresos.totalIva} />
+        <Metric label="Total ingresos C/IVA (UYU)" value={preview.ingresos.ingresosConIva} />
+        <Metric label="Total gastos S/IVA (UYU)" value={preview.gastos.totalGastos} />
+        <Metric label="Resultado distribuible (UYU)" value={preview.resultado.resultadoDistribuible} />
         <Metric label="Tipo cambio USD" value={preview.resultado.tipoCambioUsd ?? 'Sin configurar'} suffix={preview.resultado.tipoCambioUsd ? ' UYU/USD' : undefined} />
       </section>
 
       <section className="grid min-w-0 gap-3 md:grid-cols-3">
-        <Metric label="Resultado activaciones" value={preview.resultado.resultadoActivaciones} suffix=" UYU" />
-        <Metric label="Resultado adicionales" value={preview.resultado.resultadoAdicionales} suffix=" UYU" />
-        <Metric label="Resultado desarrollo" value={preview.resultado.resultadoDesarrolloUSD} suffix=" USD" />
+        <Metric label="Resultado activaciones (UYU)" value={preview.resultado.resultadoActivaciones} />
+        <Metric label="Resultado adicionales (UYU)" value={preview.resultado.resultadoAdicionales} />
+        <Metric label="Resultado desarrollo (USD)" value={preview.resultado.resultadoDesarrolloUSD} />
       </section>
 
       <section className="rounded-md border border-slate-200 bg-white p-4">
