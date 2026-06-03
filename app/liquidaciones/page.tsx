@@ -71,6 +71,12 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
         <Metric label="Tipo cambio USD" value={preview.resultado.tipoCambioUsd ?? 'Sin configurar'} />
       </section>
 
+      <section className="grid min-w-0 gap-3 md:grid-cols-3">
+        <Metric label="Resultado activaciones" value={preview.resultado.resultadoActivaciones} />
+        <Metric label="Resultado adicionales" value={preview.resultado.resultadoAdicionales} />
+        <Metric label="Resultado desarrollo" value={preview.resultado.resultadoDesarrollo} />
+      </section>
+
       <section className="rounded-md border border-slate-200 bg-white p-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
@@ -183,6 +189,37 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
       </section>
 
       <section className="rounded-md border border-slate-200 bg-white p-4">
+        <SectionHeader title="Facturación de desarrollo" description="Facturas de desarrollo del período." />
+        <div className="mt-4 overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="bg-slate-100 text-left text-xs uppercase text-slate-600">
+              <tr>
+                <Th>Empresa</Th>
+                <Th align="right">Horas</Th>
+                <Th align="right">Total UYU s/IVA</Th>
+                <Th align="right">IVA</Th>
+                <Th align="right">Total c/IVA</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {preview.ingresos.desarrolloFacturas.map((f) => (
+                <tr className="border-t border-slate-200" key={f.id}>
+                  <Td>{f.empresa}</Td>
+                  <Td align="right">{f.totalHoras}</Td>
+                  <Td align="right">{formatMoney(f.totalUYU)}</Td>
+                  <Td align="right">{formatMoney(f.iva)}</Td>
+                  <Td align="right">{formatMoney(f.totalConIva)}</Td>
+                </tr>
+              ))}
+              {preview.ingresos.desarrolloFacturas.length === 0 ? (
+                <EmptyRow colSpan={5} message="No hay facturas de desarrollo para este periodo." />
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="rounded-md border border-slate-200 bg-white p-4">
         <SectionHeader description="Gastos que reducen el resultado distribuible." title="Gastos" />
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full text-sm">
@@ -224,8 +261,11 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
               <tr>
                 <Th>Socio</Th>
                 <Th align="right">Porcentaje</Th>
-                <Th align="right">Monto pesos</Th>
-                <Th align="right">Monto USD</Th>
+                <Th align="right">Activaciones</Th>
+                <Th align="right">Adicionales</Th>
+                <Th align="right">Desarrollo</Th>
+                <Th align="right">Total pesos</Th>
+                <Th align="right">Total USD</Th>
               </tr>
             </thead>
             <tbody>
@@ -233,11 +273,14 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
                 <tr className="border-t border-slate-200" key={socio.id}>
                   <Td>{socio.nombre}</Td>
                   <Td align="right">{formatPercent(socio.porcentaje)}</Td>
+                  <Td align="right">{formatMoney(socio.montoActivaciones)}</Td>
+                  <Td align="right">{formatMoney(socio.montoAdicionales)}</Td>
+                  <Td align="right">{formatMoney(socio.montoDesarrollo)}</Td>
                   <Td align="right">{formatMoney(socio.montoPesos)}</Td>
                   <Td align="right">{socio.montoUsd ? formatMoney(socio.montoUsd) : 'Sin configurar'}</Td>
                 </tr>
               ))}
-              {preview.socios.length === 0 ? <EmptyRow colSpan={4} message="No hay socios activos configurados." /> : null}
+              {preview.socios.length === 0 ? <EmptyRow colSpan={7} message="No hay socios activos configurados." /> : null}
             </tbody>
           </table>
         </div>

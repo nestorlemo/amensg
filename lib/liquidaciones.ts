@@ -35,7 +35,7 @@ export function periodFromUrl(params: URLSearchParams) {
 }
 
 export async function buildLiquidacionPreview(period: PeriodInput) {
-  const [facturaciones, ingresosAdicionales, gastos, gastosFijosConceptos, socios, tipoCambioParametro, cierrePeriodo] =
+  const [facturaciones, ingresosAdicionales, gastos, gastosFijosConceptos, socios, tipoCambioParametro, cierrePeriodo, facturaDesarrollo] =
     await Promise.all([
       prisma.facturacionMensual.findMany({
         where: {
@@ -82,6 +82,13 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
         where: { anio_mes: { anio: period.anio, mes: period.mes } },
         select: { id: true, estado: true, snapshot: true },
       }),
+      prisma.facturaDesarrollo.findMany({
+        where: { anio: period.anio, mes: period.mes },
+        include: {
+          empresa: { select: { id: true, nombre: true } },
+          distribuciones: { include: { socio: { select: { id: true, nombre: true } } } },
+        },
+      }),
     ])
   const cierreEstado = normalizeEstado(cierrePeriodo?.estado)
   const cierreCerrado = cierreEstado === 'CERRADO'
@@ -99,7 +106,18 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
   const totalGastosVariables = sumDecimal(gastos.map((row) => row.importe))
   const totalGastosFijos = sumDecimal(gastosFijosConceptos.map((c) => c.monto!))
   const totalGastos = totalGastosVariables.add(totalGastosFijos)
-  const resultadoDistribuible = totalIngresosSinIva.sub(totalGastos)
+
+  const facturaDesarrolloIngresoIds = new Set(
+    facturaDesarrollo.map(f => f.ingresoAdicionalId).filter((id): id is string => id !== null)
+  )
+  const ingresosAdicionalesPuros = ingresosAdicionales.filter(i => !facturaDesarrolloIngresoIds.has(i.id))
+
+  const resultadoActivaciones = facturacionSinIva.sub(totalGastos)
+  const ingresosAdicionalesPurosSinIva = sumDecimal(ingresosAdicionalesPuros.map(i => i.montoSinIva))
+  const resultadoAdicionales = ingresosAdicionalesPurosSinIva
+  const desarrolloTotalUYU = sumDecimal(facturaDesarrollo.map(f => f.totalUYU))
+  const resultadoDesarrollo = desarrolloTotalUYU
+  const resultadoDistribuible = resultadoActivaciones.add(resultadoAdicionales).add(resultadoDesarrollo)
   const tipoCambioSnapshot =
     cierreCerrado && cierrePeriodo ? decimalSnapshot(safeSnapshot(cierrePeriodo.snapshot), 'tipoCambioUsd') : null
   const tipoCambioUsd = resolveTipoCambioUsd({
@@ -148,7 +166,14 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
 
   const validTipoCambio = tipoCambioUsd && tipoCambioUsd.greaterThan(0) ? tipoCambioUsd : null
   const sociosPreview = socios.map((socio) => {
-    const montoPesos = resultadoDistribuible.mul(socio.porcentajeParticipacion)
+    const montoActivaciones = resultadoActivaciones.mul(socio.porcentajeParticipacion)
+    const montoAdicionales = resultadoAdicionales.mul(socio.porcentajeParticipacion)
+    const montoDesarrollo = sumDecimal(
+      facturaDesarrollo.flatMap(f =>
+        f.distribuciones.filter(d => d.socioId === socio.id).map(d => d.montoUYU)
+      )
+    )
+    const montoPesos = montoActivaciones.add(montoAdicionales).add(montoDesarrollo)
     const montoUsd = validTipoCambio ? money(montoPesos.div(validTipoCambio)) : null
 
     return {
@@ -156,6 +181,9 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
       nombre: socio.nombre,
       porcentaje: rate(socio.porcentajeParticipacion),
       cuentas: socio.cuentas,
+      montoActivaciones: money(montoActivaciones),
+      montoAdicionales: money(montoAdicionales),
+      montoDesarrollo: money(montoDesarrollo),
       montoPesos: money(montoPesos),
       montoUsd,
     }
@@ -189,6 +217,15 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
         iva: money(row.iva),
         montoConIva: money(row.montoConIva),
       })),
+      ingresosAdicionalesPurosSinIva: money(ingresosAdicionalesPurosSinIva),
+      desarrolloFacturas: facturaDesarrollo.map(f => ({
+        id: f.id,
+        empresa: f.empresa.nombre,
+        totalHoras: f.totalHoras.toString(),
+        totalUYU: money(f.totalUYU),
+        iva: money(f.iva),
+        totalConIva: money(f.totalConIva),
+      })),
     },
     gastos: {
       totalGastos: money(totalGastos),
@@ -211,6 +248,9 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
     },
     resultado: {
       resultadoDistribuible: money(resultadoDistribuible),
+      resultadoActivaciones: money(resultadoActivaciones),
+      resultadoAdicionales: money(resultadoAdicionales),
+      resultadoDesarrollo: money(resultadoDesarrollo),
       tipoCambioUsd: tipoCambioUsd ? rate(tipoCambioUsd) : null,
       totalActivaciones,
       totalEmpresas,
