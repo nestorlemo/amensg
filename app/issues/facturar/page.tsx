@@ -269,15 +269,7 @@ export default function FacturarDesarrolloPage() {
               ))}
             </select>
           </label>
-          <label className="block text-sm font-medium text-slate-700">
-            Estado de facturación
-            <select className="mt-1 block h-9 w-40 rounded-md border border-slate-300 px-3 text-sm" value={fEstadoFact} onChange={(e) => setFEstadoFact(e.target.value as EstadoFact)}>
-              <option value="sin_facturar">Sin facturar</option>
-              <option value="facturados">Facturados</option>
-              <option value="todos">Todos</option>
-            </select>
-          </label>
-          <label className="block text-sm font-medium text-slate-700">
+<label className="block text-sm font-medium text-slate-700">
             Estado cobro
             <select className="mt-1 block h-9 w-36 rounded-md border border-slate-300 px-3 text-sm" value={fEstadoCobro} onChange={(e) => setFEstadoCobro(e.target.value)}>
               <option value="">Todos</option>
