@@ -62,19 +62,18 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
         </section>
       ) : null}
 
-      <section className="grid min-w-0 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <section className="grid min-w-0 gap-3 md:grid-cols-2 lg:grid-cols-4">
         <Metric label="Total ingresos S/IVA (UYU)" value={preview.ingresos.totalIngresosSinIva} />
         <Metric label="IVA total (UYU)" value={preview.ingresos.totalIva} />
         <Metric label="Total ingresos C/IVA (UYU)" value={preview.ingresos.ingresosConIva} />
         <Metric label="Total gastos S/IVA (UYU)" value={preview.gastos.totalGastos} />
-        <Metric label="Resultado distribuible (UYU)" value={preview.resultado.resultadoDistribuible} />
-        <Metric label="Tipo cambio USD" value={preview.resultado.tipoCambioUsd ?? 'Sin configurar'} />
       </section>
 
-      <section className="grid min-w-0 gap-3 md:grid-cols-3">
+      <section className="grid min-w-0 gap-3 md:grid-cols-2 lg:grid-cols-4">
         <Metric label="Resultado activaciones (UYU)" value={preview.resultado.resultadoActivaciones} />
         <Metric label="Resultado adicionales (USD)" value={preview.resultado.resultadoAdicionales} />
         <Metric label="Resultado desarrollo (USD)" value={preview.resultado.resultadoDesarrolloUSD} />
+        <Metric label="Resultado distribuible (UYU)" value={preview.resultado.resultadoDistribuible} />
       </section>
 
       <section className="rounded-md border border-slate-200 bg-white p-4">
