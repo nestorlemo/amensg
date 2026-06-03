@@ -123,14 +123,16 @@ export async function GET(req: NextRequest) {
   // 5. horasDesarrolloPorMes & facturacionDesarrolloPorMes
   const facturasDesarrollo = await prisma.facturaDesarrollo.findMany({
     where: { anio },
-    select: { mes: true, totalHoras: true, totalUSD: true },
+    select: { mes: true, totalHoras: true, totalUSD: true, totalUYU: true },
   })
 
   const horasMap = new Map<number, number>()
   const usdMap = new Map<number, number>()
+  const uyuMap = new Map<number, number>()
   for (const f of facturasDesarrollo) {
     horasMap.set(f.mes, (horasMap.get(f.mes) ?? 0) + Number(f.totalHoras))
     usdMap.set(f.mes, (usdMap.get(f.mes) ?? 0) + Number(f.totalUSD))
+    uyuMap.set(f.mes, (uyuMap.get(f.mes) ?? 0) + Number(f.totalUYU))
   }
 
   const horasDesarrolloPorMes = Array.from(horasMap.entries())
@@ -145,10 +147,23 @@ export async function GET(req: NextRequest) {
     return { mes, totalUSD, acumulado }
   })
 
+  // resultadoFinancieroTotal: desglose mensual completo
+  const allMeses = new Set<number>([...mesSet, ...uyuMap.keys()])
+  const resultadoFinancieroTotal = Array.from(allMeses).sort((a, b) => a - b).map((mes) => {
+    const ingresosActivaciones = facturacionTotalRows.filter(r => r.mes === mes).reduce((s, r) => s + Number(r.totalSinIva), 0)
+    const ingresosAdicionales = ingresosAdicRows.filter(r => r.mes === mes).reduce((s, r) => s + Number(r.montoSinIva), 0)
+    const desarrolloUYU = uyuMap.get(mes) ?? 0
+    const gastosVar = gastosRows.filter(r => r.mes === mes).reduce((s, r) => s + Number(r.importe), 0)
+    const gastos = gastosVar + gastoFijoTotal
+    const resultado = ingresosActivaciones + ingresosAdicionales + desarrolloUYU - gastos
+    return { mes, ingresosActivaciones, ingresosAdicionales, desarrolloUYU, gastos, resultado }
+  })
+
   return NextResponse.json({
     activacionesPorMesEmpresa,
     facturacionPorMesEmpresa,
     resultadoMensual,
+    resultadoFinancieroTotal,
     distribucionSocios,
     issuesPorEstado,
     horasDesarrolloPorMes,

@@ -49,6 +49,7 @@ type GraficosData = {
   activacionesPorMesEmpresa: { mes: number; empresa: string; cantidad: number }[]
   facturacionPorMesEmpresa: { mes: number; empresa: string; totalSinIva: number }[]
   resultadoMensual: { mes: number; ingresos: number; gastos: number; resultado: number }[]
+  resultadoFinancieroTotal: { mes: number; ingresosActivaciones: number; ingresosAdicionales: number; desarrolloUYU: number; gastos: number; resultado: number }[]
   distribucionSocios: { socio: string; monto: number }[]
   issuesPorEstado: { estado: string; count: number }[]
   horasDesarrolloPorMes: { mes: number; horas: number }[]
@@ -57,6 +58,13 @@ type GraficosData = {
 
 function fmt(n: number) {
   return new Intl.NumberFormat('es-UY', { maximumFractionDigits: 2 }).format(n)
+}
+
+function fmtShort(n: number): string {
+  const abs = Math.abs(n)
+  if (abs >= 1_000_000) return `${new Intl.NumberFormat('es-UY', { maximumFractionDigits: 1 }).format(n / 1_000_000)}M`
+  if (abs >= 1_000) return `${new Intl.NumberFormat('es-UY', { maximumFractionDigits: 1 }).format(n / 1_000)}K`
+  return new Intl.NumberFormat('es-UY', { maximumFractionDigits: 1 }).format(n)
 }
 
 function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number; color: string }[]; label?: string }) {
@@ -161,6 +169,7 @@ export default function GraficosPage() {
   })() : []
 
   const resultadoData = data?.resultadoMensual.map(r => ({ ...r, mes: MESES[r.mes - 1] })) ?? []
+  const finTotalData = data?.resultadoFinancieroTotal.map(r => ({ ...r, mes: MESES[r.mes - 1] })) ?? []
   const horasData = data?.horasDesarrolloPorMes.map(r => ({ ...r, mes: MESES[r.mes - 1] })) ?? []
   const acumuladoData = data?.facturacionDesarrolloPorMes.map(r => ({ ...r, mes: MESES[r.mes - 1] })) ?? []
 
@@ -210,7 +219,7 @@ export default function GraficosPage() {
                   })}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} tickFormatter={fmtShort} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend />
                     {activEmpresas.map((emp) => (
@@ -246,7 +255,7 @@ export default function GraficosPage() {
                   <BarChart data={facturData.map(d => ({ ...d, mes: MESES[Number(d.mes) - 1] }))}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} tickFormatter={fmtShort} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend />
                     {facturEmpresas.map((emp) => (
@@ -282,7 +291,7 @@ export default function GraficosPage() {
                   <ComposedChart data={resultadoData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} tickFormatter={fmtShort} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend />
                     <Bar dataKey="ingresos" name="Ingresos" stackId="stack" fill="#93c5fd" />
@@ -292,12 +301,30 @@ export default function GraficosPage() {
                 </ResponsiveContainer>
               </ChartCard>
 
+              {/* Chart 4b: ComposedChart resultado financiero total */}
+              <ChartCard title="Resultado financiero total mensual (UYU)">
+                <ResponsiveContainer width="100%" height={300}>
+                  <ComposedChart data={finTotalData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} tickFormatter={fmtShort} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend />
+                    <Bar dataKey="ingresosActivaciones" name="Activaciones" stackId="ing" fill="#1769E0" />
+                    <Bar dataKey="ingresosAdicionales" name="Adicionales" stackId="ing" fill="#19C3FF" />
+                    <Bar dataKey="desarrolloUYU" name="Desarrollo" stackId="ing" fill="#20E0B2" />
+                    <Bar dataKey="gastos" name="Gastos" fill="#f87171" />
+                    <Line type="monotone" dataKey="resultado" name="Resultado" stroke="#0B6B3A" strokeWidth={3} dot={{ r: 4 }} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
               {/* Chart 5: BarChart horizontal distribución socios */}
               <ChartCard title="Distribución acumulada por socio (UYU)">
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={data.distribucionSocios} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis type="number" tick={{ fontSize: 11 }} />
+                    <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={fmtShort} />
                     <YAxis type="category" dataKey="socio" tick={{ fontSize: 11 }} width={110} />
                     <Tooltip content={<CustomTooltip />} />
                     <Bar dataKey="monto" name="Monto" fill="#1769E0" />
@@ -331,7 +358,7 @@ export default function GraficosPage() {
                   <BarChart data={horasData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} tickFormatter={fmtShort} />
                     <Tooltip content={<CustomTooltip />} />
                     <Bar dataKey="horas" name="Horas" fill="#1769E0" />
                   </BarChart>
@@ -344,7 +371,7 @@ export default function GraficosPage() {
                   <LineChart data={acumuladoData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} tickFormatter={fmtShort} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend />
                     <Line type="monotone" dataKey="totalUSD" name="USD mes" stroke="#F0B840" strokeWidth={2} dot />
