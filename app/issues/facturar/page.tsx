@@ -305,7 +305,7 @@ export default function FacturarDesarrolloPage() {
                     <td className="px-4 py-3 text-right font-semibold">${f.totalConIva.toFixed(2)}</td>
                     <td className="px-4 py-3">
                       {f.distribuciones.length === 0 ? '—' : f.distribuciones.map(d => (
-                        <div key={d.id} className="text-xs">{d.socio.nombre}: {d.porcentaje}% · ${d.montoUYU.toFixed(2)}</div>
+                        <div key={d.id} className="text-xs">{d.socio.nombre}: {d.porcentaje}% · ${(f.totalConIva * d.porcentaje / 100).toFixed(2)} USD</div>
                       ))}
                     </td>
                     <td className="px-4 py-3">
