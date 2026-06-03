@@ -50,8 +50,8 @@ export default function FacturarDesarrolloPage() {
   const firstOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
   const today = now.toISOString().split('T')[0]!
 
-  const [fechaDesde, setFechaDesde] = useState(firstOfMonth)
-  const [fechaHasta, setFechaHasta] = useState(today)
+  const [fechaDesde, setFechaDesde] = useState('')
+  const [fechaHasta, setFechaHasta] = useState('')
   const [fEmpresa, setFEmpresa] = useState('')
   const [fEstadoFact, setFEstadoFact] = useState<EstadoFact>('sin_facturar')
   const [fEstadoCobro, setFEstadoCobro] = useState('')
@@ -121,7 +121,9 @@ export default function FacturarDesarrolloPage() {
     setGroups([])
     try {
       // Fetch EN_PRODUCCION issues filtered server-side by FacturaIssue existence
-      const qs = new URLSearchParams({ estado: 'EN_PRODUCCION', includeFacturado: 'true', fechaDesde, fechaHasta })
+      const qs = new URLSearchParams({ estado: 'EN_PRODUCCION', includeFacturado: 'true' })
+      if (fechaDesde) qs.set('fechaDesde', fechaDesde)
+      if (fechaHasta) qs.set('fechaHasta', fechaHasta)
       if (fEmpresa) qs.set('empresaId', fEmpresa)
       if (fEstadoFact === 'sin_facturar') qs.set('estadoFacturacion', 'sin_facturar')
       else if (fEstadoFact === 'facturados') qs.set('estadoFacturacion', 'facturado')
@@ -261,14 +263,6 @@ export default function FacturarDesarrolloPage() {
               <option value="todos">Todos</option>
             </select>
           </label>
-          <label className="block text-sm font-medium text-slate-700">
-            Estado cobro
-            <select className="mt-1 block h-9 w-36 rounded-md border border-slate-300 px-3 text-sm" value={fEstadoCobro} onChange={(e) => setFEstadoCobro(e.target.value)}>
-              <option value="">Todos</option>
-              <option value="PENDIENTE">Pendiente</option>
-              <option value="COBRADO">Cobrado</option>
-            </select>
-          </label>
           <button className="h-9 rounded-md bg-slate-950 px-5 text-sm font-semibold text-white disabled:opacity-50" disabled={loading} type="submit">
             {loading ? 'Buscando…' : 'Buscar issues'}
           </button>
@@ -281,7 +275,17 @@ export default function FacturarDesarrolloPage() {
       <section className="rounded-xl border border-slate-200 bg-white">
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
           <h2 className="text-sm font-semibold text-slate-950">Historial de facturas</h2>
-          <button onClick={() => void fetchFacturas()} className="text-xs text-slate-500 hover:text-slate-700">↻ Actualizar</button>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 text-xs text-slate-600">
+              Estado cobro
+              <select className="h-7 rounded-md border border-slate-300 px-2 text-xs" value={fEstadoCobro} onChange={(e) => setFEstadoCobro(e.target.value)}>
+                <option value="">Todos</option>
+                <option value="PENDIENTE">Pendiente</option>
+                <option value="COBRADO">Cobrado</option>
+              </select>
+            </label>
+            <button onClick={() => void fetchFacturas()} className="text-xs text-slate-500 hover:text-slate-700">↻ Actualizar</button>
+          </div>
         </div>
         {loadingFacturas ? (
           <p className="p-6 text-sm text-slate-400">Cargando…</p>
