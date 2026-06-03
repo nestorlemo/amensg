@@ -27,7 +27,7 @@ export function LoginForm({ next }: { next: string }) {
       }),
     }, 'No se pudo iniciar sesión.')
 
-    if (!result.ok) {
+    if (result.ok === false) {
       setError(result.error)
       setLoading(false)
       return

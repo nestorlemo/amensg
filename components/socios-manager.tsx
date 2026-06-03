@@ -76,7 +76,7 @@ function CreateSocioForm() {
     const form = event.currentTarget
     const result = await request('/api/socios', 'POST', payload(new FormData(form)))
 
-    if (!result.ok) {
+    if (result.ok === false) {
       setError(result.error)
       return
     }
@@ -121,7 +121,7 @@ function SocioRow({ socio }: { socio: Socio }) {
     const result = await request(`/api/socios/${socio.id}`, 'PUT', payload(new FormData(event.currentTarget)))
     setIsSaving(false)
 
-    if (!result.ok) {
+    if (result.ok === false) {
       setError(result.error)
       return
     }
@@ -135,7 +135,7 @@ function SocioRow({ socio }: { socio: Socio }) {
     const result = await request(`/api/socios/${socio.id}/desactivar`, 'POST', {})
     setIsSaving(false)
 
-    if (!result.ok) {
+    if (result.ok === false) {
       setError(result.error)
       return
     }
@@ -228,5 +228,5 @@ async function request(url: string, method: string, body: Record<string, unknown
     body: JSON.stringify(body),
   }, 'No se pudo completar la operación.')
 
-  return result.ok ? { ok: true, error: null } : { ok: false, error: result.error }
+  return result.ok === true ? { ok: true, error: null } : { ok: false, error: result.error }
 }

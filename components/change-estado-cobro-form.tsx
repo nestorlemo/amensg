@@ -69,7 +69,7 @@ export function ChangeEstadoCobroForm({
       }),
     }, 'No se pudo actualizar el estado.')
 
-    if (!result.ok) {
+    if (result.ok === false) {
       setError(result.error)
       setIsSaving(false)
       return

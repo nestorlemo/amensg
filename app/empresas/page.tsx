@@ -379,7 +379,7 @@ export default function EmpresasPage() {
 
       {/* Table card */}
       <div
-        className="overflow-hidden rounded-2xl"
+        className="overflow-x-auto rounded-2xl"
         style={{ background: '#ffffff', border: `1px solid ${BORDER}`, boxShadow: '0 1px 4px rgba(23,105,224,0.06)' }}
       >
         {/* Search bar */}

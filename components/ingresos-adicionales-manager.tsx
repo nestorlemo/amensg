@@ -40,7 +40,7 @@ export function IngresoAdicionalForm({ disabled = false, empresas }: { disabled?
     event.preventDefault()
     const form = event.currentTarget
     const result = await request('/api/ingresos-adicionales', 'POST', payload(new FormData(form)))
-    if (!result.ok) {
+    if (result.ok === false) {
       setError(result.error)
       return
     }
@@ -82,7 +82,7 @@ export function IngresoRowActions({ disabled = false, empresas, ingreso }: { dis
   async function update(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const result = await request(`/api/ingresos-adicionales/${ingreso.id}`, 'PUT', payload(new FormData(event.currentTarget)))
-    if (!result.ok) {
+    if (result.ok === false) {
       setError(result.error)
       return
     }
@@ -91,7 +91,7 @@ export function IngresoRowActions({ disabled = false, empresas, ingreso }: { dis
 
   async function remove() {
     const result = await request(`/api/ingresos-adicionales/${ingreso.id}`, 'DELETE', null)
-    if (!result.ok) {
+    if (result.ok === false) {
       setError(result.error)
       return
     }
@@ -184,7 +184,7 @@ function IngresoCurrencyFields({
       'No se pudo obtener el tipo de cambio.',
     )
 
-    if (!result.ok) {
+    if (result.ok === false) {
       setRateError(result.error)
       return
     }
@@ -401,7 +401,7 @@ async function request(url: string, method: string, body: Record<string, unknown
     body: body ? JSON.stringify(body) : undefined,
   }, 'No se pudo completar la operación.')
 
-  return result.ok ? { ok: true, error: null } : { ok: false, error: result.error }
+  return result.ok === true ? { ok: true, error: null } : { ok: false, error: result.error }
 }
 
 function calculateMontoSinIva(moneda: string, montoOrigen: string, tipoCambio: string) {

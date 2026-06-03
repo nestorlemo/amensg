@@ -60,7 +60,7 @@ function ParametroRow({ parametro }: { parametro: Parametro }) {
     })
 
     setIsSaving(false)
-    if (!result.ok) {
+    if (result.ok === false) {
       setError(result.error)
       return
     }
@@ -117,5 +117,5 @@ async function request(url: string, body: Record<string, unknown>) {
     body: JSON.stringify(body),
   }, 'No se pudo guardar el parámetro.')
 
-  return result.ok ? { ok: true, error: null } : { ok: false, error: result.error }
+  return result.ok === true ? { ok: true, error: null } : { ok: false, error: result.error }
 }

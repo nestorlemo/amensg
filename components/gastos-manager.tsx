@@ -79,7 +79,7 @@ export function GastosFijosManager({ conceptos }: { conceptos: Concepto[] }) {
       tipo: 'FIJO',
       monto: fd.get('monto'),
     })
-    if (!result.ok) { setFormError(result.error); return }
+    if (result.ok === false) { setFormError(result.error); return }
     setFormError(null)
     form.reset()
     router.refresh()
@@ -159,7 +159,7 @@ function ConceptoFijoRow({ concepto }: { concepto: Concepto }) {
       monto: fd.get('monto'),
       activo: concepto.activo,
     })
-    if (!result.ok) { setError(result.error); return }
+    if (result.ok === false) { setError(result.error); return }
     setEditing(false)
     router.refresh()
   }
@@ -171,7 +171,7 @@ function ConceptoFijoRow({ concepto }: { concepto: Concepto }) {
       monto: concepto.monto,
       activo: !concepto.activo,
     })
-    if (!result.ok) { setError(result.error); return }
+    if (result.ok === false) { setError(result.error); return }
     router.refresh()
   }
 
@@ -243,7 +243,7 @@ export function GastosVariablesManager({
       importe: fd.get('importe'),
       observaciones: fd.get('observaciones'),
     })
-    if (!result.ok) { setError(result.error); return }
+    if (result.ok === false) { setError(result.error); return }
     setError(null)
     form.reset()
     router.refresh()
@@ -305,13 +305,13 @@ export function GastoRowActions({
       importe: fd.get('importe'),
       observaciones: fd.get('observaciones'),
     })
-    if (!result.ok) { setError(result.error); return }
+    if (result.ok === false) { setError(result.error); return }
     router.refresh()
   }
 
   async function remove() {
     const result = await apiFetch(`/api/gastos/${gasto.id}`, 'DELETE', null)
-    if (!result.ok) { setError(result.error); return }
+    if (result.ok === false) { setError(result.error); return }
     router.refresh()
   }
 
@@ -416,5 +416,5 @@ async function apiFetch(url: string, method: string, body: Record<string, unknow
     },
     'No se pudo completar la operación.',
   )
-  return result.ok ? { ok: true as const, error: null } : { ok: false as const, error: result.error }
+  return result.ok === true ? { ok: true as const, error: null } : { ok: false as const, error: result.error }
 }

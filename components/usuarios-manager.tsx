@@ -51,7 +51,7 @@ export function UsuariosManager({ usuarios }: { usuarios: Usuario[] }) {
   async function request(url: string, init: RequestInit) {
     setError(null)
     const result = await requestJson(url, init, 'No se pudo completar la acción.')
-    if (!result.ok) {
+    if (result.ok === false) {
       setError(result.error)
       return
     }
