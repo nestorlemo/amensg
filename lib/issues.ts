@@ -1,4 +1,4 @@
-const ESTADOS_VALIDOS   = new Set(['PENDIENTE', 'EN_DESARROLLO', 'EN_TEST', 'EN_PRODUCCION', 'COBRADO', 'CANCELADO', 'NO_HACER'])
+const ESTADOS_VALIDOS   = new Set(['PENDIENTE', 'EN_DESARROLLO', 'EN_TEST', 'EN_PRODUCCION', 'CANCELADO'])
 const PRIORIDADES_VALIDAS = new Set(['ALTA', 'MEDIA', 'BAJA'])
 
 export function parseIssueBody(body: Record<string, unknown>) {
@@ -31,6 +31,14 @@ export function parseIssueBody(body: Record<string, unknown>) {
     ? new Date(body.fechaProduccion as string)
     : estado === 'EN_PRODUCCION' ? new Date() : null
 
+  const motivoCancelacion = estado === 'CANCELADO'
+    ? (typeof body.motivoCancelacion === 'string' ? body.motivoCancelacion.trim() : null)
+    : null
+
+  if (estado === 'CANCELADO' && !motivoCancelacion) {
+    return { error: { error: 'VALIDATION_ERROR', message: 'El motivo de cancelación es requerido.' } }
+  }
+
   return {
     data: {
       fecha,
@@ -44,6 +52,7 @@ export function parseIssueBody(body: Record<string, unknown>) {
       prioridad,
       empresaId,
       fechaProduccion,
+      motivoCancelacion,
     },
   }
 }
@@ -58,6 +67,7 @@ export function serializeIssue(issue: {
   totalHoras: { toString(): string }
   estado: string
   fechaProduccion: Date | null
+  motivoCancelacion?: string | null
   reportadoPor: string
   prioridad: string
   creadoEn: Date
@@ -73,6 +83,7 @@ export function serializeIssue(issue: {
     totalHoras: Number(issue.totalHoras),
     estado: issue.estado,
     fechaProduccion: issue.fechaProduccion ? issue.fechaProduccion.toISOString().split('T')[0] : null,
+    motivoCancelacion: issue.motivoCancelacion ?? null,
     reportadoPor: issue.reportadoPor,
     prioridad: issue.prioridad,
     creadoEn: issue.creadoEn.toISOString(),

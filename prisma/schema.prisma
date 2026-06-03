@@ -220,6 +220,7 @@ model Issue {
   totalHoras        Decimal   @db.Decimal(8, 2)
   estado            String
   fechaProduccion   DateTime?
+  motivoCancelacion String?
   reportadoPor      String
   prioridad         String
   empresaId         String?   @db.Uuid

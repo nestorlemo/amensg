@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { DateInput } from '@/components/date-input'
 import { PageHeader } from '@/components/page-header'
 
-const ESTADOS = ['PENDIENTE', 'EN_DESARROLLO', 'EN_TEST', 'EN_PRODUCCION', 'FACTURADO', 'COBRADO', 'CANCELADO', 'NO_HACER'] as const
+const ESTADOS = ['PENDIENTE', 'EN_DESARROLLO', 'EN_TEST', 'EN_PRODUCCION', 'CANCELADO'] as const
 const PRIORIDADES = ['ALTA', 'MEDIA', 'BAJA'] as const
 
 type Issue = {
@@ -18,9 +18,11 @@ type Issue = {
   totalHoras: number
   estado: string
   fechaProduccion: string | null
+  motivoCancelacion: string | null
   reportadoPor: string
   prioridad: string
   empresa: { id: string; nombre: string } | null
+  facturado: boolean
 }
 
 type Empresa = { id: string; nombre: string }
@@ -31,10 +33,7 @@ const ESTADO_BADGE: Record<string, string> = {
   EN_DESARROLLO: 'bg-blue-100 text-blue-800',
   EN_TEST:       'bg-yellow-100 text-yellow-800',
   EN_PRODUCCION: 'bg-emerald-100 text-emerald-800',
-  FACTURADO:     'bg-purple-100 text-purple-800',
-  COBRADO:       'bg-emerald-700 text-white',
   CANCELADO:     'bg-red-100 text-red-700',
-  NO_HACER:      'bg-slate-200 text-slate-600',
 }
 
 const PRIORIDAD_BADGE: Record<string, string> = {
@@ -64,6 +63,86 @@ function calcHoras(devStr: string, pctTest: number, pctRework: number) {
   return { dev, test, rework, total }
 }
 
+// ─── Cancel Modal ─────────────────────────────────────────────────────────────
+
+function CancelModal({
+  issueId,
+  descripcion,
+  onConfirm,
+  onClose,
+}: {
+  issueId: string
+  descripcion: string
+  onConfirm: (id: string, motivo: string) => Promise<void>
+  onClose: () => void
+}) {
+  const [motivo, setMotivo] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError]   = useState<string | null>(null)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!motivo.trim()) { setError('El motivo es requerido.'); return }
+    setSaving(true)
+    try {
+      await onConfirm(issueId, motivo.trim())
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between rounded-t-2xl border-b border-slate-200 bg-slate-50 px-6 py-4">
+          <h2 className="text-base font-semibold text-slate-950">Cancelar issue</h2>
+          <button className="rounded-md p-1 text-slate-400 hover:bg-slate-200" onClick={onClose} type="button">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
+        <form className="space-y-4 px-6 py-5" onSubmit={(e) => void handleSubmit(e)}>
+          <p className="text-sm text-slate-600">
+            Issue: <span className="font-medium text-slate-900">{descripcion.length > 80 ? `${descripcion.slice(0, 80)}…` : descripcion}</span>
+          </p>
+          <label className="block text-sm font-medium text-slate-700">
+            Motivo de cancelación <span className="text-red-500">*</span>
+            <textarea
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              rows={3}
+              value={motivo}
+              onChange={(e) => { setMotivo(e.target.value); setError(null) }}
+              autoFocus
+              required
+            />
+          </label>
+          {error ? <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
+          <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
+            <button
+              className="h-9 rounded-md border border-slate-300 px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              onClick={onClose}
+              type="button"
+            >
+              Volver
+            </button>
+            <button
+              className="h-9 rounded-md bg-red-600 px-5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+              disabled={saving}
+              type="submit"
+            >
+              {saving ? 'Cancelando…' : 'Confirmar cancelación'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 // ─── Edit Modal ───────────────────────────────────────────────────────────────
 
 function EditModal({
@@ -79,7 +158,7 @@ function EditModal({
   onSave: (updated: Issue) => void
   onClose: () => void
 }) {
-  const [form, setForm] = useState<FormState>({
+  const [form, setForm] = useState<FormState & { motivoCancelacion: string }>({
     fecha:            issue.fecha,
     descripcion:      issue.descripcion,
     empresaId:        issue.empresa?.id ?? '',
@@ -88,6 +167,7 @@ function EditModal({
     estado:           issue.estado,
     reportadoPor:     issue.reportadoPor,
     fechaProduccion:  issue.fechaProduccion ?? '',
+    motivoCancelacion: issue.motivoCancelacion ?? '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState<string | null>(null)
@@ -97,6 +177,10 @@ function EditModal({
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+    if (form.estado === 'CANCELADO' && !form.motivoCancelacion.trim()) {
+      setError('El motivo de cancelación es requerido.')
+      return
+    }
     setSaving(true)
     try {
       const res = await fetch(`/api/issues/${issue.id}`, {
@@ -115,6 +199,7 @@ function EditModal({
           fechaProduccion:  form.estado === 'EN_PRODUCCION' && form.fechaProduccion
                               ? form.fechaProduccion
                               : undefined,
+          motivoCancelacion: form.estado === 'CANCELADO' ? form.motivoCancelacion.trim() : undefined,
         }),
       })
       const data = await res.json()
@@ -125,16 +210,14 @@ function EditModal({
     }
   }
 
-  const set = (key: keyof FormState) => (v: string) => setForm((f) => ({ ...f, [key]: v }))
+  const set = (key: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [key]: v }))
 
   return (
-    /* Backdrop */
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl">
-        {/* Header */}
         <div className="flex items-center justify-between rounded-t-2xl border-b border-slate-200 bg-slate-50 px-6 py-4">
           <h2 className="text-base font-semibold text-slate-950">Editar issue</h2>
           <button
@@ -149,7 +232,6 @@ function EditModal({
           </button>
         </div>
 
-        {/* Form */}
         <form className="space-y-4 px-6 py-5" onSubmit={(e) => void handleSave(e)}>
           <div className="grid gap-3 md:grid-cols-2">
             <label className="block text-sm font-medium text-slate-700">
@@ -197,18 +279,29 @@ function EditModal({
             <MInput label="Reportado por" value={form.reportadoPor} onChange={set('reportadoPor')} required />
           </div>
 
-          {/* Calculated hours */}
           <div className="grid grid-cols-3 gap-3">
             <ReadonlyField label={`Test (${config.porcentajeTest}%)`}  value={dev > 0 ? `${test}h`   : '—'} />
             <ReadonlyField label={`Rework (${config.porcentajeRework}%)`} value={dev > 0 ? `${rework}h` : '—'} />
             <ReadonlyField label="Total horas" value={dev > 0 ? `${total}h` : '—'} highlight />
           </div>
 
-          {/* fechaProduccion — only when EN_PRODUCCION */}
           {form.estado === 'EN_PRODUCCION' ? (
             <label className="block text-sm font-medium text-slate-700">
               Fecha en producción
               <DateInput className="mt-1 block h-9 w-full rounded-md border border-slate-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" value={form.fechaProduccion} onChange={set('fechaProduccion')} />
+            </label>
+          ) : null}
+
+          {form.estado === 'CANCELADO' ? (
+            <label className="block text-sm font-medium text-slate-700">
+              Motivo de cancelación <span className="text-red-500">*</span>
+              <textarea
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                rows={2}
+                value={form.motivoCancelacion}
+                onChange={(e) => setForm((f) => ({ ...f, motivoCancelacion: e.target.value }))}
+                required
+              />
             </label>
           ) : null}
 
@@ -251,13 +344,15 @@ export default function IssuesPage() {
   const [error, setError]       = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingIssue, setEditingIssue] = useState<Issue | null>(null)
+  const [cancelPending, setCancelPending] = useState<Issue | null>(null)
 
   // Filters
-  const [fEstado, setFEstado]       = useState('')
-  const [fEmpresa, setFEmpresa]     = useState('')
-  const [fPrioridad, setFPrioridad] = useState('')
-  const [fDesde, setFDesde]         = useState('')
-  const [fHasta, setFHasta]         = useState('')
+  const [fEstado, setFEstado]           = useState('')
+  const [fEmpresa, setFEmpresa]         = useState('')
+  const [fPrioridad, setFPrioridad]     = useState('')
+  const [fDesde, setFDesde]             = useState('')
+  const [fHasta, setFHasta]             = useState('')
+  const [fFacturacion, setFFacturacion] = useState('')
 
   // Create form
   const [form, setForm] = useState({ ...EMPTY_FORM, fecha: todayISO })
@@ -279,17 +374,18 @@ export default function IssuesPage() {
       .catch(() => null)
   }, [])
 
-  useEffect(() => { void fetchAll() }, [fEstado, fEmpresa, fPrioridad, fDesde, fHasta]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void fetchAll() }, [fEstado, fEmpresa, fPrioridad, fDesde, fHasta, fFacturacion]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function fetchAll() {
     setLoading(true)
     try {
       const qs = new URLSearchParams()
-      if (fEstado)    qs.set('estado',      fEstado)
-      if (fEmpresa)   qs.set('empresaId',   fEmpresa)
-      if (fPrioridad) qs.set('prioridad',   fPrioridad)
-      if (fDesde)     qs.set('fechaDesde',  fDesde)
-      if (fHasta)     qs.set('fechaHasta',  fHasta)
+      if (fEstado)      qs.set('estado',      fEstado)
+      if (fEmpresa)     qs.set('empresaId',   fEmpresa)
+      if (fPrioridad)   qs.set('prioridad',   fPrioridad)
+      if (fDesde)       qs.set('fechaDesde',  fDesde)
+      if (fHasta)       qs.set('fechaHasta',  fHasta)
+      if (fFacturacion) qs.set('facturacion', fFacturacion)
       const res  = await fetch(`/api/issues?${qs}`)
       const data = await res.json()
       setIssues(data.issues ?? [])
@@ -325,12 +421,26 @@ export default function IssuesPage() {
     }
   }
 
-  async function handleEstado(id: string, estado: string) {
+  async function handleEstadoChange(issue: Issue, nuevoEstado: string) {
+    if (nuevoEstado === 'CANCELADO') {
+      setCancelPending({ ...issue, estado: nuevoEstado })
+      return
+    }
+    await fetch(`/api/issues/${issue.id}/estado`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ estado: nuevoEstado }),
+    })
+    void fetchAll()
+  }
+
+  async function handleConfirmCancel(id: string, motivoCancelacion: string) {
     await fetch(`/api/issues/${id}/estado`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ estado }),
+      body: JSON.stringify({ estado: 'CANCELADO', motivoCancelacion }),
     })
+    setCancelPending(null)
     void fetchAll()
   }
 
@@ -373,6 +483,11 @@ export default function IssuesPage() {
             <option value="">Todas</option>
             {PRIORIDADES.map((p) => <option key={p} value={p}>{p}</option>)}
           </Select>
+          <Select label="Facturación" value={fFacturacion} onChange={setFFacturacion}>
+            <option value="">Todos</option>
+            <option value="sin_facturar">Sin facturar</option>
+            <option value="facturado">Facturado</option>
+          </Select>
           <label className="block text-sm font-medium text-slate-700">
             Fecha prod. desde
             <DateInput className="mt-1 block h-9 w-40 rounded-md border border-slate-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" value={fDesde} onChange={setFDesde} />
@@ -391,11 +506,12 @@ export default function IssuesPage() {
             className="h-9 rounded-md border border-emerald-600 px-4 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
             onClick={() => {
               const qs = new URLSearchParams()
-              if (fEstado)    qs.set('estado',     fEstado)
-              if (fEmpresa)   qs.set('empresaId',  fEmpresa)
-              if (fPrioridad) qs.set('prioridad',  fPrioridad)
-              if (fDesde)     qs.set('fechaDesde', fDesde)
-              if (fHasta)     qs.set('fechaHasta', fHasta)
+              if (fEstado)      qs.set('estado',      fEstado)
+              if (fEmpresa)     qs.set('empresaId',   fEmpresa)
+              if (fPrioridad)   qs.set('prioridad',   fPrioridad)
+              if (fDesde)       qs.set('fechaDesde',  fDesde)
+              if (fHasta)       qs.set('fechaHasta',  fHasta)
+              if (fFacturacion) qs.set('facturacion', fFacturacion)
               window.location.href = `/api/issues/export?${qs}`
             }}
           >
@@ -494,6 +610,7 @@ export default function IssuesPage() {
                 <Th>Empresa</Th>
                 <Th>Horas</Th>
                 <Th>Estado</Th>
+                <Th>Facturación</Th>
                 <Th>Prioridad</Th>
                 <Th>Reportado por</Th>
                 <Th>Acciones</Th>
@@ -501,9 +618,9 @@ export default function IssuesPage() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td className="px-4 py-8 text-center text-slate-400" colSpan={8}>Cargando…</td></tr>
+                <tr><td className="px-4 py-8 text-center text-slate-400" colSpan={9}>Cargando…</td></tr>
               ) : issues.length === 0 ? (
-                <tr><td className="px-4 py-8 text-center text-slate-400" colSpan={8}>No hay issues para los filtros seleccionados.</td></tr>
+                <tr><td className="px-4 py-8 text-center text-slate-400" colSpan={9}>No hay issues para los filtros seleccionados.</td></tr>
               ) : issues.map((issue) => (
                 <tr key={issue.id} className="hover:bg-slate-50">
                   <Td>{issue.fecha}</Td>
@@ -522,13 +639,26 @@ export default function IssuesPage() {
                     </span>
                   </Td>
                   <Td>
-                    <select
-                      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${ESTADO_BADGE[issue.estado] ?? 'bg-slate-100 text-slate-700'}`}
-                      value={issue.estado}
-                      onChange={(e) => void handleEstado(issue.id, e.target.value)}
-                    >
-                      {ESTADOS.map((s) => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
-                    </select>
+                    <div className="flex flex-col gap-0.5">
+                      <select
+                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${ESTADO_BADGE[issue.estado] ?? 'bg-slate-100 text-slate-700'}`}
+                        value={issue.estado}
+                        onChange={(e) => void handleEstadoChange(issue, e.target.value)}
+                      >
+                        {ESTADOS.map((s) => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
+                      </select>
+                      {issue.estado === 'CANCELADO' && issue.motivoCancelacion ? (
+                        <span className="block max-w-[160px] truncate text-[10px] text-red-500" title={issue.motivoCancelacion}>
+                          {issue.motivoCancelacion}
+                        </span>
+                      ) : null}
+                    </div>
+                  </Td>
+                  <Td>
+                    {issue.facturado
+                      ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">Facturado</span>
+                      : <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">Sin facturar</span>
+                    }
                   </Td>
                   <Td>
                     <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${PRIORIDAD_BADGE[issue.prioridad] ?? ''}`}>
@@ -553,6 +683,16 @@ export default function IssuesPage() {
           </table>
         </div>
       </section>
+
+      {/* Cancel Modal */}
+      {cancelPending ? (
+        <CancelModal
+          issueId={cancelPending.id}
+          descripcion={cancelPending.descripcion}
+          onConfirm={handleConfirmCancel}
+          onClose={() => setCancelPending(null)}
+        />
+      ) : null}
 
       {/* Edit Modal */}
       {editingIssue ? (
@@ -615,7 +755,6 @@ function Input({
   )
 }
 
-// Modal-specific input (no width constraint by default)
 function MInput({
   label, value, onChange, type = 'text', step, min, required,
 }: {
@@ -668,7 +807,6 @@ function Select({
   )
 }
 
-// Modal-specific select (same as Select but alias for clarity)
 function MSelect({
   label, value, onChange, children,
 }: {

@@ -6,7 +6,7 @@ import { serializeIssue } from '@/lib/issues'
 
 export const runtime = 'nodejs'
 
-const ESTADOS_VALIDOS = new Set(['PENDIENTE', 'EN_DESARROLLO', 'EN_TEST', 'EN_PRODUCCION', 'COBRADO', 'CANCELADO', 'NO_HACER'])
+const ESTADOS_VALIDOS = new Set(['PENDIENTE', 'EN_DESARROLLO', 'EN_TEST', 'EN_PRODUCCION', 'CANCELADO'])
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -24,9 +24,19 @@ export async function PUT(request: Request, { params }: Params) {
     return NextResponse.json({ error: 'VALIDATION_ERROR', message: 'Estado inválido.' }, { status: 422 })
   }
 
+  if (estado === 'CANCELADO') {
+    const motivo = typeof body.motivoCancelacion === 'string' ? body.motivoCancelacion.trim() : ''
+    if (!motivo) {
+      return NextResponse.json({ error: 'VALIDATION_ERROR', message: 'El motivo de cancelación es requerido.' }, { status: 422 })
+    }
+  }
+
   const data: Record<string, unknown> = { estado }
   if (estado === 'EN_PRODUCCION' && !existing.fechaProduccion) {
     data.fechaProduccion = new Date()
+  }
+  if (estado === 'CANCELADO') {
+    data.motivoCancelacion = (body.motivoCancelacion as string).trim()
   }
 
   const updated = await prisma.issue.update({
