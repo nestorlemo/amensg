@@ -613,7 +613,7 @@ export default function IssuesPage() {
           <table className="min-w-full text-sm">
             <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
-                <Th>Fecha</Th>
+                <Th>Fecha prod.</Th>
                 <Th>Descripción</Th>
                 <Th>Empresa</Th>
                 <Th>Horas</Th>
@@ -631,7 +631,7 @@ export default function IssuesPage() {
                 <tr><td className="px-4 py-8 text-center text-slate-400" colSpan={9}>No hay issues para los filtros seleccionados.</td></tr>
               ) : issues.map((issue) => (
                 <tr key={issue.id} className="hover:bg-slate-50">
-                  <Td>{issue.fecha}</Td>
+                  <Td>{issue.fechaProduccion ? issue.fechaProduccion.split('-').reverse().join('/') : '—'}</Td>
                   <Td>
                     <span className="block max-w-xs truncate" title={issue.descripcion}>
                       {issue.descripcion.length > 80 ? `${issue.descripcion.slice(0, 80)}…` : issue.descripcion}
