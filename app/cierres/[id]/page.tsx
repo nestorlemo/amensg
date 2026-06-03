@@ -194,7 +194,7 @@ export default async function CierreDetailPage({ params }: PageProps) {
       </section>
 
       <section className="rounded-md border border-slate-200 bg-white p-4">
-        <h2 className="text-lg font-semibold text-slate-950">Distribucion por socio</h2>
+        <h2 className="text-lg font-semibold text-slate-950">Distribución por socio</h2>
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="bg-slate-100 text-left text-xs uppercase text-slate-600">

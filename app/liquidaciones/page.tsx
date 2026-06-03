@@ -97,7 +97,7 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
             </thead>
             <tbody>
               <FinancialRow
-                concept="Facturacion"
+                concept="Facturación"
                 iva={facturacionIva}
                 total={facturacionConIva}
                 withoutIva={preview.ingresos.facturacionSinIva}
@@ -123,7 +123,7 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
       <section className="rounded-md border border-slate-200 bg-white p-4">
         <SectionHeader
           description={`${preview.resultado.totalEmpresas} empresas y ${preview.resultado.totalActivaciones} activaciones facturables.`}
-          title="Detalle de facturacion"
+          title="Detalle de facturación"
         />
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full text-sm">
@@ -147,7 +147,7 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
                 </tr>
               ))}
               {preview.ingresos.facturaciones.length === 0 ? (
-                <EmptyRow colSpan={5} message="No hay facturacion activa para este periodo." />
+                <EmptyRow colSpan={5} message="No hay facturación activa para este periodo." />
               ) : null}
             </tbody>
           </table>
@@ -266,7 +266,7 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
       <section className="rounded-md border border-slate-200 bg-white p-4">
         <SectionHeader
           description={`${preview.socios.length} socios activos para distribuir resultado.`}
-          title="Distribucion por socio"
+          title="Distribución por socio"
         />
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full text-sm">

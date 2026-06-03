@@ -42,7 +42,7 @@ export type ReportPreview = {
 const reportConfig: Record<ReportSlug, { title: string; description: string; enabledFilters: ReportFilterKey[] }> = {
   'mensual-empresa': {
     title: 'Mensual por empresa',
-    description: 'Resumen mensual por empresa con activaciones facturables, facturacion e ingresos adicionales.',
+    description: 'Resumen mensual por empresa con activaciones facturables, facturación e ingresos adicionales.',
     enabledFilters: ['anio', 'mes', 'empresaId'],
   },
   activaciones: {
@@ -51,8 +51,8 @@ const reportConfig: Record<ReportSlug, { title: string; description: string; ena
     enabledFilters: ['anio', 'mes', 'empresaId'],
   },
   facturacion: {
-    title: 'Facturacion',
-    description: 'Resumen de facturacion mensual por empresa con estados de cobro.',
+    title: 'Facturación',
+    description: 'Resumen de facturación mensual por empresa con estados de cobro.',
     enabledFilters: ['anio', 'mes', 'empresaId', 'estado'],
   },
   'cobros-pendientes': {
@@ -71,8 +71,8 @@ const reportConfig: Record<ReportSlug, { title: string; description: string; ena
     enabledFilters: ['anio', 'mes', 'empresaId'],
   },
   liquidacion: {
-    title: 'Liquidacion / cierre',
-    description: 'Preview del periodo abierto o snapshot del cierre cuando el periodo esta cerrado.',
+    title: 'Liquidación / cierre',
+    description: 'Preview del periodo abierto o snapshot del cierre cuando el periodo está cerrado.',
     enabledFilters: ['anio', 'mes'],
   },
 }
@@ -158,7 +158,7 @@ export async function getReportPreview(slug: ReportSlug, params: SearchParamsInp
         { label: 'Total activaciones', value: data.pagination.total },
         { label: 'Filas en preview', value: data.rows.length },
       ],
-      columns: ['Empresa', 'Periodo', 'MID', 'Chip', 'Lote', 'Estado', 'Fecha importacion', 'Fecha activacion', 'Situacion'],
+      columns: ['Empresa', 'Periodo', 'MID', 'Chip', 'Lote', 'Estado', 'Fecha importación', 'Fecha activación', 'Situación'],
       rows: data.rows.map((row) => [
         row.empresa,
         periodLabel(row.anio, row.mes),
@@ -185,9 +185,9 @@ export async function getReportPreview(slug: ReportSlug, params: SearchParamsInp
       filterOptions,
       exportPath: buildExportPath(slug, params),
       metrics: [
-        { label: 'Facturacion sin IVA', value: money(subtotal) },
+        { label: 'Facturación sin IVA', value: money(subtotal) },
         { label: 'IVA', value: money(iva) },
-        { label: 'Facturacion con IVA', value: money(total) },
+        { label: 'Facturación con IVA', value: money(total) },
         { label: 'Empresas', value: new Set(data.rows.map((row) => row.empresaId)).size },
       ],
       columns: ['Empresa', 'Periodo', 'Activaciones', 'Precio unitario', 'Subtotal', 'IVA', 'Total', 'Estado cobro', 'Fecha cobro'],
@@ -347,10 +347,10 @@ async function getMensualEmpresaPreview(params: SearchParamsInput) {
     metrics: [
       { label: 'Empresas', value: rows.length },
       { label: 'Activaciones', value: rows.reduce((acc, row) => acc + row.activaciones, 0) },
-      { label: 'Facturacion con IVA', value: money(totalFacturacion) },
+      { label: 'Facturación con IVA', value: money(totalFacturacion) },
       { label: 'Ingresos adicionales con IVA', value: money(totalIngresos) },
     ],
-    columns: ['Empresa', 'Periodo', 'Activaciones facturables', 'Facturacion sin IVA', 'IVA facturacion', 'Facturacion con IVA', 'Ingresos adicionales sin IVA', 'Ingresos adicionales con IVA'],
+    columns: ['Empresa', 'Periodo', 'Activaciones facturables', 'Facturación sin IVA', 'IVA facturación', 'Facturación con IVA', 'Ingresos adicionales sin IVA', 'Ingresos adicionales con IVA'],
     rows: rows.map((row) => [
       row.empresa,
       row.periodo,
