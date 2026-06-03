@@ -469,60 +469,68 @@ export default function IssuesPage() {
       </div>
 
       {/* Filtros */}
-      <section className="rounded-xl border border-slate-200 bg-white p-5">
+      <section className="rounded-xl border border-slate-200 bg-white p-5 space-y-3">
+        {/* Fila 1: filtros de estado/empresa/prioridad/facturación + Filtrar */}
         <div className="flex flex-wrap items-end gap-3">
-          <Select label="Estado" value={fEstado} onChange={setFEstado}>
+          <Select label="Estado" value={fEstado} onChange={setFEstado} width="w-36">
             <option value="">Todos</option>
             {ESTADOS.map((e) => <option key={e} value={e}>{e.replace(/_/g, ' ')}</option>)}
           </Select>
-          <Select label="Empresa" value={fEmpresa} onChange={setFEmpresa}>
+          <Select label="Empresa" value={fEmpresa} onChange={setFEmpresa} width="w-44">
             <option value="">Todas</option>
             {empresas.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
           </Select>
-          <Select label="Prioridad" value={fPrioridad} onChange={setFPrioridad}>
+          <Select label="Prioridad" value={fPrioridad} onChange={setFPrioridad} width="w-28">
             <option value="">Todas</option>
             {PRIORIDADES.map((p) => <option key={p} value={p}>{p}</option>)}
           </Select>
-          <Select label="Facturación" value={fFacturacion} onChange={setFFacturacion}>
+          <Select label="Facturación" value={fFacturacion} onChange={setFFacturacion} width="w-36">
             <option value="">Todos</option>
             <option value="sin_facturar">Sin facturar</option>
             <option value="facturado">Facturado</option>
           </Select>
+          <div className="flex items-end">
+            <button
+              className="h-9 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white"
+              onClick={() => void fetchAll()}
+            >
+              Filtrar
+            </button>
+          </div>
+        </div>
+        {/* Fila 2: fechas + botones de acción */}
+        <div className="flex flex-wrap items-end gap-3">
           <label className="block text-sm font-medium text-slate-700">
             Fecha prod. desde
-            <DateInput className="mt-1 block h-9 w-40 rounded-md border border-slate-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" value={fDesde} onChange={setFDesde} />
+            <DateInput className="mt-1 block h-9 w-36 rounded-md border border-slate-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" value={fDesde} onChange={setFDesde} />
           </label>
           <label className="block text-sm font-medium text-slate-700">
             Fecha prod. hasta
-            <DateInput className="mt-1 block h-9 w-40 rounded-md border border-slate-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" value={fHasta} onChange={setFHasta} />
+            <DateInput className="mt-1 block h-9 w-36 rounded-md border border-slate-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" value={fHasta} onChange={setFHasta} />
           </label>
-          <button
-            className="h-9 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white"
-            onClick={() => void fetchAll()}
-          >
-            Filtrar
-          </button>
-          <button
-            className="h-9 rounded-md border border-emerald-600 px-4 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
-            onClick={() => {
-              const qs = new URLSearchParams()
-              if (fEstado)      qs.set('estado',      fEstado)
-              if (fEmpresa)     qs.set('empresaId',   fEmpresa)
-              if (fPrioridad)   qs.set('prioridad',   fPrioridad)
-              if (fDesde)       qs.set('fechaDesde',  fDesde)
-              if (fHasta)       qs.set('fechaHasta',  fHasta)
-              if (fFacturacion) qs.set('facturacion', fFacturacion)
-              window.location.href = `/api/issues/export?${qs}`
-            }}
-          >
-            Exportar Excel
-          </button>
-          <button
-            className="ml-auto h-9 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white"
-            onClick={() => setShowForm((v) => !v)}
-          >
-            {showForm ? 'Cancelar' : '+ Nuevo issue'}
-          </button>
+          <div className="ml-auto flex items-end gap-3">
+            <button
+              className="h-9 rounded-md border border-emerald-600 px-4 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+              onClick={() => {
+                const qs = new URLSearchParams()
+                if (fEstado)      qs.set('estado',      fEstado)
+                if (fEmpresa)     qs.set('empresaId',   fEmpresa)
+                if (fPrioridad)   qs.set('prioridad',   fPrioridad)
+                if (fDesde)       qs.set('fechaDesde',  fDesde)
+                if (fHasta)       qs.set('fechaHasta',  fHasta)
+                if (fFacturacion) qs.set('facturacion', fFacturacion)
+                window.location.href = `/api/issues/export?${qs}`
+              }}
+            >
+              Exportar Excel
+            </button>
+            <button
+              className="h-9 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white"
+              onClick={() => setShowForm((v) => !v)}
+            >
+              {showForm ? 'Cancelar' : '+ Nuevo issue'}
+            </button>
+          </div>
         </div>
       </section>
 
@@ -789,15 +797,15 @@ function ReadonlyField({ label, value, highlight }: { label: string; value: stri
 }
 
 function Select({
-  label, value, onChange, children,
+  label, value, onChange, children, width = 'w-full',
 }: {
-  label: string; value: string; onChange: (v: string) => void; children: React.ReactNode
+  label: string; value: string; onChange: (v: string) => void; children: React.ReactNode; width?: string
 }) {
   return (
     <label className="block text-sm font-medium text-slate-700">
       {label}
       <select
-        className="mt-1 block h-9 w-full rounded-md border border-slate-300 px-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        className={`mt-1 block h-9 ${width} rounded-md border border-slate-300 px-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500`}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >
