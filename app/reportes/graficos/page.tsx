@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
@@ -198,19 +200,43 @@ export default function GraficosPage() {
           <section className="space-y-4">
             <SectionTitle title="Activaciones" color="#1769E0" />
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              {/* Chart 1: BarChart agrupado activaciones */}
+              {/* Chart 1: AreaChart evolución activaciones */}
               <ChartCard title="Evolución mensual de activaciones">
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={activData.map(d => ({ ...d, mes: MESES[Number(d.mes) - 1] }))}>
+                  <AreaChart data={activData.map(d => {
+                    const row = { ...d, mes: MESES[Number(d.mes) - 1] } as Record<string, number | string>
+                    const total = activEmpresas.reduce((s, emp) => s + Number(row[emp] ?? 0), 0)
+                    return { ...row, Total: total }
+                  })}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend />
                     {activEmpresas.map((emp) => (
-                      <Bar key={emp} dataKey={emp} fill={empresaColor(emp)} />
+                      <Area
+                        key={emp}
+                        type="monotone"
+                        dataKey={emp}
+                        stroke={empresaColor(emp)}
+                        fill={empresaColor(emp)}
+                        fillOpacity={0.15}
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
                     ))}
-                  </BarChart>
+                    <Area
+                      type="monotone"
+                      dataKey="Total"
+                      stroke="#0B1F3A"
+                      fill="#0B1F3A"
+                      fillOpacity={0.05}
+                      strokeWidth={3}
+                      dot={{ r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </AreaChart>
                 </ResponsiveContainer>
               </ChartCard>
 
