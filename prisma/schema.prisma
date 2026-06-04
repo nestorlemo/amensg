@@ -80,6 +80,8 @@ model ImportacionActivacion {
   activaciones         ActivacionImportada[]
   facturaciones        FacturacionMensual[]
   @@index([anio, mes])
+  @@index([estado])
+  @@index([anio, mes, estado])
 }
 
 model ActivacionImportada {
@@ -102,9 +104,15 @@ model ActivacionImportada {
   importacion          ImportacionActivacion  @relation(fields: [importacionId], references: [id])
   empresa              Empresa                @relation(fields: [empresaId], references: [id])
 
+  @@index([importacionId])
+  @@index([empresaId])
+  @@index([mid])
+  @@index([chip])
+  @@index([estadoActivacion])
+  @@index([anio, mes])
+  @@index([anio, mes, empresaId])
   @@index([empresaId, anio, mes, mid])
   @@index([empresaId, anio, mes, chip])
-  @@index([importacionId])
 }
 
 model FacturacionMensual {

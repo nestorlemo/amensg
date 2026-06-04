@@ -155,11 +155,11 @@ export async function getReportPreview(slug: ReportSlug, params: SearchParamsInp
       filterOptions,
       exportPath: buildExportPath(slug, params),
       metrics: [
-        { label: 'Total activaciones', value: data.pagination.total },
-        { label: 'Filas en preview', value: data.rows.length },
+        { label: 'Total activaciones', value: data.total },
+        { label: 'Filas en preview', value: data.data.length },
       ],
       columns: ['Empresa', 'Periodo', 'MID', 'Chip', 'Lote', 'Estado', 'Fecha importación', 'Fecha activación', 'Situación'],
-      rows: data.rows.map((row) => [
+      rows: data.data.map((row) => [
         row.empresa,
         periodLabel(row.anio, row.mes),
         row.mid,

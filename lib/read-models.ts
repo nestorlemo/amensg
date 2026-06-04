@@ -125,6 +125,9 @@ function activeBillingWhere(where: Prisma.FacturacionMensualWhereInput, params: 
 }
 
 export async function getImportaciones(params: SearchParamsInput) {
+  const page = Math.max(numberParam(params, 'page') ?? 1, 1)
+  const pageSize = 20
+  const skip = (page - 1) * pageSize
   const anio = numberParam(params, 'anio')
   const mes = numberParam(params, 'mes')
   const estado = stringParam(params, 'estado')
@@ -134,45 +137,68 @@ export async function getImportaciones(params: SearchParamsInput) {
     ...(estado ? { estado } : {}),
   }
 
-  const importaciones = await prisma.importacionActivacion.findMany({
-    where,
-    orderBy: [{ anio: 'desc' }, { mes: 'desc' }, { creadaEn: 'desc' }],
-    include: {
-      facturaciones: {
-        select: {
-          empresaId: true,
+  const [total, importaciones] = await Promise.all([
+    prisma.importacionActivacion.count({ where }),
+    prisma.importacionActivacion.findMany({
+      where,
+      orderBy: [{ anio: 'desc' }, { mes: 'desc' }, { creadaEn: 'desc' }],
+      skip,
+      take: pageSize,
+      include: {
+        facturaciones: {
+          select: {
+            empresaId: true,
+          },
+        },
+        _count: {
+          select: {
+            activaciones: true,
+          },
         },
       },
-    },
-  })
+    }),
+  ])
 
-  const rows = []
-  for (const importacion of importaciones) {
-    const totalRows = await prisma.activacionImportada.count({ where: { importacionId: importacion.id } })
-    const completedActivations = await prisma.activacionImportada.count({
-      where: { importacionId: importacion.id, tieneFechaRealActivacion: true },
-    })
-    const withoutRealActivationDate = await prisma.activacionImportada.count({
-      where: { importacionId: importacion.id, tieneFechaRealActivacion: false },
-    })
+  // Fetch completed/without counts in bulk using groupBy
+  const importacionIds = importaciones.map((i) => i.id)
+  const [completedCounts, withoutCounts] = await Promise.all([
+    prisma.activacionImportada.groupBy({
+      by: ['importacionId'],
+      where: { importacionId: { in: importacionIds }, tieneFechaRealActivacion: true },
+      _count: { _all: true },
+    }),
+    prisma.activacionImportada.groupBy({
+      by: ['importacionId'],
+      where: { importacionId: { in: importacionIds }, tieneFechaRealActivacion: false },
+      _count: { _all: true },
+    }),
+  ])
 
-    rows.push({
-      id: importacion.id,
-      anio: importacion.anio,
-      mes: importacion.mes,
-      nombreArchivo: importacion.nombreArchivo,
-      estado: importacion.estado,
-      anuladaEn: iso(importacion.anuladaEn),
-      motivoAnulacion: importacion.motivoAnulacion,
-      totalRows,
-      companies: new Set(importacion.facturaciones.map((facturacion) => facturacion.empresaId)).size,
-      completedActivations,
-      withoutRealActivationDate,
-      creadaEn: iso(importacion.creadaEn),
-    })
+  const completedMap = new Map(completedCounts.map((r) => [r.importacionId, r._count._all]))
+  const withoutMap = new Map(withoutCounts.map((r) => [r.importacionId, r._count._all]))
+
+  const data = importaciones.map((importacion) => ({
+    id: importacion.id,
+    anio: importacion.anio,
+    mes: importacion.mes,
+    nombreArchivo: importacion.nombreArchivo,
+    estado: importacion.estado,
+    anuladaEn: iso(importacion.anuladaEn),
+    motivoAnulacion: importacion.motivoAnulacion,
+    totalRows: importacion._count.activaciones,
+    companies: new Set(importacion.facturaciones.map((facturacion) => facturacion.empresaId)).size,
+    completedActivations: completedMap.get(importacion.id) ?? 0,
+    withoutRealActivationDate: withoutMap.get(importacion.id) ?? 0,
+    creadaEn: iso(importacion.creadaEn),
+  }))
+
+  return {
+    data,
+    total,
+    page,
+    pageSize,
+    totalPages: Math.max(Math.ceil(total / pageSize), 1),
   }
-
-  return { rows }
 }
 
 export async function getImportacionDetail(id: string) {
@@ -266,8 +292,7 @@ export async function getImportacionDetail(id: string) {
   }
 }
 
-export async function getActivaciones(params: SearchParamsInput) {
-  const { page, pageSize, skip, take } = pageParams(params)
+export function getActivacionesFilters(params: SearchParamsInput) {
   const anio = numberParam(params, 'anio')
   const mes = numberParam(params, 'mes')
   const empresaId = stringParam(params, 'empresaId')
@@ -277,6 +302,9 @@ export async function getActivaciones(params: SearchParamsInput) {
   const lote = stringParam(params, 'lote')
   const estadoActivacion = stringParam(params, 'estadoActivacion')
   const activacionCompletada = stringParam(params, 'activacionCompletada')
+
+  const hasFilter = Boolean(anio || mes || empresaId || importacionId || mid || chip || lote || estadoActivacion || activacionCompletada)
+
   const where: Prisma.ActivacionImportadaWhereInput = {
     ...(anio ? { anio } : {}),
     ...(mes ? { mes } : {}),
@@ -290,12 +318,81 @@ export async function getActivaciones(params: SearchParamsInput) {
     ...(activacionCompletada === 'false' ? { tieneFechaRealActivacion: false } : {}),
   }
 
-  const [total, rows, empresas] = await Promise.all([
+  return { hasFilter, where }
+}
+
+export function serializeActivacion(row: {
+  id: string
+  importacionId: string
+  empresaId: string
+  anio: number
+  mes: number
+  mid: string
+  chip: string
+  empresa: { id: string; nombre: string }
+  empresaNombreArchivo: string
+  rawRowJson: Prisma.JsonValue
+  lote: string
+  estadoActivacion: string
+  fechaImportacion: Date
+  fechaActivacion: Date | null
+  fechaVencimiento?: Date | null
+  tieneFechaRealActivacion: boolean
+  distribuidor?: Prisma.JsonValue
+  fechaAsignacionDistribuidor?: Date | null
+}) {
+  return {
+    id: row.id,
+    importacionId: row.importacionId,
+    empresaId: row.empresaId,
+    anio: row.anio,
+    mes: row.mes,
+    mid: row.mid,
+    chip: row.chip,
+    empresa: row.empresa.nombre,
+    empresaNombreArchivo: row.empresaNombreArchivo,
+    tipoActivacion: rawString(row.rawRowJson, ['Tipo de activación', 'Tipo activación', 'Tipo Activacion']),
+    lote: row.lote,
+    subLote: rawString(row.rawRowJson, ['Sub-lote', 'Sub lote', 'Sublote']),
+    estadoActivacion: row.estadoActivacion,
+    fechaImportacion: iso(row.fechaImportacion),
+    fechaActivacion: iso(row.fechaActivacion),
+    fechaVencimiento: iso((row as { fechaVencimiento?: Date | null }).fechaVencimiento ?? null),
+    distribuidor: rawString(row.rawRowJson, ['Distribuidor', 'distribuidor']),
+    fechaAsignacionDistribuidor: iso((row as { fechaAsignacionDistribuidor?: Date | null }).fechaAsignacionDistribuidor ?? null),
+    situacion: row.tieneFechaRealActivacion ? 'Completada' : 'Sin fecha real',
+  }
+}
+
+export async function getActivaciones(params: SearchParamsInput) {
+  const page = Math.max(numberParam(params, 'page') ?? 1, 1)
+  const pageSize = 100
+  const skip = (page - 1) * pageSize
+  const { hasFilter, where } = getActivacionesFilters(params)
+
+  const empresas = await prisma.empresa.findMany({
+    where: { activa: true },
+    orderBy: { nombre: 'asc' },
+    select: { id: true, nombre: true },
+  })
+
+  if (!hasFilter) {
+    return {
+      data: [],
+      total: 0,
+      page: 1,
+      pageSize,
+      totalPages: 0,
+      filters: { empresas },
+    }
+  }
+
+  const [total, rows] = await Promise.all([
     prisma.activacionImportada.count({ where }),
     prisma.activacionImportada.findMany({
       where,
       skip,
-      take,
+      take: pageSize,
       orderBy: [{ anio: 'desc' }, { mes: 'desc' }, { empresaNombreArchivo: 'asc' }, { creadaEn: 'asc' }],
       include: {
         empresa: {
@@ -306,43 +403,15 @@ export async function getActivaciones(params: SearchParamsInput) {
         },
       },
     }),
-    prisma.empresa.findMany({
-      where: { activa: true },
-      orderBy: { nombre: 'asc' },
-      select: {
-        id: true,
-        nombre: true,
-      },
-    }),
   ])
 
   return {
-    rows: rows.map((row) => ({
-      id: row.id,
-      importacionId: row.importacionId,
-      empresaId: row.empresaId,
-      anio: row.anio,
-      mes: row.mes,
-      mid: row.mid,
-      chip: row.chip,
-      empresa: row.empresa.nombre,
-      empresaNombreArchivo: row.empresaNombreArchivo,
-      tipoActivacion: rawString(row.rawRowJson, ['Tipo de activación', 'Tipo activación', 'Tipo Activacion']),
-      lote: row.lote,
-      estadoActivacion: row.estadoActivacion,
-      fechaImportacion: iso(row.fechaImportacion),
-      fechaActivacion: iso(row.fechaActivacion),
-      situacion: row.tieneFechaRealActivacion ? 'Completada' : 'Sin fecha real',
-    })),
-    pagination: {
-      page,
-      pageSize,
-      total,
-      totalPages: Math.max(Math.ceil(total / pageSize), 1),
-    },
-    filters: {
-      empresas,
-    },
+    data: rows.map((row) => serializeActivacion(row)),
+    total,
+    page,
+    pageSize,
+    totalPages: Math.max(Math.ceil(total / pageSize), 1),
+    filters: { empresas },
   }
 }
 
