@@ -19,11 +19,12 @@ export async function GET(request: Request) {
   if ('error' in auth) return auth.error
 
   const { searchParams } = new URL(request.url)
-  const estado     = searchParams.get('estado')     ?? undefined
-  const empresaId  = searchParams.get('empresaId')  ?? undefined
-  const prioridad  = searchParams.get('prioridad')  ?? undefined
-  const fechaDesde = searchParams.get('fechaDesde') ?? undefined
-  const fechaHasta = searchParams.get('fechaHasta') ?? undefined
+  const estado      = searchParams.get('estado')      ?? undefined
+  const empresaId   = searchParams.get('empresaId')   ?? undefined
+  const prioridad   = searchParams.get('prioridad')   ?? undefined
+  const fechaDesde  = searchParams.get('fechaDesde')  ?? undefined
+  const fechaHasta  = searchParams.get('fechaHasta')  ?? undefined
+  const facturacion = searchParams.get('facturacion') ?? undefined
 
   const where: Record<string, unknown> = {}
   if (estado)    where.estado    = estado
@@ -39,6 +40,8 @@ export async function GET(request: Request) {
     }
     where.fechaProduccion = range
   }
+  if (facturacion === 'sin_facturar') where.facturaIssues = { none: {} }
+  if (facturacion === 'facturado')    where.facturaIssues = { some: {} }
 
   const issues = await prisma.issue.findMany({
     where,
