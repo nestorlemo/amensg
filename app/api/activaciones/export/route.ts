@@ -71,7 +71,7 @@ export async function GET(request: Request) {
   const dataRows = data
     .map((row, i) => {
       const bg = i % 2 === 0 ? 'white' : altBg
-      const cells = [
+      const values = [
         row.mid,
         row.chip,
         row.empresa,
@@ -85,10 +85,13 @@ export async function GET(request: Request) {
         row.distribuidor,
         fmtDate(row.fechaAsignacionDistribuidor),
       ]
-        .map(
-          (cell) =>
-            `<td style="background:${bg};border:1px solid #ccc;padding:5px 10px">${escHtml(cell ?? '')}</td>`,
-        )
+      // Columns that may contain long numeric strings — force text format
+      const textCols = new Set([0, 1, 4, 5])
+      const cells = values
+        .map((cell, colIdx) => {
+          const textStyle = textCols.has(colIdx) ? "mso-number-format:'\\@';" : ''
+          return `<td style="${textStyle}background:${bg};border:1px solid #ccc;padding:5px 10px">${escHtml(cell ?? '')}</td>`
+        })
         .join('')
       return `<tr>${cells}</tr>`
     })
