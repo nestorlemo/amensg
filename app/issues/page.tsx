@@ -725,30 +725,31 @@ export default function IssuesPage() {
           <table className="min-w-full text-sm">
             <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
+                <Th>Fecha reg.</Th>
                 <Th>Fecha prod.</Th>
                 <Th>Descripción</Th>
                 <Th>Empresa</Th>
                 <Th>Horas</Th>
                 <Th>Estado</Th>
                 <Th>Facturación</Th>
-
                 <Th>Reportado por</Th>
                 <Th>Acciones</Th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td className="px-4 py-8 text-center text-slate-400" colSpan={8}>Cargando…</td></tr>
+                <tr><td className="px-4 py-8 text-center text-slate-400" colSpan={9}>Cargando…</td></tr>
               ) : issues.length === 0 ? (
-                <tr><td className="px-4 py-8 text-center text-slate-400" colSpan={8}>No hay issues para los filtros seleccionados.</td></tr>
+                <tr><td className="px-4 py-8 text-center text-slate-400" colSpan={9}>No hay issues para los filtros seleccionados.</td></tr>
               ) : issues.map((issue) => (
                 <tr key={issue.id} className="hover:bg-slate-50">
+                  <Td>{issue.fecha ? issue.fecha.split('T')[0]!.split('-').reverse().join('/') : '—'}</Td>
                   <Td>{issue.fechaProduccion ? issue.fechaProduccion.split('-').reverse().join('/') : '—'}</Td>
-                  <Td>
+                  <td className="min-w-0 px-4 py-3 text-slate-700">
                     <span className="block max-w-xs truncate" title={issue.descripcion}>
                       {issue.descripcion.length > 80 ? `${issue.descripcion.slice(0, 80)}…` : issue.descripcion}
                     </span>
-                  </Td>
+                  </td>
                   <Td>{issue.empresa?.nombre ?? '—'}</Td>
                   <Td>
                     <span
