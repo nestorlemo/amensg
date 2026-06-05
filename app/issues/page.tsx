@@ -762,9 +762,9 @@ export default function IssuesPage() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td className="px-4 py-8 text-center text-slate-400" colSpan={9}>Cargando…</td></tr>
+                <tr><td className="px-4 py-8 text-center text-slate-400" colSpan={10}>Cargando…</td></tr>
               ) : issues.length === 0 ? (
-                <tr><td className="px-4 py-8 text-center text-slate-400" colSpan={9}>No hay issues para los filtros seleccionados.</td></tr>
+                <tr><td className="px-4 py-8 text-center text-slate-400" colSpan={10}>No hay issues para los filtros seleccionados.</td></tr>
               ) : issues.map((issue) => (
                 <tr key={issue.id} className="hover:bg-slate-50">
                   <Td>{issue.fecha ? issue.fecha.split('T')[0]!.split('-').reverse().join('/') : '—'}</Td>
