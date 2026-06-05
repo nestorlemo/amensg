@@ -5,24 +5,24 @@ import { useEffect, useState } from 'react'
 import { DateInput } from '@/components/date-input'
 import { PageHeader } from '@/components/page-header'
 
-type Issue = {
-  id: string; fecha: string; descripcion: string; totalHoras: number; estado: string
+// ── Types ────────────────────────────────────────────────────────────────────
+
+type IssueDisponible = {
+  id: string
+  fecha: string
+  descripcion: string
+  totalHoras: number
+  estado: string
   empresa: { id: string; nombre: string } | null
-  facturado: boolean
 }
 
-type Socio = { id: string; nombre: string; porcentajeParticipacion: string }
-
-type EmpresaGroup = {
-  empresaId: string
+type SocioState = {
+  id: string
   nombre: string
-  issues: Issue[]
-  totalHoras: number
+  porcentaje: string // editable string, e.g. "50"
 }
 
 type EmpresaOption = { id: string; nombre: string }
-
-type EstadoFact = 'sin_facturar' | 'facturados' | 'todos'
 
 type FacturaHistorial = {
   id: string
@@ -36,265 +36,516 @@ type FacturaHistorial = {
   totalConIva: number
   estado: string
   ingresoAdicionalId: string | null
-  distribuciones: { id: string; porcentaje: number; montoUYU: number; socio: { id: string; nombre: string } }[]
+  distribuciones: {
+    id: string
+    porcentaje: number
+    montoUYU: number
+    socio: { id: string; nombre: string }
+  }[]
   issues: { id: string; descripcion: string; totalHoras: number }[]
 }
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+const fmt = (n: number) =>
+  new Intl.NumberFormat('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
+
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 
-// distribuciones: empresaId -> socioId -> porcentaje string
-type DistMap = Record<string, Record<string, string>>
+// ── Page component ────────────────────────────────────────────────────────────
 
 export default function FacturarDesarrolloPage() {
-  const now = new Date()
-  const firstOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
-  const today = now.toISOString().split('T')[0]!
-
-  const [fechaDesde, setFechaDesde] = useState('')
-  const [fechaHasta, setFechaHasta] = useState('')
-  const [fEmpresa, setFEmpresa] = useState('')
-  const [fEstadoFact, setFEstadoFact] = useState<EstadoFact>('sin_facturar')
-  const [fEstadoCobro, setFEstadoCobro] = useState('')
+  // ── Shared data ────────────────────────────────────────────────────────────
   const [empresasOpts, setEmpresasOpts] = useState<EmpresaOption[]>([])
-  const [groups, setGroups]     = useState<EmpresaGroup[]>([])
-  const [socios, setSocios]     = useState<Socio[]>([])
-  const [valorHora, setValorHora] = useState(0)
-  const [loading, setLoading]   = useState(false)
+  const [valorHora, setValorHora] = useState(45) // default 45 if config unavailable
+
+  // ── Section 1: Issues disponibles para facturar ───────────────────────────
+  const [fDesde, setFDesde] = useState('')
+  const [fHasta, setFHasta] = useState('')
+  const [fEmpresaBusqueda, setFEmpresaBusqueda] = useState('')
+  const [issuesDisponibles, setIssuesDisponibles] = useState<IssueDisponible[]>([])
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [socios, setSocios] = useState<SocioState[]>([])
+  const [buscando, setBuscando] = useState(false)
   const [searched, setSearched] = useState(false)
+  const [generando, setGenerando] = useState(false)
+  const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
-  // Per-empresa form state
-  // distribuciones: empresaId -> { socioId -> porcentaje }
-  const [distribuciones, setDistribuciones] = useState<DistMap>({})
-  const [selectedIssues, setSelectedIssues] = useState<Record<string, Set<string>>>({})
-  const [saving, setSaving]   = useState<Record<string, boolean>>({})
-  const [results, setResults] = useState<Record<string, { ok: boolean; msg: string }>>({})
-
+  // ── Section 2: Historial de facturas ──────────────────────────────────────
+  const [fEmpresaHistorial, setFEmpresaHistorial] = useState('')
+  const [fEstadoCobro, setFEstadoCobro] = useState('')
   const [facturas, setFacturas] = useState<FacturaHistorial[]>([])
-  const [loadingFacturas, setLoadingFacturas] = useState(false)
+  const [loadingHistorial, setLoadingHistorial] = useState(false)
 
-  async function fetchFacturas() {
-    setLoadingFacturas(true)
-    try {
-      const r = await fetch('/api/facturas-desarrollo')
-      const d = await r.json()
-      setFacturas((d as { facturas?: FacturaHistorial[] }).facturas ?? [])
-    } finally {
-      setLoadingFacturas(false)
-    }
-  }
-
-  async function marcarCobrado(facturaId: string) {
-    await fetch(`/api/facturas-desarrollo/${facturaId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ estado: 'COBRADO' })
-    })
-    await fetchFacturas()
-  }
-
-  async function eliminarFactura(facturaId: string) {
-    if (!confirm('¿Eliminar esta factura y su ingreso adicional asociado?')) return
-    await fetch(`/api/facturas-desarrollo/${facturaId}`, { method: 'DELETE' })
-    await fetchFacturas()
-  }
-
+  // ── Initial data fetch ────────────────────────────────────────────────────
   useEffect(() => {
+    // Socios
     fetch('/api/socios')
       .then((r) => r.json())
-      .then((d: any) => setSocios(Array.isArray(d) ? d : Array.isArray(d?.rows) ? d.rows : []))
+      .then((d: unknown) => {
+        const rows: { id: string; nombre: string; porcentajeParticipacion: string | number }[] =
+          Array.isArray(d) ? d : Array.isArray((d as { rows?: unknown[] }).rows) ? (d as { rows: { id: string; nombre: string; porcentajeParticipacion: string | number }[] }).rows : []
+        setSocios(
+          rows.map((s) => ({
+            id: s.id,
+            nombre: s.nombre,
+            porcentaje: String(Math.round(Number(s.porcentajeParticipacion) * 100)),
+          }))
+        )
+      })
       .catch(() => null)
+
+    // Valor hora from config
     fetch('/api/issues/config')
       .then((r) => r.json())
-      .then((d: { valorHoraUSD: number }) => setValorHora(d.valorHoraUSD ?? 0))
+      .then((d: { valorHoraUSD?: number }) => {
+        if (d.valorHoraUSD && d.valorHoraUSD > 0) setValorHora(d.valorHoraUSD)
+      })
       .catch(() => null)
+
+    // Empresas
     fetch('/api/empresas?activo=true')
       .then((r) => r.json())
-      .then((d: { empresas?: EmpresaOption[]; data?: EmpresaOption[] }) => setEmpresasOpts(d.empresas ?? d.data ?? []))
+      .then((d: { empresas?: EmpresaOption[]; data?: EmpresaOption[] }) =>
+        setEmpresasOpts(d.empresas ?? d.data ?? [])
+      )
       .catch(() => null)
-    void fetchFacturas()
+
+    void fetchHistorial()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // ── Section 1 helpers ─────────────────────────────────────────────────────
 
   async function handleBuscar(e: React.FormEvent) {
     e.preventDefault()
-    setLoading(true)
+    setBuscando(true)
     setSearched(false)
-    setGroups([])
+    setIssuesDisponibles([])
+    setSelectedIds(new Set())
+    setSuccessMsg(null)
+    setErrorMsg(null)
     try {
-      // Fetch EN_PRODUCCION issues filtered server-side by FacturaIssue existence
-      const qs = new URLSearchParams({ estado: 'EN_PRODUCCION', includeFacturado: 'true' })
-      if (fechaDesde) qs.set('fechaDesde', fechaDesde)
-      if (fechaHasta) qs.set('fechaHasta', fechaHasta)
-      if (fEmpresa) qs.set('empresaId', fEmpresa)
-      if (fEstadoFact === 'sin_facturar') qs.set('estadoFacturacion', 'sin_facturar')
-      else if (fEstadoFact === 'facturados') qs.set('estadoFacturacion', 'facturado')
-      const res = await fetch(`/api/issues?${qs}`)
-      const data = await res.json()
-      const issues: Issue[] = (data.issues as Issue[]) ?? []
-
-      const map = new Map<string, EmpresaGroup>()
-      for (const issue of issues) {
-        const eId = issue.empresa?.id ?? 'sin-empresa'
-        const eNombre = issue.empresa?.nombre ?? 'Sin empresa'
-        if (!map.has(eId)) map.set(eId, { empresaId: eId, nombre: eNombre, issues: [], totalHoras: 0 })
-        const g = map.get(eId)!
-        g.issues.push(issue)
-        g.totalHoras += issue.totalHoras
-      }
-
-      const gs = Array.from(map.values())
-      setGroups(gs)
-
-      const initSel: Record<string, Set<string>> = {}
-      for (const g of gs) {
-        initSel[g.empresaId] = new Set(g.issues.filter((i) => !i.facturado).map((i) => i.id))
-      }
-      setSelectedIssues(initSel)
-      // Reset distribuciones — keep existing values if re-searching
-      setDistribuciones((prev) => {
-        const next: DistMap = {}
-        for (const g of gs) next[g.empresaId] = prev[g.empresaId] ?? {}
-        return next
-      })
+      const qs = new URLSearchParams({ estado: 'sin_facturar' })
+      if (fDesde) qs.set('fechaDesde', fDesde)
+      if (fHasta) qs.set('fechaHasta', fHasta)
+      if (fEmpresaBusqueda) qs.set('empresaId', fEmpresaBusqueda)
+      const res = await fetch(`/api/facturas-desarrollo?${qs}`)
+      const data = (await res.json()) as { issues?: IssueDisponible[] }
+      const issues = data.issues ?? []
+      setIssuesDisponibles(issues)
+      // Pre-select all
+      setSelectedIds(new Set(issues.map((i) => i.id)))
       setSearched(true)
     } finally {
-      setLoading(false)
+      setBuscando(false)
     }
   }
 
-  async function handleFacturar(g: EmpresaGroup) {
-    if (valorHora <= 0) {
-      setResults((r) => ({ ...r, [g.empresaId]: { ok: false, msg: 'No hay valor hora registrado.' } }))
-      return
+  function toggleAll() {
+    if (selectedIds.size === issuesDisponibles.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(issuesDisponibles.map((i) => i.id)))
     }
+  }
 
-    const issueIds = Array.from(selectedIssues[g.empresaId] ?? [])
-    if (issueIds.length === 0) {
-      setResults((r) => ({ ...r, [g.empresaId]: { ok: false, msg: 'Seleccioná al menos un issue.' } }))
-      return
-    }
+  function toggleOne(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
 
-    const pcts = distribuciones[g.empresaId] ?? {}
-    const distEntries = socios
-      .map((s) => ({ socioId: s.id, porcentaje: Number(pcts[s.id] || 0) }))
+  function setSocioPct(id: string, pct: string) {
+    setSocios((prev) => prev.map((s) => (s.id === id ? { ...s, porcentaje: pct } : s)))
+  }
+
+  const totalPct = socios.reduce((acc, s) => acc + Number(s.porcentaje || 0), 0)
+  const pctOk = socios.length === 0 || Math.abs(totalPct - 100) < 0.01
+
+  const selIssues = issuesDisponibles.filter((i) => selectedIds.has(i.id))
+  const totalHorasSel = selIssues.reduce((s, i) => s + i.totalHoras, 0)
+  const totalSinIva = Math.round(totalHorasSel * valorHora * 100) / 100
+  const ivaAmt = Math.round(totalSinIva * 0.22 * 100) / 100
+  const totalConIva = Math.round((totalSinIva + ivaAmt) * 100) / 100
+
+  // Derive empresaId from selected issues (first one)
+  const empresaIdDeIssues = selIssues[0]?.empresa?.id ?? ''
+
+  async function handleGenerar() {
+    setGenerando(true)
+    setSuccessMsg(null)
+    setErrorMsg(null)
+
+    // We need to derive fechaDesde/fechaHasta from the selected issues or the filter
+    // Use filter values if provided, otherwise derive from issues dates
+    const sortedDates = selIssues.map((i) => i.fecha).sort()
+    const derivedDesde = fDesde || sortedDates[0] || ''
+    const derivedHasta = fHasta || sortedDates[sortedDates.length - 1] || ''
+
+    const distribuciones = socios
+      .map((s) => ({ socioId: s.id, porcentaje: Number(s.porcentaje || 0) }))
       .filter((d) => d.porcentaje > 0)
-    const totalPct = distEntries.reduce((s, d) => s + d.porcentaje, 0)
-    if (socios.length > 0 && Math.abs(totalPct - 100) > 0.01) {
-      setResults((r) => ({ ...r, [g.empresaId]: { ok: false, msg: 'Los porcentajes de distribución deben sumar 100%.' } }))
-      return
-    }
 
-    setSaving((s) => ({ ...s, [g.empresaId]: true }))
     try {
       const res = await fetch('/api/facturas-desarrollo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          fechaDesde,
-          fechaHasta,
-          empresaId: g.empresaId,
+          fechaDesde: derivedDesde,
+          fechaHasta: derivedHasta,
+          empresaId: empresaIdDeIssues,
           tipoCambio: 1,
-          valorHoraUSD: valorHora,
-          issueIds,
-          distribuciones: distEntries,
+          issueIds: Array.from(selectedIds),
+          distribuciones,
+          crearCobro: true,
         }),
       })
-      const data = await res.json()
+      const data = (await res.json()) as { message?: string; totalConIva?: number }
       if (!res.ok) {
-        setResults((r) => ({ ...r, [g.empresaId]: { ok: false, msg: (data as { message?: string }).message ?? 'Error al facturar.' } }))
+        setErrorMsg(data.message ?? 'Error al generar la factura.')
       } else {
-        setResults((r) => ({ ...r, [g.empresaId]: { ok: true, msg: `Factura creada. Total: $${((data as { totalConIva?: number }).totalConIva ?? 0).toFixed(2)} USD` } }))
-        void fetchFacturas()
-        setGroups((prev) => prev.map((grp) =>
-          grp.empresaId !== g.empresaId ? grp : {
-            ...grp,
-            issues: grp.issues.map((i) => issueIds.includes(i.id) ? { ...i, facturado: true } : i),
-          }
-        ))
+        setSuccessMsg(`Factura generada. Total: $${fmt(data.totalConIva ?? 0)} USD`)
+        setSelectedIds(new Set())
+        setIssuesDisponibles([])
+        setSearched(false)
+        void fetchHistorial()
       }
+    } catch {
+      setErrorMsg('Error de red al generar la factura.')
     } finally {
-      setSaving((s) => ({ ...s, [g.empresaId]: false }))
+      setGenerando(false)
     }
   }
 
-  function toggleIssue(eId: string, issue: Issue) {
-    if (issue.facturado) return
-    setSelectedIssues((prev) => {
-      const next = new Set(prev[eId] ?? [])
-      if (next.has(issue.id)) next.delete(issue.id); else next.add(issue.id)
-      return { ...prev, [eId]: next }
-    })
-  }
+  // ── Section 2 helpers ─────────────────────────────────────────────────────
 
-  function setPct(eId: string, socioId: string, pct: string) {
-    setDistribuciones((prev) => ({
-      ...prev,
-      [eId]: { ...(prev[eId] ?? {}), [socioId]: pct },
-    }))
+  async function fetchHistorial() {
+    setLoadingHistorial(true)
+    try {
+      const res = await fetch('/api/facturas-desarrollo')
+      const data = (await res.json()) as { facturas?: FacturaHistorial[] }
+      setFacturas(data.facturas ?? [])
+    } finally {
+      setLoadingHistorial(false)
+    }
   }
 
   const filteredFacturas = facturas.filter((f) => {
     if (fEstadoCobro && f.estado !== fEstadoCobro) return false
-    if (fEmpresa && f.empresa.id !== fEmpresa) return false
-    if (fechaDesde) {
-      const [y, m] = fechaDesde.split('-').map(Number)
-      if (f.anio * 100 + f.mes < (y ?? 0) * 100 + (m ?? 0)) return false
-    }
-    if (fechaHasta) {
-      const [y, m] = fechaHasta.split('-').map(Number)
-      if (f.anio * 100 + f.mes > (y ?? 0) * 100 + (m ?? 0)) return false
-    }
+    if (fEmpresaHistorial && f.empresa.id !== fEmpresaHistorial) return false
     return true
   })
 
+  async function marcarCobrado(facturaId: string) {
+    await fetch(`/api/facturas-desarrollo/${facturaId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ estado: 'COBRADO' }),
+    })
+    void fetchHistorial()
+  }
+
+  async function eliminarFactura(facturaId: string) {
+    if (!confirm('¿Eliminar esta factura y su ingreso adicional asociado?')) return
+    await fetch(`/api/facturas-desarrollo/${facturaId}`, { method: 'DELETE' })
+    void fetchHistorial()
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+
   return (
     <div className="space-y-6">
-      <PageHeader section="DESARROLLO" title="Facturación de desarrollo" description="Generá facturas de desarrollo por empresa a partir de issues en producción." />
+      <PageHeader
+        section="DESARROLLO"
+        title="Facturación de desarrollo"
+        description="Generá facturas de desarrollo por empresa a partir de issues en producción."
+      />
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5">
-        <form className="flex flex-wrap items-end gap-4" onSubmit={(e) => void handleBuscar(e)}>
+      {/* ══════════════════════════════════════════════════════════════════════
+          SECTION 1 — Issues disponibles para facturar
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section className="rounded-xl border border-slate-200 bg-white p-6">
+        <h2 className="mb-5 text-base font-semibold text-slate-950">
+          Issues disponibles para facturar
+        </h2>
+
+        {/* Search filters */}
+        <form className="mb-5 flex flex-wrap items-end gap-4" onSubmit={(e) => void handleBuscar(e)}>
           <label className="block text-sm font-medium text-slate-700">
             Fecha prod. desde
-            <DateInput className="mt-1 block h-9 w-32 rounded-md border border-slate-300 px-3 text-sm" value={fechaDesde} onChange={setFechaDesde} />
+            <DateInput
+              className="mt-1 block h-9 w-32 rounded-md border border-slate-300 px-3 text-sm"
+              value={fDesde}
+              onChange={setFDesde}
+            />
           </label>
           <label className="block text-sm font-medium text-slate-700">
             Fecha prod. hasta
-            <DateInput className="mt-1 block h-9 w-32 rounded-md border border-slate-300 px-3 text-sm" value={fechaHasta} onChange={setFechaHasta} />
+            <DateInput
+              className="mt-1 block h-9 w-32 rounded-md border border-slate-300 px-3 text-sm"
+              value={fHasta}
+              onChange={setFHasta}
+            />
           </label>
           <label className="block text-sm font-medium text-slate-700">
             Empresa
-            <select className="mt-1 block h-9 w-48 rounded-md border border-slate-300 px-3 text-sm" value={fEmpresa} onChange={(e) => setFEmpresa(e.target.value)}>
+            <select
+              className="mt-1 block h-9 w-48 rounded-md border border-slate-300 px-3 text-sm"
+              value={fEmpresaBusqueda}
+              onChange={(e) => setFEmpresaBusqueda(e.target.value)}
+            >
               <option value="">Todas</option>
               {empresasOpts.map((emp) => (
-                <option key={emp.id} value={emp.id}>{emp.nombre}</option>
+                <option key={emp.id} value={emp.id}>
+                  {emp.nombre}
+                </option>
               ))}
             </select>
           </label>
-<label className="block text-sm font-medium text-slate-700">
-            Estado cobro
-            <select className="mt-1 block h-9 w-36 rounded-md border border-slate-300 px-3 text-sm" value={fEstadoCobro} onChange={(e) => setFEstadoCobro(e.target.value)}>
-              <option value="">Todos</option>
-              <option value="PENDIENTE">Pendiente</option>
-              <option value="COBRADO">Cobrado</option>
-            </select>
-          </label>
-          <button className="h-9 rounded-md bg-slate-950 px-5 text-sm font-semibold text-white disabled:opacity-50" disabled={loading} type="submit">
-            {loading ? 'Buscando…' : 'Buscar issues'}
+          <button
+            className="h-9 rounded-md bg-slate-950 px-5 text-sm font-semibold text-white disabled:opacity-50"
+            disabled={buscando}
+            type="submit"
+          >
+            {buscando ? 'Buscando…' : 'Buscar'}
           </button>
         </form>
+
         {valorHora > 0 && (
-          <p className="mt-2 text-sm text-slate-500">Valor hora actual: <span className="font-semibold text-slate-800">${valorHora.toFixed(2)} USD</span></p>
+          <p className="mb-4 text-sm text-slate-500">
+            Valor hora actual:{' '}
+            <span className="font-semibold text-slate-800">${valorHora.toFixed(2)} USD</span>
+          </p>
+        )}
+
+        {/* Issues table */}
+        {searched && issuesDisponibles.length === 0 && (
+          <p className="rounded-lg border border-slate-100 bg-slate-50 p-4 text-sm text-slate-500">
+            No hay issues sin facturar para los filtros seleccionados.
+          </p>
+        )}
+
+        {issuesDisponibles.length > 0 && (
+          <>
+            <div className="mb-4 overflow-x-auto rounded-md border border-slate-200">
+              <table className="min-w-full text-sm">
+                <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
+                  <tr>
+                    <th className="px-3 py-2 text-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.size === issuesDisponibles.length && issuesDisponibles.length > 0}
+                        onChange={toggleAll}
+                        title="Seleccionar todos"
+                      />
+                    </th>
+                    <th className="px-3 py-2 text-left">Fecha</th>
+                    <th className="px-3 py-2 text-left">Empresa</th>
+                    <th className="px-3 py-2 text-left">Descripción</th>
+                    <th className="px-3 py-2 text-right">Horas</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {issuesDisponibles.map((issue) => (
+                    <tr
+                      key={issue.id}
+                      className={selectedIds.has(issue.id) ? '' : 'opacity-50'}
+                    >
+                      <td className="px-3 py-2 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(issue.id)}
+                          onChange={() => toggleOne(issue.id)}
+                        />
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 text-slate-600">
+                        {issue.fecha}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 text-slate-600">
+                        {issue.empresa?.nombre ?? '—'}
+                      </td>
+                      <td className="px-3 py-2 text-slate-700">
+                        <span title={issue.descripcion}>
+                          {issue.descripcion.length > 80
+                            ? issue.descripcion.slice(0, 80) + '…'
+                            : issue.descripcion}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 text-right font-medium">
+                        {issue.totalHoras}h
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Dynamic summary */}
+            <div className="mb-6 rounded-lg border border-slate-100 bg-slate-50 p-4 text-sm text-slate-700">
+              <p>
+                <span className="font-medium">Issues seleccionados:</span>{' '}
+                {selectedIds.size} de {issuesDisponibles.length}
+              </p>
+              <p>
+                <span className="font-medium">Total horas:</span>{' '}
+                {totalHorasSel.toFixed(2)} h
+              </p>
+              <p>
+                <span className="font-medium">Total USD s/IVA:</span>{' '}
+                ${fmt(totalSinIva)}
+              </p>
+              <p>
+                <span className="font-medium">IVA (22%):</span>{' '}
+                ${fmt(ivaAmt)}
+              </p>
+              <p className="font-semibold text-slate-950">
+                Total c/IVA USD: ${fmt(totalConIva)}
+              </p>
+            </div>
+
+            {/* Socios distribution */}
+            <div className="mb-6 rounded-lg border border-slate-200 p-4">
+              <h3 className="mb-3 text-sm font-semibold text-slate-700">
+                Distribución entre socios
+              </h3>
+              {socios.length === 0 ? (
+                <p className="text-sm text-slate-400">Cargando socios…</p>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    {socios.map((socio) => {
+                      const monto = totalConIva * Number(socio.porcentaje || 0) / 100
+                      return (
+                        <div key={socio.id} className="flex items-center gap-3">
+                          <span className="w-40 text-sm text-slate-700">{socio.nombre}</span>
+                          <input
+                            className="h-9 w-24 rounded-md border border-slate-300 px-3 text-right text-sm"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="100"
+                            placeholder="0"
+                            value={socio.porcentaje}
+                            onChange={(e) => setSocioPct(socio.id, e.target.value)}
+                          />
+                          <span className="text-sm text-slate-500">%</span>
+                          <span className="w-28 text-right text-sm font-semibold text-slate-800">
+                            {socio.porcentaje ? `$${fmt(monto)} USD` : '—'}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="mt-3 flex items-center gap-2">
+                    <span
+                      className={`text-sm font-semibold ${pctOk ? 'text-emerald-700' : totalPct > 0 ? 'text-red-600' : 'text-slate-400'}`}
+                    >
+                      Total asignado: {totalPct.toFixed(1)}%
+                    </span>
+                    {!pctOk && totalPct > 0 && (
+                      <span className="text-xs text-red-600">
+                        Los porcentajes deben sumar 100%
+                      </span>
+                    )}
+                    {pctOk && totalPct > 0 && (
+                      <span className="text-xs text-emerald-600">OK</span>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Feedback messages */}
+            {successMsg && (
+              <p className="mb-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                {successMsg}
+              </p>
+            )}
+            {errorMsg && (
+              <p className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {errorMsg}
+              </p>
+            )}
+
+            {/* Generate button */}
+            <button
+              className="h-9 rounded-md bg-blue-600 px-5 text-sm font-semibold text-white disabled:opacity-50"
+              disabled={
+                generando ||
+                selectedIds.size === 0 ||
+                !pctOk ||
+                !empresaIdDeIssues
+              }
+              onClick={() => void handleGenerar()}
+              title={
+                !pctOk
+                  ? 'Los porcentajes de socios deben sumar 100%'
+                  : selectedIds.size === 0
+                  ? 'Seleccioná al menos un issue'
+                  : undefined
+              }
+            >
+              {generando ? 'Generando…' : 'Generar factura'}
+            </button>
+          </>
         )}
       </section>
 
+      {/* ══════════════════════════════════════════════════════════════════════
+          SECTION 2 — Historial de facturas
+      ══════════════════════════════════════════════════════════════════════ */}
       <section className="rounded-xl border border-slate-200 bg-white">
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-          <h2 className="text-sm font-semibold text-slate-950">Historial de facturas</h2>
-          <button onClick={() => void fetchFacturas()} className="text-xs text-slate-500 hover:text-slate-700">↻ Actualizar</button>
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 px-6 py-4">
+          <h2 className="text-base font-semibold text-slate-950">Historial de facturas</h2>
+
+          {/* Historial filters */}
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="block text-xs font-medium text-slate-600">
+              Empresa
+              <select
+                className="mt-1 block h-8 w-44 rounded-md border border-slate-300 px-2 text-xs"
+                value={fEmpresaHistorial}
+                onChange={(e) => setFEmpresaHistorial(e.target.value)}
+              >
+                <option value="">Todas</option>
+                {empresasOpts.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.nombre}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-xs font-medium text-slate-600">
+              Estado cobro
+              <select
+                className="mt-1 block h-8 w-36 rounded-md border border-slate-300 px-2 text-xs"
+                value={fEstadoCobro}
+                onChange={(e) => setFEstadoCobro(e.target.value)}
+              >
+                <option value="">Todos</option>
+                <option value="PENDIENTE">Pendiente</option>
+                <option value="COBRADO">Cobrado</option>
+              </select>
+            </label>
+            <button
+              onClick={() => void fetchHistorial()}
+              className="h-8 rounded-md border border-slate-300 px-3 text-xs text-slate-600 hover:bg-slate-50"
+            >
+              Actualizar
+            </button>
+          </div>
         </div>
-        {loadingFacturas ? (
+
+        {loadingHistorial ? (
           <p className="p-6 text-sm text-slate-400">Cargando…</p>
         ) : filteredFacturas.length === 0 ? (
-          <p className="p-6 text-sm text-slate-400">No hay facturas para los filtros seleccionados.</p>
+          <p className="p-6 text-sm text-slate-400">
+            No hay facturas para los filtros seleccionados.
+          </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
@@ -314,30 +565,51 @@ export default function FacturarDesarrolloPage() {
               <tbody className="divide-y divide-slate-100">
                 {filteredFacturas.map((f) => (
                   <tr key={f.id}>
-                    <td className="px-4 py-3 whitespace-nowrap">{MESES[f.mes - 1]} {f.anio}</td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      {String(f.mes).padStart(2, '0')}/{f.anio}
+                    </td>
                     <td className="px-4 py-3">{f.empresa.nombre}</td>
                     <td className="px-4 py-3 text-right">{f.totalHoras}h</td>
-                    <td className="px-4 py-3 text-right">${f.totalUSD.toFixed(2)} USD</td>
-                    <td className="px-4 py-3 text-right">${f.iva.toFixed(2)} USD</td>
-                    <td className="px-4 py-3 text-right font-semibold">${f.totalConIva.toFixed(2)} USD</td>
-                    <td className="px-4 py-3">
-                      {f.distribuciones.length === 0 ? '—' : f.distribuciones.map(d => (
-                        <div key={d.id} className="text-xs">{d.socio.nombre}: {d.porcentaje}% · ${(f.totalConIva * d.porcentaje / 100).toFixed(2)} USD</div>
-                      ))}
+                    <td className="px-4 py-3 text-right">${fmt(f.totalUSD)} USD</td>
+                    <td className="px-4 py-3 text-right">${fmt(f.iva)} USD</td>
+                    <td className="px-4 py-3 text-right font-semibold">
+                      ${fmt(f.totalConIva)} USD
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${f.estado === 'COBRADO' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                      {f.distribuciones.length === 0
+                        ? '—'
+                        : f.distribuciones.map((d) => (
+                            <div key={d.id} className="text-xs">
+                              {d.socio.nombre}: {d.porcentaje}% · $
+                              {fmt((f.totalConIva * d.porcentaje) / 100)} USD
+                            </div>
+                          ))}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                          f.estado === 'COBRADO'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-amber-100 text-amber-800'
+                        }`}
+                      >
                         {f.estado}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
                         {f.estado !== 'COBRADO' && (
-                          <button onClick={() => void marcarCobrado(f.id)} className="rounded border border-emerald-300 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50">
+                          <button
+                            onClick={() => void marcarCobrado(f.id)}
+                            className="rounded border border-emerald-300 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
+                          >
                             Marcar cobrado
                           </button>
                         )}
-                        <button onClick={() => void eliminarFactura(f.id)} className="rounded border border-red-300 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50">
+                        <button
+                          onClick={() => void eliminarFactura(f.id)}
+                          className="rounded border border-red-300 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
+                        >
                           Eliminar
                         </button>
                       </div>
@@ -349,159 +621,6 @@ export default function FacturarDesarrolloPage() {
           </div>
         )}
       </section>
-
-      {searched && groups.length === 0 && (
-        <p className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
-          {fEstadoFact === 'sin_facturar'
-            ? 'No hay issues EN_PRODUCCION para los filtros seleccionados. Si ya fueron facturados, cambiá el filtro a "Facturados" o "Todos".'
-            : 'No hay issues para los filtros seleccionados.'}
-        </p>
-      )}
-
-      {groups.map((g) => {
-        const selIds         = selectedIssues[g.empresaId] ?? new Set()
-        const selIssues      = g.issues.filter((i) => selIds.has(i.id))
-        const selHoras       = selIssues.reduce((s, i) => s + i.totalHoras, 0)
-        const totalUSD       = Math.round(selHoras * valorHora * 100) / 100
-        const ivaUSD         = Math.round(totalUSD * 0.22 * 100) / 100
-        const totalConIvaUSD = Math.round((totalUSD + ivaUSD) * 100) / 100
-        const pcts           = distribuciones[g.empresaId] ?? {}
-        const totalPct       = socios.reduce((s, sc) => s + Number(pcts[sc.id] || 0), 0)
-        const distOk         = socios.length === 0 || Math.abs(totalPct - 100) < 0.01
-        const res            = results[g.empresaId]
-
-        return (
-          <section key={g.empresaId} className="rounded-xl border border-slate-200 bg-white p-6">
-            <h2 className="mb-4 text-base font-semibold text-slate-950">{g.nombre}</h2>
-
-            {/* Issues */}
-            <div className="mb-4 overflow-x-auto rounded-md border border-slate-200">
-              <table className="min-w-full text-sm">
-                <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
-                  <tr>
-                    <th className="px-3 py-2 text-center">✓</th>
-                    <th className="px-3 py-2 text-left">Fecha</th>
-                    <th className="px-3 py-2 text-left">Empresa</th>
-                    <th className="px-3 py-2 text-left">Descripción</th>
-                    <th className="px-3 py-2 text-right">Horas</th>
-                    <th className="px-3 py-2 text-left">Estado</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {g.issues.map((issue) => {
-                    const isFacturado = issue.facturado
-                    return (
-                      <tr key={issue.id} className={selIds.has(issue.id) ? '' : 'opacity-50'}>
-                        <td className="px-3 py-2 text-center">
-                          <input
-                            type="checkbox"
-                            checked={selIds.has(issue.id)}
-                            disabled={isFacturado}
-                            onChange={() => toggleIssue(g.empresaId, issue)}
-                          />
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-2 text-slate-600">{issue.fecha}</td>
-                        <td className="whitespace-nowrap px-3 py-2 text-slate-600">{issue.empresa?.nombre ?? '—'}</td>
-                        <td className="px-3 py-2 text-slate-700">
-                          <span title={issue.descripcion}>{issue.descripcion.length > 80 ? issue.descripcion.slice(0, 80) + '…' : issue.descripcion}</span>
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-2 text-right font-medium">{issue.totalHoras}h</td>
-                        <td className="whitespace-nowrap px-3 py-2">
-                          {isFacturado && (
-                            <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800">Ya facturado</span>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Totales */}
-            <div className="mb-6 grid gap-3 md:grid-cols-4">
-              <div className="rounded-md border border-slate-100 bg-slate-50 p-3 text-center">
-                <p className="text-xs text-slate-500">Total horas</p>
-                <p className="text-xl font-bold text-slate-950">{selHoras.toFixed(2)}h</p>
-              </div>
-              <div className="rounded-md border border-slate-100 bg-slate-50 p-3 text-center">
-                <p className="text-xs text-slate-500">Total S/IVA USD</p>
-                <p className="text-xl font-bold text-blue-700">${totalUSD.toFixed(2)} USD</p>
-              </div>
-              <div className="rounded-md border border-slate-100 bg-slate-50 p-3 text-center">
-                <p className="text-xs text-slate-500">IVA (22%) USD</p>
-                <p className="text-xl font-bold text-slate-700">${ivaUSD.toFixed(2)} USD</p>
-              </div>
-              <div className="rounded-md border border-emerald-100 bg-emerald-50 p-3 text-center">
-                <p className="text-xs text-slate-500">Total C/IVA USD</p>
-                <p className="text-xl font-bold text-emerald-700">${totalConIvaUSD.toFixed(2)} USD</p>
-              </div>
-            </div>
-
-            {/* Distribución entre socios — visible cuando hay issues seleccionados */}
-            {selIssues.length > 0 && (
-              <div className="mb-6 rounded-lg border border-slate-200 p-4">
-                <h3 className="mb-3 text-sm font-semibold text-slate-700">Distribución entre socios</h3>
-                {socios.length === 0 ? (
-                  <p className="text-sm text-slate-400">Cargando socios…</p>
-                ) : (
-                  <>
-                    <div className="space-y-2">
-                      {socios.map((socio) => {
-                        const pct = pcts[socio.id] ?? ''
-                        const monto = totalConIvaUSD * Number(pct || 0) / 100
-                        return (
-                          <div key={socio.id} className="flex items-center gap-3">
-                            <span className="w-40 text-sm text-slate-700">{socio.nombre}</span>
-                            <input
-                              className="h-9 w-24 rounded-md border border-slate-300 px-3 text-right text-sm"
-                              type="number" step="0.01" min="0" max="100" placeholder="0"
-                              value={pct}
-                              onChange={(e) => setPct(g.empresaId, socio.id, e.target.value)}
-                            />
-                            <span className="text-sm text-slate-500">%</span>
-                            <span className="w-28 text-right text-sm font-semibold text-slate-800">
-                              {pct ? `$${monto.toFixed(2)} USD` : '—'}
-                            </span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                    <div className="mt-3 flex items-center gap-2">
-                      <span className={`text-sm font-semibold ${distOk ? 'text-emerald-700' : totalPct > 0 ? 'text-red-600' : 'text-slate-400'}`}>
-                        Total asignado: {totalPct.toFixed(1)}%
-                      </span>
-                      {!distOk && totalPct > 0 && (
-                        <span className="text-xs text-red-600">⚠ Los porcentajes deben sumar 100%</span>
-                      )}
-                      {distOk && totalPct > 0 && (
-                        <span className="text-xs text-emerald-600">✓ OK</span>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-
-            {res && (
-              <p className={`mb-3 rounded-md px-3 py-2 text-sm ${res.ok ? 'border border-emerald-200 bg-emerald-50 text-emerald-700' : 'border border-red-200 bg-red-50 text-red-700'}`}>
-                {res.msg}
-              </p>
-            )}
-
-            {!res?.ok && (
-              <button
-                className="h-9 rounded-md bg-blue-600 px-5 text-sm font-semibold text-white disabled:opacity-50"
-                disabled={saving[g.empresaId] || valorHora <= 0 || !distOk || selIssues.length === 0}
-                onClick={() => void handleFacturar(g)}
-                title={!distOk ? 'Completá la distribución entre socios (debe sumar 100%)' : undefined}
-              >
-                {saving[g.empresaId] ? 'Generando…' : 'Generar factura'}
-              </button>
-            )}
-          </section>
-        )
-      })}
     </div>
   )
 }
