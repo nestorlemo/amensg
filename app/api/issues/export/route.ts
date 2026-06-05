@@ -45,16 +45,22 @@ export async function GET(request: Request) {
   if (facturacion === 'sin_facturar') where.facturaIssues = { none: {} }
   if (facturacion === 'facturado')    where.facturaIssues = { some: {} }
 
-  const issues = await prisma.issue.findMany({
-    where,
-    include: { empresa: { select: { nombre: true } } },
-    orderBy: [{ fecha: 'desc' }, { creadoEn: 'desc' }],
-  })
+  const [issues, valorHoraParam] = await Promise.all([
+    prisma.issue.findMany({
+      where,
+      include: { empresa: { select: { nombre: true } } },
+      orderBy: [{ fecha: 'desc' }, { creadoEn: 'desc' }],
+    }),
+    prisma.parametro.findUnique({ where: { clave: 'VALOR_HORA_DESARROLLO_USD' } }),
+  ])
+
+  const valorHoraUSD = valorHoraParam ? Number(valorHoraParam.valor) : 45
 
   const totDev    = issues.reduce((s, i) => s + Number(i.horasDesarrollo), 0)
   const totTest   = issues.reduce((s, i) => s + Number(i.horasTest),       0)
   const totRework = issues.reduce((s, i) => s + Number(i.horasRework),     0)
   const totTotal  = issues.reduce((s, i) => s + Number(i.totalHoras),      0)
+  const totUSD    = Math.round(totTotal * valorHoraUSD * 100) / 100
 
   const rows = issues.map((i, idx) => {
     const bg = idx % 2 === 0 ? '#ffffff' : '#EEF2FF'
@@ -118,7 +124,8 @@ export async function GET(request: Request) {
       <td style="text-align:right">${totTest.toFixed(2)}</td>
       <td style="text-align:right">${totRework.toFixed(2)}</td>
       <td style="text-align:right">${totTotal.toFixed(2)}</td>
-      <td colspan="4"></td>
+      <td colspan="3"></td>
+      <td style="text-align:right">$${totUSD.toFixed(2)} USD</td>
     </tr>
   </tfoot>
 </table>
