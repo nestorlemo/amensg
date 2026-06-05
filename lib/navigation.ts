@@ -12,6 +12,7 @@ export const navigationItems: NavItem[] = [
   { href: '/activaciones',          label: 'Activaciones',        icon: 'Zap' },
   { href: '/facturacion',           label: 'Facturación',         icon: 'FileText' },
   { href: '/cobros',                label: 'Cobros',              icon: 'CreditCard' },
+  { href: '/cobros-unificado',      label: 'Gestión de Cobros',   icon: 'CreditCard' },
   { href: '/empresas',              label: 'Empresas',            icon: 'Building2' },
   { href: '/gastos',                label: 'Gastos',              icon: 'Receipt' },
   { href: '/ingresos-adicionales',  label: 'Ingresos adicionales', icon: 'PlusCircle' },
