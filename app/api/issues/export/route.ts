@@ -124,8 +124,13 @@ export async function GET(request: Request) {
       <td style="text-align:right">${totTest.toFixed(2)}</td>
       <td style="text-align:right">${totRework.toFixed(2)}</td>
       <td style="text-align:right">${totTotal.toFixed(2)}</td>
-      <td colspan="3"></td>
-      <td style="text-align:right">$${totUSD.toFixed(2)} USD</td>
+      <td colspan="4"></td>
+    </tr>
+    <tr class="totals">
+      <td>TOTAL SIN IVA</td>
+      <td colspan="5"></td>
+      <td style="mso-number-format:'\\@';text-align:right;font-weight:bold">USD ${new Intl.NumberFormat('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totUSD)}</td>
+      <td colspan="5"></td>
     </tr>
   </tfoot>
 </table>
