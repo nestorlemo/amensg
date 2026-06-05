@@ -13,8 +13,46 @@ export async function GET(request: Request) {
   if ('error' in auth) return auth.error
 
   const { searchParams } = new URL(request.url)
-  const empresaId = searchParams.get('empresaId') ?? undefined
+  const empresaId          = searchParams.get('empresaId')          ?? undefined
   const ingresoAdicionalId = searchParams.get('ingresoAdicionalId') ?? undefined
+  const estado             = searchParams.get('estado')             ?? undefined
+  const fechaDesde         = searchParams.get('fechaDesde')         ?? undefined
+  const fechaHasta         = searchParams.get('fechaHasta')         ?? undefined
+
+  // When estado=sin_facturar, return issues not yet associated with any FacturaDesarrollo
+  if (estado === 'sin_facturar') {
+    const issueWhere: Record<string, unknown> = {
+      eliminado: false,
+      estado: 'EN_PRODUCCION',
+      facturaIssues: { none: {} },
+    }
+    if (empresaId) issueWhere.empresaId = empresaId
+    if (fechaDesde || fechaHasta) {
+      const range: Record<string, Date> = {}
+      if (fechaDesde) range.gte = new Date(fechaDesde)
+      if (fechaHasta) {
+        const hasta = new Date(fechaHasta)
+        hasta.setDate(hasta.getDate() + 1)
+        range.lt = hasta
+      }
+      issueWhere.fechaProduccion = range
+    }
+    const issues = await prisma.issue.findMany({
+      where: issueWhere,
+      include: { empresa: { select: { id: true, nombre: true } } },
+      orderBy: [{ fecha: 'desc' }, { creadoEn: 'desc' }],
+    })
+    return NextResponse.json({
+      issues: issues.map((i) => ({
+        id: i.id,
+        fecha: i.fechaProduccion?.toISOString().split('T')[0] ?? i.fecha.toISOString().split('T')[0],
+        descripcion: i.descripcion,
+        totalHoras: Number(i.totalHoras),
+        estado: i.estado,
+        empresa: i.empresa,
+      })),
+    })
+  }
 
   const where: Record<string, unknown> = {}
   if (empresaId) where.empresaId = empresaId
@@ -47,6 +85,7 @@ export async function POST(request: Request) {
   const distribuciones = Array.isArray(body.distribuciones)
     ? (body.distribuciones as { socioId: string; porcentaje: number }[])
     : []
+  const crearCobro = body.crearCobro === true
 
   if (!fechaDesde || !fechaHasta) return NextResponse.json({ error: 'VALIDATION_ERROR', message: 'Fecha desde y hasta son requeridas.' }, { status: 422 })
   if (!empresaId)                 return NextResponse.json({ error: 'VALIDATION_ERROR', message: 'Empresa es requerida.' }, { status: 422 })
@@ -130,6 +169,23 @@ export async function POST(request: Request) {
         facturaIssues: { include: { issue: true } },
       },
     })
+
+    if (crearCobro) {
+      await tx.cobro.create({
+        data: {
+          tipo: 'DESARROLLO',
+          empresaId,
+          anio,
+          mes,
+          montoSinIva: totalUSD,
+          iva: Math.round(totalUSD * IVA * 100) / 100,
+          montoConIva: Math.round(totalUSD * (1 + IVA) * 100) / 100,
+          moneda: 'USD',
+          estado: 'FACTURADO_PENDIENTE',
+          facturaDesarrolloId: fd.id,
+        },
+      })
+    }
 
     return fd
   })
