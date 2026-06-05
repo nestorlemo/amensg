@@ -232,6 +232,7 @@ model Issue {
   reportadoPor      String
   prioridad         String
   empresaId         String?   @db.Uuid
+  sistema           String?
   empresa           Empresa?  @relation(fields: [empresaId], references: [id])
   facturaIssues     FacturaIssue[]
   creadoEn          DateTime  @default(now())

@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/page-header'
 
 const ESTADOS = ['PENDIENTE', 'EN_DESARROLLO', 'EN_TEST', 'EN_PRODUCCION', 'CANCELADO'] as const
 const PRIORIDADES = ['ALTA', 'MEDIA', 'BAJA'] as const
+const SISTEMAS = ['creditoamigo.com.py', 'agentesdeventas.com.uy', 'cargamas.com.uy', 'phonehouse.uy', 'todas']
 
 type Issue = {
   id: string
@@ -22,6 +23,7 @@ type Issue = {
   reportadoPor: string
   prioridad: string
   empresa: { id: string; nombre: string } | null
+  sistema: string | null
   facturado: boolean
 }
 
@@ -46,6 +48,7 @@ const EMPTY_FORM = {
   fecha: '',
   descripcion: '',
   empresaId: '',
+  sistema: '',
   horasDesarrollo: '',
   prioridad: 'MEDIA',
   estado: 'PENDIENTE',
@@ -240,6 +243,7 @@ function EditModal({
     fecha:            issue.fecha,
     descripcion:      issue.descripcion,
     empresaId:        issue.empresa?.id ?? '',
+    sistema:          issue.sistema ?? '',
     horasDesarrollo:  String(issue.horasDesarrollo),
     prioridad:        issue.prioridad,
     estado:           issue.estado,
@@ -272,6 +276,7 @@ function EditModal({
           fecha:            form.fecha,
           descripcion:      form.descripcion,
           empresaId:        form.empresaId || null,
+          sistema:          form.sistema || null,
           horasDesarrollo:  dev,
           horasTest:        test,
           horasRework:      rework,
@@ -351,6 +356,13 @@ function EditModal({
             </MSelect>
             <MSelect label="Prioridad" value={form.prioridad} onChange={set('prioridad')}>
               {PRIORIDADES.map((p) => <option key={p} value={p}>{p}</option>)}
+            </MSelect>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <MSelect label="Sistema" value={form.sistema} onChange={set('sistema')}>
+              <option value="">Sin sistema</option>
+              {SISTEMAS.map((s) => <option key={s} value={s}>{s}</option>)}
             </MSelect>
           </div>
 
@@ -438,6 +450,7 @@ export default function IssuesPage() {
   // Filters
   const [fEstado, setFEstado]           = useState('')
   const [fEmpresa, setFEmpresa]         = useState('')
+  const [fSistema, setFSistema]         = useState('')
 
   const [fDesde, setFDesde]             = useState('')
   const [fHasta, setFHasta]             = useState('')
@@ -463,7 +476,7 @@ export default function IssuesPage() {
       .catch(() => null)
   }, [])
 
-  useEffect(() => { void fetchAll() }, [fEstado, fEmpresa, fDesde, fHasta, fFacturacion]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void fetchAll() }, [fEstado, fEmpresa, fSistema, fDesde, fHasta, fFacturacion]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function fetchAll() {
     setLoading(true)
@@ -471,6 +484,7 @@ export default function IssuesPage() {
       const qs = new URLSearchParams()
       if (fEstado)      qs.set('estado',      fEstado)
       if (fEmpresa)     qs.set('empresaId',   fEmpresa)
+      if (fSistema)     qs.set('sistema',     fSistema)
       if (fDesde)       qs.set('fechaDesde',  fDesde)
       if (fHasta)       qs.set('fechaHasta',  fHasta)
       if (fFacturacion) qs.set('facturacion', fFacturacion)
@@ -586,6 +600,10 @@ export default function IssuesPage() {
             <option value="">Todas</option>
             {empresas.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
           </Select>
+          <Select label="Sistema" value={fSistema} onChange={setFSistema} width="w-48">
+            <option value="">Todos</option>
+            {SISTEMAS.map((s) => <option key={s} value={s}>{s}</option>)}
+          </Select>
           <Select label="Facturación" value={fFacturacion} onChange={setFFacturacion} width="w-36">
             <option value="">Todos</option>
             <option value="sin_facturar">Sin facturar</option>
@@ -617,6 +635,7 @@ export default function IssuesPage() {
                 const qs = new URLSearchParams()
                 if (fEstado)      qs.set('estado',      fEstado)
                 if (fEmpresa)     qs.set('empresaId',   fEmpresa)
+                if (fSistema)     qs.set('sistema',     fSistema)
                 if (fDesde)       qs.set('fechaDesde',  fDesde)
                 if (fHasta)       qs.set('fechaHasta',  fHasta)
                 if (fFacturacion) qs.set('facturacion', fFacturacion)
@@ -647,6 +666,10 @@ export default function IssuesPage() {
             <Select label="Empresa" value={form.empresaId} onChange={(v) => setForm((f) => ({ ...f, empresaId: v }))}>
               <option value="">Sin empresa</option>
               {empresas.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
+            </Select>
+            <Select label="Sistema" value={form.sistema} onChange={(v) => setForm((f) => ({ ...f, sistema: v }))}>
+              <option value="">Sin sistema</option>
+              {SISTEMAS.map((s) => <option key={s} value={s}>{s}</option>)}
             </Select>
             <Select label="Prioridad" value={form.prioridad} onChange={(v) => setForm((f) => ({ ...f, prioridad: v }))}>
               {PRIORIDADES.map((p) => <option key={p} value={p}>{p}</option>)}
@@ -729,6 +752,7 @@ export default function IssuesPage() {
                 <Th>Fecha prod.</Th>
                 <Th>Descripción</Th>
                 <Th>Empresa</Th>
+                <Th>Sistema</Th>
                 <Th>Horas</Th>
                 <Th>Estado</Th>
                 <Th>Facturación</Th>
@@ -751,6 +775,7 @@ export default function IssuesPage() {
                     </span>
                   </td>
                   <Td>{issue.empresa?.nombre ?? '—'}</Td>
+                  <Td>{issue.sistema ?? '—'}</Td>
                   <Td>
                     <span
                       className="cursor-default"

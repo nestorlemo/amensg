@@ -25,11 +25,13 @@ export async function GET(request: Request) {
   const fechaDesde  = searchParams.get('fechaDesde')  ?? undefined
   const fechaHasta  = searchParams.get('fechaHasta')  ?? undefined
   const facturacion = searchParams.get('facturacion') ?? undefined
+  const sistema     = searchParams.get('sistema')     ?? undefined
 
   const where: Record<string, unknown> = {}
   if (estado)    where.estado    = estado
   if (empresaId) where.empresaId = empresaId
   if (prioridad) where.prioridad = prioridad
+  if (sistema)   where.sistema   = sistema
   if (fechaDesde || fechaHasta) {
     const range: Record<string, Date> = {}
     if (fechaDesde) range.gte = new Date(fechaDesde)
@@ -61,6 +63,7 @@ export async function GET(request: Request) {
       <td>${fmt(i.fecha)}</td>
       <td>${escHtml(i.descripcion)}</td>
       <td>${escHtml(i.empresa?.nombre ?? '')}</td>
+      <td>${escHtml((i as unknown as { sistema?: string | null }).sistema ?? '')}</td>
       <td style="text-align:right">${num(i.horasDesarrollo)}</td>
       <td style="text-align:right">${num(i.horasTest)}</td>
       <td style="text-align:right">${num(i.horasRework)}</td>
@@ -94,6 +97,7 @@ export async function GET(request: Request) {
       <th>Fecha</th>
       <th>Descripción</th>
       <th>Empresa</th>
+      <th>Sistema</th>
       <th>Hs. Desarrollo</th>
       <th>Hs. Test</th>
       <th>Hs. Rework</th>
@@ -109,7 +113,7 @@ export async function GET(request: Request) {
   </tbody>
   <tfoot>
     <tr class="totals">
-      <td colspan="3">TOTAL (${issues.length} issues)</td>
+      <td colspan="4">TOTAL (${issues.length} issues)</td>
       <td style="text-align:right">${totDev.toFixed(2)}</td>
       <td style="text-align:right">${totTest.toFixed(2)}</td>
       <td style="text-align:right">${totRework.toFixed(2)}</td>

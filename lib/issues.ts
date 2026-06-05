@@ -1,5 +1,6 @@
 const ESTADOS_VALIDOS   = new Set(['PENDIENTE', 'EN_DESARROLLO', 'EN_TEST', 'EN_PRODUCCION', 'CANCELADO'])
 const PRIORIDADES_VALIDAS = new Set(['ALTA', 'MEDIA', 'BAJA'])
+const SISTEMAS_VALIDOS = new Set(['creditoamigo.com.py', 'agentesdeventas.com.uy', 'cargamas.com.uy', 'phonehouse.uy', 'todas'])
 
 export function parseIssueBody(body: Record<string, unknown>) {
   const descripcion = typeof body.descripcion === 'string' ? body.descripcion.trim() : ''
@@ -42,6 +43,12 @@ export function parseIssueBody(body: Record<string, unknown>) {
     return { error: { error: 'VALIDATION_ERROR', message: 'El motivo de cancelación es requerido.' } }
   }
 
+  const sistemaRaw = typeof body.sistema === 'string' && body.sistema ? body.sistema : null
+  if (sistemaRaw && !SISTEMAS_VALIDOS.has(sistemaRaw)) {
+    return { error: { error: 'VALIDATION_ERROR', message: 'Sistema inválido.' } }
+  }
+  const sistema = sistemaRaw
+
   return {
     data: {
       fecha,
@@ -56,6 +63,7 @@ export function parseIssueBody(body: Record<string, unknown>) {
       empresaId,
       fechaProduccion,
       motivoCancelacion,
+      sistema,
     },
   }
 }
@@ -73,6 +81,7 @@ export function serializeIssue(issue: {
   motivoCancelacion?: string | null
   reportadoPor: string
   prioridad: string
+  sistema?: string | null
   creadoEn: Date
   empresa?: { id: string; nombre: string } | null
 }) {
@@ -89,6 +98,7 @@ export function serializeIssue(issue: {
     motivoCancelacion: issue.motivoCancelacion ?? null,
     reportadoPor: issue.reportadoPor,
     prioridad: issue.prioridad,
+    sistema: issue.sistema ?? null,
     creadoEn: issue.creadoEn.toISOString(),
     empresa: issue.empresa ?? null,
   }

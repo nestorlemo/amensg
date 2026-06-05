@@ -18,12 +18,14 @@ export async function GET(request: Request) {
   const prioridad         = searchParams.get('prioridad')         ?? undefined
   const fechaDesde        = searchParams.get('fechaDesde')        ?? undefined
   const fechaHasta        = searchParams.get('fechaHasta')        ?? undefined
+  const sistema           = searchParams.get('sistema')           ?? undefined
 
   const where: Record<string, unknown> = {}
   if (estadoIn.length > 0) where.estado = { in: estadoIn }
   else if (estado) where.estado = estado
   if (empresaId) where.empresaId = empresaId
   if (prioridad) where.prioridad = prioridad
+  if (sistema) where.sistema = sistema
   if (fechaDesde || fechaHasta) {
     const range: Record<string, Date> = {}
     if (fechaDesde) range.gte = new Date(fechaDesde)
