@@ -1,0 +1,1 @@
+ALTER TABLE "Issue" ADD COLUMN "eliminado" BOOLEAN NOT NULL DEFAULT false;

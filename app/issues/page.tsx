@@ -569,6 +569,16 @@ export default function IssuesPage() {
     setEditingIssue(null)
   }
 
+  async function handleDelete(issue: Issue) {
+    if (!window.confirm('¿Eliminar este issue? No aparecerá más en el sistema.')) return
+    const res = await fetch(`/api/issues/${issue.id}`, { method: 'DELETE' })
+    if (res.status === 409) {
+      alert('No se puede eliminar un issue facturado.')
+      return
+    }
+    void fetchAll()
+  }
+
   const enProduccion     = issues.filter((i) => i.estado === 'EN_PRODUCCION')
   const totalHorasMes    = enProduccion.reduce((s, i) => s + i.totalHoras, 0)
   const montoEstimadoMes = Math.round(totalHorasMes * config.valorHoraUSD * 100) / 100
@@ -808,15 +818,27 @@ export default function IssuesPage() {
                   </Td>
                   <Td>{issue.reportadoPor}</Td>
                   <Td>
-                    <button
-                      className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:border-slate-400 hover:bg-slate-50"
-                      onClick={() => setEditingIssue(issue)}
-                      title="Editar issue"
-                      type="button"
-                    >
-                      <PencilIcon />
-                      Editar
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:border-slate-400 hover:bg-slate-50"
+                        onClick={() => setEditingIssue(issue)}
+                        title="Editar issue"
+                        type="button"
+                      >
+                        <PencilIcon />
+                        Editar
+                      </button>
+                      <button
+                        className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-600 hover:border-red-400 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+                        disabled={issue.facturado}
+                        onClick={() => !issue.facturado && void handleDelete(issue)}
+                        title={issue.facturado ? 'No se puede eliminar un issue facturado' : 'Eliminar issue'}
+                        type="button"
+                      >
+                        <TrashIcon />
+                        Eliminar
+                      </button>
+                    </div>
                   </Td>
                 </tr>
               ))}
@@ -866,6 +888,14 @@ function PencilIcon() {
     <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
       <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function TrashIcon() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }

@@ -235,6 +235,7 @@ model Issue {
   sistema           String?
   empresa           Empresa?  @relation(fields: [empresaId], references: [id])
   facturaIssues     FacturaIssue[]
+  eliminado         Boolean   @default(false)
   creadoEn          DateTime  @default(now())
   actualizadoEn     DateTime  @updatedAt
 

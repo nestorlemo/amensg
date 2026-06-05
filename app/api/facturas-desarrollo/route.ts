@@ -69,7 +69,7 @@ export async function POST(request: Request) {
   }
 
   // Get issues and calc hours
-  const issues = await prisma.issue.findMany({ where: { id: { in: issueIds } } })
+  const issues = await prisma.issue.findMany({ where: { id: { in: issueIds }, eliminado: false } })
   const totalHoras  = issues.reduce((s, i) => s + Number(i.totalHoras), 0)
   const totalUSD    = Math.round(totalHoras * valorHoraUSD * 100) / 100
   const totalUYU    = Math.round(totalUSD * tipoCambio * 100) / 100

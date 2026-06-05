@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   const fechaHasta        = searchParams.get('fechaHasta')        ?? undefined
   const sistema           = searchParams.get('sistema')           ?? undefined
 
-  const where: Record<string, unknown> = {}
+  const where: Record<string, unknown> = { eliminado: false }
   if (estadoIn.length > 0) where.estado = { in: estadoIn }
   else if (estado) where.estado = estado
   if (empresaId) where.empresaId = empresaId

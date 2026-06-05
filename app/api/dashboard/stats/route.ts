@@ -21,10 +21,10 @@ export async function GET(request: Request) {
     endOfMonth.setMonth(endOfMonth.getMonth() + 1)
 
     const [pendientes, enDesarrollo, enProduccionMes, valorHoraParam] = await Promise.all([
-      prisma.issue.count({ where: { estado: 'PENDIENTE' } }),
-      prisma.issue.count({ where: { estado: 'EN_DESARROLLO' } }),
+      prisma.issue.count({ where: { estado: 'PENDIENTE', eliminado: false } }),
+      prisma.issue.count({ where: { estado: 'EN_DESARROLLO', eliminado: false } }),
       prisma.issue.findMany({
-        where: { estado: 'EN_PRODUCCION', fechaProduccion: { gte: startOfMonth, lt: endOfMonth } },
+        where: { estado: 'EN_PRODUCCION', fechaProduccion: { gte: startOfMonth, lt: endOfMonth }, eliminado: false },
         select: { totalHoras: true },
       }),
       prisma.parametro.findUnique({ where: { clave: 'valor_hora_desarrollo_usd' } }),

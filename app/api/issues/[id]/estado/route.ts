@@ -15,7 +15,7 @@ export async function PUT(request: Request, { params }: Params) {
   if ('error' in auth) return auth.error
 
   const { id } = await params
-  const existing = await prisma.issue.findUnique({ where: { id } })
+  const existing = await prisma.issue.findUnique({ where: { id, eliminado: false } })
   if (!existing) return NextResponse.json({ error: 'NOT_FOUND', message: 'Issue no encontrado.' }, { status: 404 })
 
   const body = await request.json().catch(() => ({})) as Record<string, unknown>

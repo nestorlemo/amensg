@@ -35,7 +35,7 @@ export async function GET(request: Request) {
   const facturacion = searchParams.get('facturacion') ?? undefined
   const sistema     = searchParams.get('sistema')     ?? undefined
 
-  const where: Record<string, unknown> = {}
+  const where: Record<string, unknown> = { eliminado: false }
   if (estado)    where.estado    = estado
   if (empresaId) where.empresaId = empresaId
   if (prioridad) where.prioridad = prioridad
