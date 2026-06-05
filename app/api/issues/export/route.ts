@@ -128,9 +128,17 @@ export async function GET(request: Request) {
     </tr>
     <tr class="totals">
       <td>TOTAL SIN IVA</td>
-      <td colspan="5"></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
       <td style="mso-number-format:'\\@';text-align:right;font-weight:bold">USD ${new Intl.NumberFormat('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totUSD)}</td>
-      <td colspan="5"></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
     </tr>
   </tfoot>
 </table>
