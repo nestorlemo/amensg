@@ -487,6 +487,10 @@ export default function IssuesPage() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     setFormError(null)
+    if (form.estado === 'EN_PRODUCCION' && !form.fechaProduccion) {
+      setFormError('La fecha puesta en producción es obligatoria cuando el estado es EN_PRODUCCION.')
+      return
+    }
     setSaving(true)
     try {
       const res = await fetch('/api/issues', {
@@ -669,9 +673,20 @@ export default function IssuesPage() {
             <ReadonlyField label={`Test (${config.porcentajeTest}%)`}    value={cDevHoras > 0 ? `${cTestHoras}h`   : '—'} />
             <ReadonlyField label={`Rework (${config.porcentajeRework}%)`} value={cDevHoras > 0 ? `${cReworkHoras}h` : '—'} />
             <Input label="Reportado por" value={form.reportadoPor} onChange={(v) => setForm((f) => ({ ...f, reportadoPor: v }))} required />
-            <Select label="Estado inicial" value={form.estado} onChange={(v) => setForm((f) => ({ ...f, estado: v }))}>
+            <Select label="Estado inicial" value={form.estado} onChange={(v) => setForm((f) => ({ ...f, estado: v, fechaProduccion: '' }))}>
               {ESTADOS.map((e) => <option key={e} value={e}>{e.replace(/_/g, ' ')}</option>)}
             </Select>
+            {form.estado === 'EN_PRODUCCION' ? (
+              <label className="block text-sm font-medium text-slate-700">
+                Fecha puesta en producción
+                <DateInput
+                  className="mt-1 block h-9 w-full rounded-md border border-slate-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  value={form.fechaProduccion ?? ''}
+                  onChange={(v) => setForm((f) => ({ ...f, fechaProduccion: v }))}
+                  required
+                />
+              </label>
+            ) : null}
             {cDevHoras > 0 ? (
               <div className="flex flex-col justify-center gap-1 rounded-md border border-emerald-200 bg-white px-4 py-2">
                 <div className="text-sm text-slate-600">
