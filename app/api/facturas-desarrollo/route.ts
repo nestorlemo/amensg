@@ -159,7 +159,7 @@ export async function POST(request: Request) {
           create: distribuciones.map((d) => ({
             socioId: d.socioId,
             porcentaje: d.porcentaje,
-            montoUYU: Math.round(totalConIva * (d.porcentaje / 100) * 100) / 100,
+            montoUYU: Math.round(totalUSD * (d.porcentaje / 100) * 100) / 100,
           })),
         } : undefined,
       },

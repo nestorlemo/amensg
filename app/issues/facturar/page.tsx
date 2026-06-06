@@ -410,7 +410,7 @@ export default function FacturarDesarrolloPage() {
             {/* Socios distribution */}
             <div className="mb-6 rounded-lg border border-slate-200 p-4">
               <h3 className="mb-3 text-sm font-semibold text-slate-700">
-                Distribución entre socios
+                Distribución entre socios — sobre monto s/IVA
               </h3>
               {socios.length === 0 ? (
                 <p className="text-sm text-slate-400">Cargando socios…</p>
@@ -418,7 +418,7 @@ export default function FacturarDesarrolloPage() {
                 <>
                   <div className="space-y-2">
                     {socios.map((socio) => {
-                      const monto = totalConIva * Number(socio.porcentaje || 0) / 100
+                      const monto = totalSinIva * Number(socio.porcentaje || 0) / 100
                       return (
                         <div key={socio.id} className="flex items-center gap-3">
                           <span className="w-40 text-sm text-slate-700">{socio.nombre}</span>
