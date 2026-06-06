@@ -641,7 +641,7 @@ export default function FacturarDesarrolloPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-2">
-                        {f.estado !== 'COBRADO' && (
+                        {f.cobroEstado !== 'COBRADO' && (
                           <button
                             onClick={() => setModalFactura(f)}
                             className="rounded border border-emerald-300 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
