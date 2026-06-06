@@ -55,29 +55,45 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     data: data.map((r) => {
-      // For ACTIVACIONES: derive companies from cobroFacturaciones; else use empresa field
-      const empresas = r.cobroFacturaciones.length > 0
-        ? r.cobroFacturaciones.map((cf) => ({
-            id: cf.facturacionMensual.empresa.id,
-            nombre: cf.facturacionMensual.empresa.nombre,
-          }))
-        : [{ id: r.empresaId, nombre: r.empresa?.nombre ?? '' }]
+      const facturaciones = r.cobroFacturaciones.map((cf) => ({
+        empresaId: cf.facturacionMensual.empresa.id,
+        empresa:   cf.facturacionMensual.empresa.nombre,
+        totalSinIva: cf.facturacionMensual.totalSinIva.toString(),
+        iva:         cf.facturacionMensual.iva.toString(),
+        totalConIva: cf.facturacionMensual.totalConIva.toString(),
+      }))
 
-      // Deduplicate
-      const empresasMap = new Map(empresas.map((e) => [e.id, e]))
-      const empresasUnicas = [...empresasMap.values()]
+      // Deduplicate empresa list
+      const empresasMap = new Map<string, { id: string; nombre: string }>()
+      if (facturaciones.length > 0) {
+        for (const f of facturaciones) empresasMap.set(f.empresaId, { id: f.empresaId, nombre: f.empresa })
+      } else {
+        empresasMap.set(r.empresaId, { id: r.empresaId, nombre: r.empresa?.nombre ?? '' })
+      }
+      const empresas = [...empresasMap.values()]
+
+      // Amounts: sum from facturaciones when available, else from cobro fields
+      const montoSinIva = facturaciones.length > 0
+        ? facturaciones.reduce((s, f) => s + Number(f.totalSinIva), 0).toFixed(2)
+        : r.montoSinIva.toString()
+      const iva = facturaciones.length > 0
+        ? facturaciones.reduce((s, f) => s + Number(f.iva), 0).toFixed(2)
+        : r.iva.toString()
+      const montoConIva = facturaciones.length > 0
+        ? facturaciones.reduce((s, f) => s + Number(f.totalConIva), 0).toFixed(2)
+        : r.montoConIva.toString()
 
       return {
         id: r.id,
         tipo: r.tipo,
-        empresa: r.empresa?.nombre ?? empresasUnicas[0]?.nombre ?? '',
+        empresa: r.empresa?.nombre ?? empresas[0]?.nombre ?? '',
         empresaId: r.empresaId,
-        empresas: empresasUnicas,
+        empresas,
         anio: r.anio,
         mes: r.mes,
-        montoSinIva: r.montoSinIva.toString(),
-        iva: r.iva.toString(),
-        montoConIva: r.montoConIva.toString(),
+        montoSinIva,
+        iva,
+        montoConIva,
         moneda: r.moneda,
         estado: r.estado,
         fechaCobro: r.fechaCobro?.toISOString() ?? null,

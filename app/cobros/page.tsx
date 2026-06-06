@@ -408,10 +408,10 @@ export default function FacturacionActivacionesPage() {
                   ) : historial.map((c) => (
                     <tr key={c.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3 whitespace-nowrap">{formatPeriod(c.anio, c.mes)}</td>
-                      <td className="px-4 py-3">
-                        {(c.empresas.length > 0 ? c.empresas : [{ id: c.empresaId, nombre: c.empresa }]).map((e) => (
-                          <div key={e.id} className="text-xs font-medium">{e.nombre}</div>
-                        ))}
+                      <td className="px-4 py-3 text-sm">
+                        {(c.empresas.length > 0 ? c.empresas : [{ id: c.empresaId, nombre: c.empresa }])
+                          .map((e) => e.nombre)
+                          .join(', ')}
                       </td>
                       <td className="px-4 py-3 text-right">${fmt(c.montoSinIva)}</td>
                       <td className="px-4 py-3 text-right">${fmt(c.iva)}</td>
