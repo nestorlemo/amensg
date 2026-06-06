@@ -39,6 +39,7 @@ type FacturaHistorial = {
   ingresoAdicionalId: string | null
   cobroId: string | null
   urlPdfFactura: string | null
+  fechaCobro: string | null
   distribuciones: {
     id: string
     porcentaje: number
@@ -54,6 +55,11 @@ const fmt = (n: number) =>
   new Intl.NumberFormat('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+
+function formatDate(iso: string | null) {
+  if (!iso) return '—'
+  return new Intl.DateTimeFormat('es-UY').format(new Date(iso))
+}
 
 // ── Page component ────────────────────────────────────────────────────────────
 
@@ -543,8 +549,8 @@ export default function FacturarDesarrolloPage() {
                 onChange={(e) => setFEstadoCobro(e.target.value)}
               >
                 <option value="">Todos</option>
-                <option value="PENDIENTE">Pendiente</option>
-                <option value="COBRADO">Cobrado</option>
+                <option value="FACTURADO">FACTURADO</option>
+                <option value="COBRADO">COBRADO</option>
               </select>
             </label>
             <button
@@ -574,7 +580,9 @@ export default function FacturarDesarrolloPage() {
                   <th className="px-4 py-3 text-right">IVA (USD)</th>
                   <th className="px-4 py-3 text-right">C/IVA (USD)</th>
                   <th className="px-4 py-3 text-left">Distribución</th>
-                  <th className="px-4 py-3 text-left">Estado cobro</th>
+                  <th className="px-4 py-3 text-left">Estado</th>
+                  <th className="px-4 py-3 text-left">Fecha Cobro</th>
+                  <th className="px-4 py-3 text-left">PDF</th>
                   <th className="px-4 py-3 text-left">Acciones</th>
                 </tr>
               </thead>
@@ -588,29 +596,44 @@ export default function FacturarDesarrolloPage() {
                     <td className="px-4 py-3 text-right">{f.totalHoras}h</td>
                     <td className="px-4 py-3 text-right">${fmt(f.totalUSD)}</td>
                     <td className="px-4 py-3 text-right">${fmt(f.iva)}</td>
-                    <td className="px-4 py-3 text-right font-semibold">
-                      ${fmt(f.totalConIva)}
-                    </td>
+                    <td className="px-4 py-3 text-right font-semibold">${fmt(f.totalConIva)}</td>
                     <td className="px-4 py-3">
                       {f.distribuciones.length === 0
                         ? '—'
                         : f.distribuciones.map((d) => (
                             <div key={d.id} className="text-xs">
-                              {d.socio.nombre}: {d.porcentaje}% · $
-                              {fmt((f.totalConIva * d.porcentaje) / 100)}
+                              {d.socio.nombre}: {d.porcentaje}% · ${fmt((f.totalConIva * d.porcentaje) / 100)}
                             </div>
                           ))}
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                          f.estado === 'COBRADO'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-amber-100 text-amber-800'
-                        }`}
-                      >
+                      <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${f.estado === 'COBRADO' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
                         {f.estado}
                       </span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">
+                      {formatDate(f.fechaCobro)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {f.cobroId && (
+                        f.urlPdfFactura ? (
+                          <a
+                            href={`/api/cobros-unificado/${f.cobroId}/pdf`}
+                            target="_blank" rel="noopener noreferrer"
+                            className="rounded border border-blue-300 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
+                          >
+                            Ver PDF
+                          </a>
+                        ) : (
+                          <label className="cursor-pointer rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                            {uploadingPdf === f.id ? 'Subiendo...' : 'Subir PDF'}
+                            <input
+                              type="file" accept=".pdf" className="hidden"
+                              onChange={(e) => { const file = e.target.files?.[0]; if (file && f.cobroId) void subirPdf(f.cobroId, f.id, file) }}
+                            />
+                          </label>
+                        )
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-2">
@@ -621,35 +644,6 @@ export default function FacturarDesarrolloPage() {
                           >
                             Marcar cobrado
                           </button>
-                        )}
-                        {f.cobroId && (
-                          f.urlPdfFactura ? (
-                            <>
-                              <a
-                                href={`/api/cobros-unificado/${f.cobroId}/pdf`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="rounded border border-blue-300 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
-                              >
-                                Ver PDF
-                              </a>
-                              <label className="cursor-pointer rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
-                                {uploadingPdf === f.id ? 'Subiendo...' : 'Reemplazar PDF'}
-                                <input
-                                  type="file" accept=".pdf" className="hidden"
-                                  onChange={(e) => { const file = e.target.files?.[0]; if (file && f.cobroId) void subirPdf(f.cobroId, f.id, file) }}
-                                />
-                              </label>
-                            </>
-                          ) : (
-                            <label className="cursor-pointer rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
-                              {uploadingPdf === f.id ? 'Subiendo...' : 'Subir PDF'}
-                              <input
-                                type="file" accept=".pdf" className="hidden"
-                                onChange={(e) => { const file = e.target.files?.[0]; if (file && f.cobroId) void subirPdf(f.cobroId, f.id, file) }}
-                              />
-                            </label>
-                          )
                         )}
                         <button
                           onClick={() => void eliminarFactura(f.id)}

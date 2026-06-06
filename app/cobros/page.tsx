@@ -80,7 +80,6 @@ export default function FacturacionActivacionesPage() {
   const [loadingH,  setLoadingH]    = useState(false)
   const [uploadingPdf, setUploadingPdf]       = useState<string | null>(null)
   const [marcandoCobrado, setMarcandoCobrado] = useState<string | null>(null)
-  const [fechaCobroMap, setFechaCobroMap]     = useState<Record<string, string>>({})
 
   const [empresasOpts, setEmpresasOpts] = useState<EmpresaOption[]>([])
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
@@ -181,8 +180,14 @@ export default function FacturacionActivacionesPage() {
     }
   }
 
+  async function eliminarCobro(id: string) {
+    if (!confirm('¿Eliminar este cobro?')) return
+    await fetch(`/api/cobros-unificado/${id}`, { method: 'DELETE' })
+    void fetchHistorial()
+  }
+
   async function marcarCobrado(id: string) {
-    const fecha = fechaCobroMap[id] ?? new Date().toISOString().split('T')[0]!
+    const fecha = new Date().toISOString().split('T')[0]!
     setMarcandoCobrado(id)
     try {
       await fetch(`/api/cobros-unificado/${id}`, {
@@ -384,13 +389,13 @@ export default function FacturacionActivacionesPage() {
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
                   <tr>
-                    <th className="px-4 py-3 text-left">Empresas</th>
                     <th className="px-4 py-3 text-left">Período</th>
+                    <th className="px-4 py-3 text-left">Empresa(s)</th>
                     <th className="px-4 py-3 text-right">S/IVA (UYU)</th>
                     <th className="px-4 py-3 text-right">IVA (UYU)</th>
                     <th className="px-4 py-3 text-right">C/IVA (UYU)</th>
                     <th className="px-4 py-3 text-left">Estado</th>
-                    <th className="px-4 py-3 text-left">Fecha cobro</th>
+                    <th className="px-4 py-3 text-left">Fecha Cobro</th>
                     <th className="px-4 py-3 text-left">PDF</th>
                     <th className="px-4 py-3 text-left">Acciones</th>
                   </tr>
@@ -402,12 +407,12 @@ export default function FacturacionActivacionesPage() {
                     </tr>
                   ) : historial.map((c) => (
                     <tr key={c.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-4 py-3 whitespace-nowrap">{formatPeriod(c.anio, c.mes)}</td>
                       <td className="px-4 py-3">
                         {(c.empresas.length > 0 ? c.empresas : [{ id: c.empresaId, nombre: c.empresa }]).map((e) => (
                           <div key={e.id} className="text-xs font-medium">{e.nombre}</div>
                         ))}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap">{formatPeriod(c.anio, c.mes)}</td>
                       <td className="px-4 py-3 text-right">${fmt(c.montoSinIva)}</td>
                       <td className="px-4 py-3 text-right">${fmt(c.iva)}</td>
                       <td className="px-4 py-3 text-right font-semibold">${fmt(c.montoConIva)}</td>
@@ -441,14 +446,8 @@ export default function FacturacionActivacionesPage() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        {c.estado !== 'COBRADO' && (
-                          <div className="flex gap-1 items-center">
-                            <input
-                              type="date"
-                              value={fechaCobroMap[c.id] ?? new Date().toISOString().split('T')[0]!}
-                              onChange={(e) => setFechaCobroMap((prev) => ({ ...prev, [c.id]: e.target.value }))}
-                              className="h-8 rounded border border-slate-300 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-400"
-                            />
+                        <div className="flex flex-wrap gap-2">
+                          {c.estado !== 'COBRADO' && (
                             <button
                               onClick={() => void marcarCobrado(c.id)}
                               disabled={marcandoCobrado === c.id}
@@ -456,8 +455,14 @@ export default function FacturacionActivacionesPage() {
                             >
                               {marcandoCobrado === c.id ? '...' : 'Marcar cobrado'}
                             </button>
-                          </div>
-                        )}
+                          )}
+                          <button
+                            onClick={() => void eliminarCobro(c.id)}
+                            className="rounded border border-red-300 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
+                          >
+                            Eliminar
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

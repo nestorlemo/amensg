@@ -16,3 +16,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const updated = await prisma.cobro.update({ where: { id }, data })
   return NextResponse.json({ ok: true, id: updated.id })
 }
+
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requireApiAuth()
+  if ('error' in auth) return auth.error
+  const { id } = await params
+  await prisma.cobro.delete({ where: { id } })
+  return NextResponse.json({ ok: true })
+}
