@@ -386,9 +386,9 @@ export default function FacturacionActivacionesPage() {
                   <tr>
                     <th className="px-4 py-3 text-left">Empresas</th>
                     <th className="px-4 py-3 text-left">Período</th>
-                    <th className="px-4 py-3 text-right">S/IVA</th>
-                    <th className="px-4 py-3 text-right">IVA</th>
-                    <th className="px-4 py-3 text-right">C/IVA</th>
+                    <th className="px-4 py-3 text-right">S/IVA (UYU)</th>
+                    <th className="px-4 py-3 text-right">IVA (UYU)</th>
+                    <th className="px-4 py-3 text-right">C/IVA (UYU)</th>
                     <th className="px-4 py-3 text-left">Estado</th>
                     <th className="px-4 py-3 text-left">Fecha cobro</th>
                     <th className="px-4 py-3 text-left">PDF</th>

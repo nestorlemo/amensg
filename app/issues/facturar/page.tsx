@@ -570,9 +570,9 @@ export default function FacturarDesarrolloPage() {
                   <th className="px-4 py-3 text-left">Período</th>
                   <th className="px-4 py-3 text-left">Empresa</th>
                   <th className="px-4 py-3 text-right">Horas</th>
-                  <th className="px-4 py-3 text-right">USD S/IVA</th>
-                  <th className="px-4 py-3 text-right">IVA USD</th>
-                  <th className="px-4 py-3 text-right">Total C/IVA USD</th>
+                  <th className="px-4 py-3 text-right">S/IVA (USD)</th>
+                  <th className="px-4 py-3 text-right">IVA (USD)</th>
+                  <th className="px-4 py-3 text-right">C/IVA (USD)</th>
                   <th className="px-4 py-3 text-left">Distribución</th>
                   <th className="px-4 py-3 text-left">Estado cobro</th>
                   <th className="px-4 py-3 text-left">Acciones</th>
@@ -586,10 +586,10 @@ export default function FacturarDesarrolloPage() {
                     </td>
                     <td className="px-4 py-3">{f.empresa.nombre}</td>
                     <td className="px-4 py-3 text-right">{f.totalHoras}h</td>
-                    <td className="px-4 py-3 text-right">${fmt(f.totalUSD)} USD</td>
-                    <td className="px-4 py-3 text-right">${fmt(f.iva)} USD</td>
+                    <td className="px-4 py-3 text-right">${fmt(f.totalUSD)}</td>
+                    <td className="px-4 py-3 text-right">${fmt(f.iva)}</td>
                     <td className="px-4 py-3 text-right font-semibold">
-                      ${fmt(f.totalConIva)} USD
+                      ${fmt(f.totalConIva)}
                     </td>
                     <td className="px-4 py-3">
                       {f.distribuciones.length === 0
@@ -597,7 +597,7 @@ export default function FacturarDesarrolloPage() {
                         : f.distribuciones.map((d) => (
                             <div key={d.id} className="text-xs">
                               {d.socio.nombre}: {d.porcentaje}% · $
-                              {fmt((f.totalConIva * d.porcentaje) / 100)} USD
+                              {fmt((f.totalConIva * d.porcentaje) / 100)}
                             </div>
                           ))}
                     </td>
