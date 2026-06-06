@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
+import { ConfirmarCobroModal } from '@/components/confirmar-cobro-modal'
 import { DateInput } from '@/components/date-input'
 import { PageHeader } from '@/components/page-header'
 
@@ -86,7 +87,8 @@ export default function FacturarDesarrolloPage() {
   const [fEstadoCobro, setFEstadoCobro] = useState('')
   const [facturas, setFacturas] = useState<FacturaHistorial[]>([])
   const [loadingHistorial, setLoadingHistorial] = useState(false)
-  const [uploadingPdf, setUploadingPdf] = useState<string | null>(null) // facturaId being uploaded
+  const [uploadingPdf, setUploadingPdf] = useState<string | null>(null)
+  const [modalFactura, setModalFactura] = useState<FacturaHistorial | null>(null)
 
   // ── Initial data fetch ────────────────────────────────────────────────────
   useEffect(() => {
@@ -250,12 +252,13 @@ export default function FacturarDesarrolloPage() {
     return true
   })
 
-  async function marcarCobrado(facturaId: string) {
+  async function confirmarCobrado(facturaId: string, fecha: string) {
     await fetch(`/api/facturas-desarrollo/${facturaId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ estado: 'COBRADO' }),
+      body: JSON.stringify({ estado: 'COBRADO', fechaCobro: fecha }),
     })
+    setModalFactura(null)
     void fetchHistorial()
   }
 
@@ -639,7 +642,7 @@ export default function FacturarDesarrolloPage() {
                       <div className="flex flex-wrap gap-2">
                         {f.estado !== 'COBRADO' && (
                           <button
-                            onClick={() => void marcarCobrado(f.id)}
+                            onClick={() => setModalFactura(f)}
                             className="rounded border border-emerald-300 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
                           >
                             Marcar cobrado
@@ -660,6 +663,15 @@ export default function FacturarDesarrolloPage() {
           </div>
         )}
       </section>
+
+      {modalFactura && (
+        <ConfirmarCobroModal
+          empresas={modalFactura.empresa.nombre}
+          periodo={`${String(modalFactura.mes).padStart(2, '0')}/${modalFactura.anio}`}
+          onConfirm={(fecha) => confirmarCobrado(modalFactura.id, fecha)}
+          onCancel={() => setModalFactura(null)}
+        />
+      )}
     </div>
   )
 }

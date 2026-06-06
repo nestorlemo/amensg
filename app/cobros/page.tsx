@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 
+import { ConfirmarCobroModal } from '@/components/confirmar-cobro-modal'
 import { MonthInput } from '@/components/month-input'
 import { PageHeader } from '@/components/page-header'
 
@@ -80,6 +81,7 @@ export default function FacturacionActivacionesPage() {
   const [loadingH,  setLoadingH]    = useState(false)
   const [uploadingPdf, setUploadingPdf]       = useState<string | null>(null)
   const [marcandoCobrado, setMarcandoCobrado] = useState<string | null>(null)
+  const [modalCobro, setModalCobro] = useState<CobroHistorial | null>(null)
 
   const [empresasOpts, setEmpresasOpts] = useState<EmpresaOption[]>([])
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
@@ -186,8 +188,7 @@ export default function FacturacionActivacionesPage() {
     void fetchHistorial()
   }
 
-  async function marcarCobrado(id: string) {
-    const fecha = new Date().toISOString().split('T')[0]!
+  async function confirmarCobro(id: string, fecha: string) {
     setMarcandoCobrado(id)
     try {
       await fetch(`/api/cobros-unificado/${id}`, {
@@ -195,6 +196,7 @@ export default function FacturacionActivacionesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ estado: 'COBRADO', fechaCobro: fecha }),
       })
+      setModalCobro(null)
       void fetchHistorial()
     } finally {
       setMarcandoCobrado(null)
@@ -449,11 +451,11 @@ export default function FacturacionActivacionesPage() {
                         <div className="flex flex-wrap gap-2">
                           {c.estado !== 'COBRADO' && (
                             <button
-                              onClick={() => void marcarCobrado(c.id)}
+                              onClick={() => setModalCobro(c)}
                               disabled={marcandoCobrado === c.id}
                               className="rounded border border-emerald-300 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
                             >
-                              {marcandoCobrado === c.id ? '...' : 'Marcar cobrado'}
+                              Marcar cobrado
                             </button>
                           )}
                           <button
@@ -472,6 +474,16 @@ export default function FacturacionActivacionesPage() {
           )}
         </div>
       </section>
+
+      {modalCobro && (
+        <ConfirmarCobroModal
+          empresas={(modalCobro.empresas.length > 0 ? modalCobro.empresas : [{ id: modalCobro.empresaId, nombre: modalCobro.empresa }])
+            .map((e) => e.nombre).join(', ')}
+          periodo={formatPeriod(modalCobro.anio, modalCobro.mes)}
+          onConfirm={(fecha) => confirmarCobro(modalCobro.id, fecha)}
+          onCancel={() => setModalCobro(null)}
+        />
+      )}
     </div>
   )
 }

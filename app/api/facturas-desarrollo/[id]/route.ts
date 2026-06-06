@@ -39,9 +39,12 @@ export async function PUT(request: Request, { params }: Params) {
   // If body has estado, update only estado
   if (typeof body.estado === 'string') {
     if (body.estado === 'COBRADO') {
+      const fechaCobro = typeof body.fechaCobro === 'string' && body.fechaCobro
+        ? new Date(body.fechaCobro)
+        : new Date()
       await prisma.cobro.updateMany({
         where: { facturaDesarrolloId: id, fechaCobro: null },
-        data: { fechaCobro: new Date() },
+        data: { fechaCobro },
       })
     }
     const updated = await prisma.facturaDesarrollo.update({
