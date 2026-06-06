@@ -136,7 +136,8 @@ model FacturacionMensual {
   importacion    ImportacionActivacion @relation(fields: [importacionId], references: [id])
   empresa        Empresa  @relation(fields: [empresaId], references: [id])
   estadoCobro    EstadoCobro @relation(fields: [estadoCobroId], references: [id])
-  cobros         Cobro[]
+  cobros              Cobro[]
+  cobroFacturaciones  CobroFacturacion[]
 
   @@index([empresaId, anio, mes])
   @@index([importacionId])
@@ -316,6 +317,7 @@ model Cobro {
   facturaDesarrolloId   String?   @db.Uuid
   facturaDesarrollo     FacturaDesarrollo?   @relation(fields: [facturaDesarrolloId],  references: [id])
   ingresoAdicionalId    String?   @db.Uuid
+  cobroFacturaciones    CobroFacturacion[]
   creadoEn              DateTime  @default(now())
   actualizadoEn         DateTime  @updatedAt
 
@@ -325,6 +327,18 @@ model Cobro {
   @@index([tipo])
   @@index([facturacionMensualId])
   @@index([facturaDesarrolloId])
+}
+
+model CobroFacturacion {
+  id                   String             @id @default(uuid()) @db.Uuid
+  cobroId              String             @db.Uuid
+  cobro                Cobro              @relation(fields: [cobroId], references: [id], onDelete: Cascade)
+  facturacionMensualId String             @db.Uuid
+  facturacionMensual   FacturacionMensual @relation(fields: [facturacionMensualId], references: [id])
+
+  @@unique([cobroId, facturacionMensualId])
+  @@index([cobroId])
+  @@index([facturacionMensualId])
 }
 
 model Auditoria {

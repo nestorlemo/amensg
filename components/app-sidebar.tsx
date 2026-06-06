@@ -2,7 +2,7 @@ import Link from 'next/link'
 import {
   LayoutDashboard, Upload, Zap, FileText, CreditCard, Building2,
   Receipt, PlusCircle, Calculator, Lock, BarChart2, Settings,
-  Users, UserCog, Shield, LogOut, Bug, FileCode2, X, type LucideIcon
+  Users, UserCog, Shield, LogOut, Bug, FileCode2, Wallet, X, type LucideIcon
 } from 'lucide-react'
 
 import type { CurrentUser } from '@/lib/auth'
@@ -11,7 +11,7 @@ import { navigationItems } from '@/lib/navigation'
 const iconMap: Record<string, LucideIcon> = {
   LayoutDashboard, Upload, Zap, FileText, CreditCard, Building2,
   Receipt, PlusCircle, Calculator, Lock, BarChart2, Settings,
-  Users, UserCog, Shield, Bug, FileCode2
+  Users, UserCog, Shield, Bug, FileCode2, Wallet,
 }
 
 function LogoMark() {
@@ -32,17 +32,35 @@ function LogoMark() {
   )
 }
 
+function SectionDivider({ label }: { label: string }) {
+  return (
+    <div className="pt-4 pb-1 px-1">
+      <div className="flex items-center gap-2">
+        <div className="h-px flex-1" style={{ background: '#e6eefc' }} />
+        <span
+          className="text-xs font-semibold uppercase tracking-widest whitespace-nowrap"
+          style={{ color: '#8ba3c7' }}
+        >
+          {label}
+        </span>
+        <div className="h-px flex-1" style={{ background: '#e6eefc' }} />
+      </div>
+    </div>
+  )
+}
+
 export function AppSidebar({ user, onClose }: { user: CurrentUser; onClose?: () => void }) {
-  const allItems = navigationItems.filter((item) => {
+  const visibleItems = navigationItems.filter((item) => {
     if (item.adminOnly) return user.rol === 'ADMIN'
     if (item.roles) return item.roles.includes(user.rol)
-    // No roles restriction — hide from ISSUES (they only see explicitly listed items)
     if (user.rol === 'ISSUES') return false
     return true
   })
-  const regularItems = allItems.filter((item) => !item.adminOnly)
-  const adminItems = allItems.filter((item) => item.adminOnly)
+
   const displayName = user.nombre || user.email
+
+  // Build list: interleave section dividers before items that start a new section
+  const renderedSections = new Set<string>()
 
   return (
     <aside
@@ -66,53 +84,32 @@ export function AppSidebar({ user, onClose }: { user: CurrentUser; onClose?: () 
 
       {/* Navigation */}
       <nav aria-label="Principal" className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
-        <ul className="space-y-0.5">
-          {regularItems.map((item) => {
+        <div className="space-y-0.5">
+          {visibleItems.flatMap((item) => {
             const Icon = iconMap[item.icon]
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[#5a6a82] transition-colors hover:bg-[#EEF4FF] hover:text-[#1769E0]"
-                >
-                  {Icon ? <Icon size={16} className="shrink-0" /> : null}
-                  {item.label}
-                </Link>
-              </li>
-            )
-          })}
+            const elements: React.ReactNode[] = []
 
-          {adminItems.length > 0 ? (
-            <>
-              <li className="pt-4 pb-1 px-1">
-                <div className="flex items-center gap-2">
-                  <div className="h-px flex-1" style={{ background: '#e6eefc' }} />
-                  <span
-                    className="text-xs font-semibold uppercase tracking-widest whitespace-nowrap"
-                    style={{ color: '#8ba3c7' }}
-                  >
-                    Administración
-                  </span>
-                  <div className="h-px flex-1" style={{ background: '#e6eefc' }} />
-                </div>
-              </li>
-              {adminItems.map((item) => {
-                const Icon = iconMap[item.icon]
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[#5a6a82] transition-colors hover:bg-[#EEF4FF] hover:text-[#1769E0]"
-                    >
-                      {Icon ? <Icon size={16} className="shrink-0" /> : null}
-                      {item.label}
-                    </Link>
-                  </li>
-                )
-              })}
-            </>
-          ) : null}
-        </ul>
+            if (item.section && !renderedSections.has(item.section)) {
+              renderedSections.add(item.section)
+              elements.push(<SectionDivider key={`sec-${item.section}`} label={item.section} />)
+            } else if (item.adminOnly && !renderedSections.has('ADMINISTRACIÓN')) {
+              renderedSections.add('ADMINISTRACIÓN')
+              elements.push(<SectionDivider key="sec-admin" label="Administración" />)
+            }
+
+            elements.push(
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[#5a6a82] transition-colors hover:bg-[#EEF4FF] hover:text-[#1769E0]"
+              >
+                {Icon ? <Icon size={16} className="shrink-0" /> : null}
+                {item.label}
+              </Link>
+            )
+            return elements
+          })}
+        </div>
       </nav>
 
       {/* User + Logout */}
