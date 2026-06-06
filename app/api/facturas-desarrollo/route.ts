@@ -64,7 +64,7 @@ export async function GET(request: Request) {
       empresa: { select: { id: true, nombre: true } },
       distribuciones: { include: { socio: { select: { id: true, nombre: true } } } },
       facturaIssues: { include: { issue: true } },
-      cobros: { select: { id: true, urlPdfFactura: true, fechaCobro: true }, take: 1, orderBy: { creadoEn: 'desc' } },
+      cobros: { select: { id: true, estado: true, urlPdfFactura: true, fechaCobro: true }, take: 1, orderBy: { creadoEn: 'desc' } },
     },
     orderBy: [{ anio: 'desc' }, { mes: 'desc' }, { creadoEn: 'desc' }],
   })
