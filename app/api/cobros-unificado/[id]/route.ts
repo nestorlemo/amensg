@@ -21,6 +21,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const auth = await requireApiAuth()
   if ('error' in auth) return auth.error
   const { id } = await params
-  await prisma.cobro.delete({ where: { id } })
+  await prisma.$transaction(async (tx) => {
+    await tx.cobroFacturacion.deleteMany({ where: { cobroId: id } })
+    await tx.cobro.delete({ where: { id } })
+  })
   return NextResponse.json({ ok: true })
 }
