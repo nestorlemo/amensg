@@ -1,503 +1,586 @@
 'use client'
 
 import Link from 'next/link'
-import type { FormEvent } from 'react'
 import { useState } from 'react'
 
-import { AlertError, AlertSuccess } from '@/components/alerts'
-import { requestJson } from '@/lib/client-api'
-import type { ImportPreviewResult } from '@/lib/import-preview/types'
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-type ConfirmResult = {
-  importacionId: string
-  facturaciones: Array<{
-    id: string
-    empresaId: string
-    empresaNombreArchivo: string
-    anio: number
-    mes: number
-    cantidadActivaciones: number
-    subtotal: string
-    iva: string
-    total: string
-  }>
+type EmpresaDecision = 'pendiente' | 'sobreescribir' | 'omitir'
+
+type EmpresaInfo = {
+  nombre: string
+  yaExiste: boolean | null // null = loading
+  decision: EmpresaDecision
 }
 
-type ApiPayload = {
-  error?: string
-  message?: string
-  missingCompanies?: string[]
+type PeriodoResumen = {
+  periodo: string // 'YYYY-MM'
+  anio: number
+  mes: number
+  filas: number
+  empresas: EmpresaInfo[]
 }
+
+type ParsedFile = {
+  header: string
+  byPeriod: Map<string, string[]>
+  periodos: PeriodoResumen[]
+}
+
+type PeriodoStatus =
+  | { state: 'pending' }
+  | { state: 'checking' }
+  | { state: 'ready' } // checked, no conflicts or all resolved
+  | { state: 'processing' }
+  | { state: 'done'; procesadas: number; importacionId: string | null }
+  | { state: 'error'; message: string }
+
+// ─── CSV client-side parsing ──────────────────────────────────────────────────
+
+const FECHA_IMPORTACION_IDX = 6
+const EMPRESA_IDX = 2
+
+function parseCSVClient(text: string): Omit<ParsedFile, 'periodos'> & { periodos: (Omit<PeriodoResumen, 'empresas'> & { empresasNombres: string[] })[] } {
+  const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+  const lines = normalized.split('\n')
+  const header = lines[0] ?? ''
+
+  const headers = header.split(';').map((h) => h.trim().replace(/^﻿/, ''))
+  const fechaIdx = headers.indexOf('Fecha de importación') !== -1 ? headers.indexOf('Fecha de importación') : FECHA_IMPORTACION_IDX
+  const empresaIdx = headers.indexOf('Empresa') !== -1 ? headers.indexOf('Empresa') : EMPRESA_IDX
+
+  const byPeriod = new Map<string, string[]>()
+  const empresasByPeriod = new Map<string, Set<string>>()
+
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i]
+    if (!line || !line.trim()) continue
+
+    const fields = line.split(';')
+    const fechaStr = (fields[fechaIdx] ?? '').trim()
+    const periodo = extractPeriodo(fechaStr)
+    if (!periodo) continue
+
+    const rows = byPeriod.get(periodo)
+    if (rows) {
+      rows.push(line)
+    } else {
+      byPeriod.set(periodo, [line])
+      empresasByPeriod.set(periodo, new Set())
+    }
+
+    const empresa = (fields[empresaIdx] ?? '').trim()
+    if (empresa) empresasByPeriod.get(periodo)!.add(empresa)
+  }
+
+  const periodos = [...byPeriod.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([periodo, rows]) => {
+      const [anioStr, mesStr] = periodo.split('-')
+      return {
+        periodo,
+        anio: Number(anioStr),
+        mes: Number(mesStr),
+        filas: rows.length,
+        empresasNombres: [...(empresasByPeriod.get(periodo) ?? [])].sort(),
+      }
+    })
+
+  return { header, byPeriod, periodos }
+}
+
+function extractPeriodo(fechaStr: string): string | null {
+  const m = fechaStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+  if (!m) return null
+  return `${m[3]}-${m[2]}`
+}
+
+function buildPartialFile(header: string, lines: string[], periodo: string): File {
+  const csv = [header, ...lines].join('\n')
+  return new File([csv], `importacion-${periodo}.csv`, { type: 'text/csv' })
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const MONTHS = ['', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+
+function periodoLabel(anio: number, mes: number) {
+  return `${MONTHS[mes] ?? mes} ${anio}`
+}
+
+function formatBytes(b: number) {
+  if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`
+  return `${(b / (1024 * 1024)).toFixed(1)} MB`
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export function ImportPreviewForm() {
-  const [file, setFile] = useState<File | null>(null)
-  const [preview, setPreview] = useState<ImportPreviewResult | null>(null)
-  const [confirmResult, setConfirmResult] = useState<ConfirmResult | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [confirmError, setConfirmError] = useState<string | null>(null)
-  const [missingCompanies, setMissingCompanies] = useState<string[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [isConfirming, setIsConfirming] = useState(false)
-  const [showConfirmStep, setShowConfirmStep] = useState(false)
+  const [fileName, setFileName] = useState<string | null>(null)
+  const [fileSize, setFileSize] = useState<number>(0)
+  const [parsed, setParsed] = useState<ParsedFile | null>(null)
+  const [isParsing, setIsParsing] = useState(false)
+  const [isChecking, setIsChecking] = useState(false)
+  const [parseError, setParseError] = useState<string | null>(null)
+  const [statuses, setStatuses] = useState<Map<string, PeriodoStatus>>(new Map())
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [doneCount, setDoneCount] = useState(0)
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
 
-    if (!file) {
-      setError('Seleccione un archivo CSV para previsualizar.')
-      return
+    setIsParsing(true)
+    setParseError(null)
+    setParsed(null)
+    setStatuses(new Map())
+    setDoneCount(0)
+    setFileName(file.name)
+    setFileSize(file.size)
+
+    try {
+      const text = await file.text()
+      await new Promise<void>((r) => setTimeout(r, 0))
+      const raw = parseCSVClient(text)
+
+      if (raw.periodos.length === 0) {
+        setParseError('No se encontraron períodos válidos. Verificá que "Fecha de importación" tenga fechas en formato dd/mm/yyyy.')
+        setIsParsing(false)
+        return
+      }
+
+      setIsParsing(false)
+      setIsChecking(true)
+
+      // Build full PeriodoResumen with empresa state, checking duplicates via API
+      const periodos: PeriodoResumen[] = []
+      for (const p of raw.periodos) {
+        const empresas: EmpresaInfo[] = []
+        for (const nombre of p.empresasNombres) {
+          const res = await fetch(`/api/importaciones/existe?empresa=${encodeURIComponent(nombre)}&anio=${p.anio}&mes=${p.mes}`)
+          const data = await res.json()
+          empresas.push({
+            nombre,
+            yaExiste: res.ok ? (data.existe as boolean) : false,
+            decision: data.existe ? 'pendiente' : 'sobreescribir', // 'sobreescribir' here means "proceed normally"
+          })
+        }
+        periodos.push({ periodo: p.periodo, anio: p.anio, mes: p.mes, filas: p.filas, empresas })
+      }
+
+      const result: ParsedFile = { header: raw.header, byPeriod: raw.byPeriod, periodos }
+      setParsed(result)
+
+      const initial = new Map<string, PeriodoStatus>()
+      for (const p of periodos) {
+        const hasConflict = p.empresas.some((e) => e.yaExiste)
+        initial.set(p.periodo, hasConflict ? { state: 'ready' } : { state: 'ready' })
+      }
+      setStatuses(initial)
+    } catch (err) {
+      setParseError(err instanceof Error ? err.message : 'Error al leer el archivo.')
+      setIsParsing(false)
     }
 
-    setIsLoading(true)
-    setError(null)
-    setConfirmError(null)
-    setMissingCompanies([])
-    setPreview(null)
-    setConfirmResult(null)
-    setShowConfirmStep(false)
-
-    const formData = new FormData()
-    formData.append('file', file)
-
-    const result = await requestJson<ImportPreviewResult>('/api/importaciones/preview', {
-      method: 'POST',
-      body: formData,
-    }, 'No se pudo generar la vista previa.')
-
-    if (!result.ok) {
-      setError(result.error)
-      setIsLoading(false)
-      return
-    }
-
-    setPreview(result.data)
-    setIsLoading(false)
+    setIsChecking(false)
   }
 
-  async function handleConfirm() {
-    if (!file || !preview || preview.validation.hasBlockingErrors) {
-      return
+  function setEmpresaDecision(periodo: string, empresa: string, decision: EmpresaDecision) {
+    setParsed((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        periodos: prev.periodos.map((p) =>
+          p.periodo === periodo
+            ? { ...p, empresas: p.empresas.map((e) => (e.nombre === empresa ? { ...e, decision } : e)) }
+            : p,
+        ),
+      }
+    })
+  }
+
+  function setStatus(periodo: string, status: PeriodoStatus) {
+    setStatuses((prev) => new Map(prev).set(periodo, status))
+  }
+
+  async function processPeriodo(resumen: PeriodoResumen, parsedData: ParsedFile): Promise<boolean> {
+    const lines = parsedData.byPeriod.get(resumen.periodo) ?? []
+
+    // Determine empresa sets based on user decisions
+    const sobreescribir = resumen.empresas
+      .filter((e) => e.yaExiste && e.decision === 'sobreescribir')
+      .map((e) => e.nombre)
+    const omitir = resumen.empresas
+      .filter((e) => e.yaExiste && e.decision === 'omitir')
+      .map((e) => e.nombre)
+
+    // Check if all companies are being skipped
+    const todasOmitidas = resumen.empresas.every((e) => e.yaExiste && e.decision === 'omitir')
+    if (todasOmitidas) {
+      setStatus(resumen.periodo, { state: 'done', procesadas: 0, importacionId: null })
+      return true
     }
 
-    setIsConfirming(true)
-    setConfirmError(null)
-    setMissingCompanies([])
-    setConfirmResult(null)
+    const csvFile = buildPartialFile(parsedData.header, lines, resumen.periodo)
+    setStatus(resumen.periodo, { state: 'processing' })
 
     const formData = new FormData()
-    formData.append('file', file)
+    formData.append('file', csvFile)
+    formData.append('periodo', resumen.periodo)
+    if (sobreescribir.length > 0) formData.append('sobreescribir', sobreescribir.join('|'))
+    if (omitir.length > 0) formData.append('omitir', omitir.join('|'))
 
-    const result = await requestJson<ConfirmResult>('/api/importaciones/confirmar', {
-      method: 'POST',
-      body: formData,
-    }, 'No se pudo confirmar la importación.')
+    try {
+      const res = await fetch('/api/importaciones/confirmar', { method: 'POST', body: formData })
+      const data = await res.json()
 
-    if (!result.ok) {
-      setConfirmError(result.error)
-      const payload = result.body as ApiPayload | undefined
-      setMissingCompanies(payload && Array.isArray(payload.missingCompanies) ? payload.missingCompanies : [])
-      setIsConfirming(false)
-      return
+      if (!res.ok) {
+        setStatus(resumen.periodo, { state: 'error', message: data.message ?? 'Error al procesar.' })
+        return false
+      }
+
+      setStatus(resumen.periodo, { state: 'done', procesadas: data.procesadas, importacionId: data.importacionId })
+      return true
+    } catch {
+      setStatus(resumen.periodo, { state: 'error', message: 'Error de conexión.' })
+      return false
+    }
+  }
+
+  async function handleConfirmAll() {
+    if (!parsed || isProcessing) return
+
+    // Check all conflicting empresas have a decision
+    const pending = parsed.periodos.flatMap((p) =>
+      p.empresas.filter((e) => e.yaExiste && e.decision === 'pendiente').map((e) => `${e.nombre} (${periodoLabel(p.anio, p.mes)})`)
+    )
+    if (pending.length > 0) return // button disabled when pending decisions exist
+
+    setIsProcessing(true)
+    let done = [...statuses.values()].filter((s) => s.state === 'done').length
+
+    for (const periodo of parsed.periodos) {
+      const current = statuses.get(periodo.periodo)
+      if (current?.state === 'done') continue
+      const ok = await processPeriodo(periodo, parsed)
+      if (ok) {
+        done++
+        setDoneCount(done)
+      }
     }
 
-    setShowConfirmStep(false)
-    setConfirmResult(result.data)
-    setIsConfirming(false)
+    setIsProcessing(false)
   }
+
+  async function handleRetry(resumen: PeriodoResumen) {
+    if (!parsed || isProcessing) return
+    setIsProcessing(true)
+    const ok = await processPeriodo(resumen, parsed)
+    if (ok) setDoneCount((c) => c + 1)
+    setIsProcessing(false)
+  }
+
+  const totalPeriodos = parsed?.periodos.length ?? 0
+  const allDone = totalPeriodos > 0 && doneCount === totalPeriodos
+  const anyError = [...statuses.values()].some((s) => s.state === 'error')
+  const hasPendingDecisions = parsed?.periodos.some((p) =>
+    p.empresas.some((e) => e.yaExiste && e.decision === 'pendiente')
+  ) ?? false
+  const progressPct = totalPeriodos > 0 ? (doneCount / totalPeriodos) * 100 : 0
 
   return (
     <div className="space-y-6">
-      <section className="rounded-lg border border-slate-200 bg-white p-5">
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div>
-            <label className="block text-sm font-medium text-slate-700" htmlFor="csv-file">
-              Archivo CSV
-            </label>
-            <input
-              accept=".csv,text/csv"
-              className="mt-2 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
-              id="csv-file"
-              name="file"
-              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-              type="file"
-            />
-          </div>
-          <button
-            className="rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={isLoading}
-            type="submit"
-          >
-            {isLoading ? 'Generando preview...' : 'Generar preview'}
-          </button>
-        </form>
+      {/* File picker */}
+      <section className="rounded-xl border border-slate-200 bg-white p-6">
+        <label className="block text-sm font-medium text-slate-700" htmlFor="csv-file">
+          Archivo CSV
+        </label>
+        <p className="mt-1 text-xs text-slate-500">
+          El archivo se procesa en tu navegador — cada mes se envía al servidor por separado.
+        </p>
+        <input
+          accept=".csv,text/csv"
+          className="mt-3 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
+          disabled={isParsing || isChecking || isProcessing}
+          id="csv-file"
+          name="file"
+          onChange={handleFileChange}
+          type="file"
+        />
+        {(isParsing || isChecking) ? (
+          <p className="mt-3 flex items-center gap-2 text-sm text-slate-600">
+            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />
+            {isParsing ? 'Analizando archivo...' : 'Verificando importaciones existentes...'}
+          </p>
+        ) : null}
       </section>
 
-      {error ? <AlertError>{error}</AlertError> : null}
+      {parseError ? (
+        <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-900">{parseError}</div>
+      ) : null}
 
-      {preview ? (
-        <PreviewResult
-          confirmError={confirmError}
-          confirmResult={confirmResult}
-          isConfirming={isConfirming}
-          missingCompanies={missingCompanies}
-          onCancelConfirm={() => setShowConfirmStep(false)}
-          onConfirm={handleConfirm}
-          onRequestConfirm={() => setShowConfirmStep(true)}
-          preview={preview}
-          showConfirmStep={showConfirmStep}
-        />
+      {parsed && !isParsing && !isChecking ? (
+        <>
+          {/* File summary */}
+          <section className="rounded-xl border border-slate-200 bg-white p-6">
+            <h2 className="text-base font-semibold text-slate-950">Resumen del archivo</h2>
+            <div className="mt-3 grid gap-3 sm:grid-cols-3">
+              <InfoCard label="Archivo" value={fileName ?? ''} />
+              <InfoCard label="Tamaño" value={formatBytes(fileSize)} />
+              <InfoCard
+                label="Total filas válidas"
+                value={parsed.periodos.reduce((s, p) => s + p.filas, 0).toLocaleString('es-UY')}
+              />
+            </div>
+          </section>
+
+          {/* Periods table */}
+          <section className="rounded-xl border border-slate-200 bg-white p-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h2 className="text-base font-semibold text-slate-950">
+                  Períodos detectados — {totalPeriodos} {totalPeriodos === 1 ? 'mes' : 'meses'}
+                </h2>
+                {hasPendingDecisions ? (
+                  <p className="mt-1 text-sm text-amber-700">
+                    ⚠️ Hay empresas con importación existente. Definí qué hacer con cada una antes de continuar.
+                  </p>
+                ) : isProcessing ? (
+                  <p className="mt-1 text-sm text-slate-500">{doneCount} de {totalPeriodos} meses completados</p>
+                ) : allDone ? (
+                  <p className="mt-1 text-sm font-medium text-emerald-700">✅ Todos los meses fueron importados.</p>
+                ) : anyError ? (
+                  <p className="mt-1 text-sm text-red-700">Algunos meses fallaron. Podés reintentarlos.</p>
+                ) : null}
+              </div>
+
+              {!allDone ? (
+                <button
+                  className="shrink-0 rounded-md px-5 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={isProcessing || hasPendingDecisions}
+                  onClick={handleConfirmAll}
+                  style={{ background: (isProcessing || hasPendingDecisions) ? '#94a3b8' : 'linear-gradient(135deg,#1769E0,#19C3FF)' }}
+                  title={hasPendingDecisions ? 'Resolvé los conflictos antes de confirmar' : undefined}
+                  type="button"
+                >
+                  {isProcessing ? 'Procesando...' : anyError ? 'Reintentar pendientes' : 'Confirmar todo'}
+                </button>
+              ) : (
+                <Link
+                  className="shrink-0 rounded-md px-5 py-2 text-sm font-semibold text-white"
+                  href="/importaciones"
+                  style={{ background: 'linear-gradient(135deg,#1769E0,#19C3FF)' }}
+                >
+                  Ver importaciones
+                </Link>
+              )}
+            </div>
+
+            {/* Global progress bar */}
+            {(isProcessing || allDone) && totalPeriodos > 0 ? (
+              <div className="mt-4">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className="h-2 rounded-full transition-all duration-500"
+                    style={{ width: `${progressPct}%`, background: 'linear-gradient(90deg,#1769E0,#19C3FF)' }}
+                  />
+                </div>
+                <p className="mt-1 text-right text-xs text-slate-500">{doneCount} / {totalPeriodos} meses</p>
+              </div>
+            ) : null}
+
+            <div className="mt-5 space-y-3">
+              {parsed.periodos.map((p) => (
+                <PeriodoRow
+                  key={p.periodo}
+                  isProcessing={isProcessing}
+                  onDecision={(empresa, decision) => setEmpresaDecision(p.periodo, empresa, decision)}
+                  onRetry={() => handleRetry(p)}
+                  periodo={p}
+                  status={statuses.get(p.periodo) ?? { state: 'ready' }}
+                />
+              ))}
+            </div>
+          </section>
+        </>
       ) : null}
     </div>
   )
 }
 
-function PreviewResult({
-  confirmError,
-  confirmResult,
-  isConfirming,
-  missingCompanies,
-  onCancelConfirm,
-  onConfirm,
-  onRequestConfirm,
-  preview,
-  showConfirmStep,
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function PeriodoRow({
+  isProcessing,
+  onDecision,
+  onRetry,
+  periodo,
+  status,
 }: {
-  confirmError: string | null
-  confirmResult: ConfirmResult | null
-  isConfirming: boolean
-  missingCompanies: string[]
-  onCancelConfirm: () => void
-  onConfirm: () => void
-  onRequestConfirm: () => void
-  preview: ImportPreviewResult
-  showConfirmStep: boolean
+  isProcessing: boolean
+  onDecision: (empresa: string, decision: EmpresaDecision) => void
+  onRetry: () => void
+  periodo: PeriodoResumen
+  status: PeriodoStatus
 }) {
-  const period = preview.detectedPeriod
-    ? `${String(preview.detectedPeriod.mes).padStart(2, '0')}/${preview.detectedPeriod.anio}`
-    : 'No detectado'
+  const label = periodoLabel(periodo.anio, periodo.mes)
+  const conflicts = periodo.empresas.filter((e) => e.yaExiste)
+  const hasConflicts = conflicts.length > 0
+  const allSkipped = periodo.empresas.every((e) => e.yaExiste && e.decision === 'omitir')
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-lg border border-slate-200 bg-white p-5">
-        <h2 className="text-lg font-semibold text-slate-950">Resultado de preview</h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Metric label="Archivo" value={preview.file.name} />
-          <Metric label="Tamaño" value={`${preview.file.size} bytes`} />
-          <Metric label="Periodo" value={period} />
-          <Metric label="Hash SHA-256" value={preview.file.hash} wide />
-          <Metric label="Filas totales" value={preview.totalRows} />
-          <Metric label="Filas importables" value={preview.importableRows} />
-          <Metric label="Filas facturables" value={preview.facturableRows} />
-          <Metric label="Empresas" value={preview.detectedCompaniesCount} />
-          <Metric label="Lotes" value={preview.detectedLotsCount} />
-          <Metric label="Estados" value={preview.detectedStatesCount} />
-          <Metric label="Completadas" value={preview.completedActivationsCount} />
-          <Metric label="Sin fecha real" value={preview.activationsWithoutRealActivationDateCount} />
-        </div>
-      </section>
+    <div className={`rounded-lg border bg-slate-50 p-4 ${hasConflicts && status.state !== 'done' ? 'border-amber-300' : 'border-slate-200'}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-medium capitalize text-slate-900">{label}</span>
+            <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600">
+              {periodo.filas.toLocaleString('es-UY')} filas
+            </span>
+            {hasConflicts && status.state !== 'done' ? (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                {conflicts.length} empresa{conflicts.length > 1 ? 's' : ''} ya importada{conflicts.length > 1 ? 's' : ''}
+              </span>
+            ) : null}
+          </div>
 
-      <ValidationPanel preview={preview} />
+          {/* Empresa list — only show if period is not yet done */}
+          {status.state !== 'done' && status.state !== 'processing' ? (
+            <div className="mt-3 space-y-2">
+              {periodo.empresas.map((empresa) => (
+                <EmpresaRow
+                  key={empresa.nombre}
+                  empresa={empresa}
+                  isProcessing={isProcessing}
+                  onDecision={(decision) => onDecision(empresa.nombre, decision)}
+                />
+              ))}
+            </div>
+          ) : null}
 
-      {!preview.validation.hasBlockingErrors && !confirmResult ? (
-        <section className="rounded-lg border border-slate-200 bg-white p-5">
-          <h2 className="text-lg font-semibold text-slate-950">Confirmar importación</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            La confirmación persiste la importación, todas las filas del CSV y genera una facturación mensual por
-            empresa. Esta acción no implementa cancelación ni edición de filas importadas.
-          </p>
-          {!showConfirmStep ? (
-            <button
-              className="mt-4 rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
-              onClick={onRequestConfirm}
-              type="button"
-            >
-              Confirmar importación
-            </button>
-          ) : (
-            <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-4">
-              <p className="text-sm font-medium text-amber-950">Confirme que desea guardar esta importación.</p>
-              <div className="mt-3 flex gap-3">
-                <button
-                  className="rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={isConfirming}
-                  onClick={onConfirm}
-                  type="button"
-                >
-                  {isConfirming ? 'Confirmando...' : 'Sí, confirmar'}
-                </button>
-                <button
-                  className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                  disabled={isConfirming}
-                  onClick={onCancelConfirm}
-                  type="button"
-                >
-                  Cancelar
-                </button>
+          {status.state === 'processing' ? (
+            <div className="mt-3">
+              <p className="flex items-center gap-2 text-xs text-slate-600">
+                <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />
+                Procesando {label}... {periodo.filas.toLocaleString('es-UY')} filas
+              </p>
+              <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+                <div
+                  className="h-1.5 animate-pulse rounded-full"
+                  style={{ width: '60%', background: 'linear-gradient(90deg,#1769E0,#19C3FF)' }}
+                />
               </div>
             </div>
-          )}
-        </section>
-      ) : null}
-
-      {confirmError ? (
-        <AlertError className="p-5">
-          <p className="font-semibold">{confirmError}</p>
-          {missingCompanies.length > 0 ? (
-            <ul className="mt-3 list-inside list-disc">
-              {missingCompanies.map((company) => (
-                <li key={company}>{company}</li>
-              ))}
-            </ul>
           ) : null}
-        </AlertError>
-      ) : null}
 
-      {confirmResult ? <ConfirmationResult result={confirmResult} /> : null}
-
-      <section className="grid gap-6 xl:grid-cols-3">
-        <SummaryTable title="Empresas" rows={preview.companySummary} />
-        <SummaryTable title="Estados" rows={preview.stateSummary} />
-        <SummaryTable title="Lotes" rows={preview.lotSummary} />
-      </section>
-
-      <section className="rounded-lg border border-slate-200 bg-white p-5">
-        <h2 className="text-lg font-semibold text-slate-950">Preview económico</h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          <Metric label="Precio unitario" value={preview.economicPreview.precioUnitarioActivacion} />
-          <Metric label="IVA %" value={preview.economicPreview.porcentajeIva} />
-          <Metric label="Total sin IVA" value={preview.economicPreview.totalSinIva} />
-          <Metric label="IVA" value={preview.economicPreview.iva} />
-          <Metric label="Total con IVA" value={preview.economicPreview.totalConIva} />
-        </div>
-      </section>
-    </div>
-  )
-}
-
-function ConfirmationResult({ result }: { result: ConfirmResult }) {
-  return (
-    <AlertSuccess className="p-5">
-      <h2 className="text-lg font-semibold text-emerald-950">Importación confirmada</h2>
-      <p className="mt-2 text-sm text-emerald-900">Importacion ID: {result.importacionId}</p>
-      <div className="mt-4 overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="text-emerald-900">
-            <tr>
-              <th className="border-b border-emerald-200 py-2 pr-3 font-medium">Empresa</th>
-              <th className="border-b border-emerald-200 py-2 pr-3 font-medium">Activaciones</th>
-              <th className="border-b border-emerald-200 py-2 pr-3 font-medium">Subtotal</th>
-              <th className="border-b border-emerald-200 py-2 pr-3 font-medium">IVA</th>
-              <th className="border-b border-emerald-200 py-2 pr-3 font-medium">Total</th>
-              <th className="border-b border-emerald-200 py-2 pr-3 font-medium">Facturación ID</th>
-            </tr>
-          </thead>
-          <tbody>
-            {result.facturaciones.map((facturacion) => (
-              <tr key={facturacion.id}>
-                <td className="border-b border-emerald-100 py-2 pr-3">{facturacion.empresaNombreArchivo}</td>
-                <td className="border-b border-emerald-100 py-2 pr-3">{facturacion.cantidadActivaciones}</td>
-                <td className="border-b border-emerald-100 py-2 pr-3">{facturacion.subtotal}</td>
-                <td className="border-b border-emerald-100 py-2 pr-3">{facturacion.iva}</td>
-                <td className="border-b border-emerald-100 py-2 pr-3">{facturacion.total}</td>
-                <td className="border-b border-emerald-100 py-2 pr-3">{facturacion.id}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <Link className="mt-4 inline-flex text-sm font-semibold text-emerald-950 underline" href="/importaciones">
-        Ver importaciones
-      </Link>
-    </AlertSuccess>
-  )
-}
-
-function ValidationPanel({ preview }: { preview: ImportPreviewResult }) {
-  return (
-    <section className="grid gap-6 lg:grid-cols-2">
-      <IssueList
-        emptyText="No hay errores bloqueantes."
-        items={preview.validation.errors}
-        tone="error"
-        title="Errores bloqueantes"
-      />
-      <IssueList
-        emptyText="No hay advertencias."
-        items={preview.validation.warnings}
-        tone="warning"
-        title="Advertencias"
-      />
-    </section>
-  )
-}
-
-function IssueList({
-  emptyText,
-  items,
-  title,
-  tone,
-}: {
-  emptyText: string
-  items: ImportPreviewResult['validation']['errors']
-  title: string
-  tone: 'error' | 'warning'
-}) {
-  const classes =
-    tone === 'error'
-      ? 'border-red-200 bg-red-50 text-red-900'
-      : 'border-amber-200 bg-amber-50 text-amber-900'
-
-  if (tone === 'warning') {
-    return <WarningList classes={classes} emptyText={emptyText} items={items} title={title} />
-  }
-
-  return (
-    <div className={`rounded-lg border p-5 ${classes}`}>
-      <h2 className="text-lg font-semibold">{title}</h2>
-      {items.length > 0 ? (
-        <ul className="mt-3 space-y-2 text-sm">
-          {items.map((item, index) => (
-            <li key={`${item.code}-${item.row ?? 'global'}-${index}`}>
-              {item.row ? `Fila ${item.row}: ` : ''}
-              {item.message}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="mt-3 text-sm">{emptyText}</p>
-      )}
-    </div>
-  )
-}
-
-function WarningList({
-  classes,
-  emptyText,
-  items,
-  title,
-}: {
-  classes: string
-  emptyText: string
-  items: ImportPreviewResult['validation']['warnings']
-  title: string
-}) {
-  const [expanded, setExpanded] = useState(false)
-  const grouped = groupWarnings(items)
-
-  return (
-    <div className={`rounded-lg border p-5 ${classes}`}>
-      <h2 className="text-lg font-semibold">{title}</h2>
-      {items.length > 0 ? (
-        <div className="mt-3 space-y-3 text-sm">
-          <p className="font-medium">Total de advertencias: {items.length}</p>
-          <ul className="grid gap-2 sm:grid-cols-2">
-            {grouped.map((item) => (
-              <li className="rounded-md bg-white/60 px-3 py-2" key={item.code}>
-                <span className="font-semibold">{warningLabel(item.code)}:</span> {item.count}
-              </li>
-            ))}
-          </ul>
-          <button
-            className="rounded-md border border-amber-300 bg-white px-3 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-100"
-            type="button"
-            onClick={() => setExpanded((value) => !value)}
-          >
-            {expanded ? 'Ocultar detalle de advertencias' : 'Ver detalle de advertencias'}
-          </button>
-          {expanded ? (
-            <div className="max-h-80 overflow-y-auto rounded-md border border-amber-200 bg-white/70 p-3">
-              <ul className="space-y-2">
-                {items.map((item, index) => (
-                  <li key={`${item.code}-${item.row ?? 'global'}-${index}`}>
-                    {item.row ? `Fila ${item.row}: ` : ''}
-                    {item.message}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </div>
-      ) : (
-        <p className="mt-3 text-sm">{emptyText}</p>
-      )}
-    </div>
-  )
-}
-
-function SummaryTable({
-  title,
-  rows,
-}: {
-  title: string
-  rows: Array<{ name: string; count: number; importableRows?: number; facturableRows?: number }>
-}) {
-  return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5">
-      <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
-      <div className="mt-4 overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="text-slate-500">
-            <tr>
-              <th className="border-b border-slate-200 py-2 pr-3 font-medium">Nombre</th>
-              <th className="border-b border-slate-200 py-2 pr-3 font-medium">Filas</th>
-              {rows.some((row) => row.importableRows !== undefined) ? (
-                <th className="border-b border-slate-200 py-2 pr-3 font-medium">Importables</th>
+          {status.state === 'done' ? (
+            <p className="mt-2 text-xs font-medium text-emerald-700">
+              {allSkipped
+                ? '⏭️ Omitido — todas las empresas ya importadas fueron salteadas'
+                : `✅ ${status.procesadas.toLocaleString('es-UY')} filas importadas`}
+              {status.importacionId ? (
+                <span className="ml-2 font-normal text-slate-400">ID: {status.importacionId}</span>
               ) : null}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.name}>
-                <td className="border-b border-slate-100 py-2 pr-3 text-slate-900">{row.name}</td>
-                <td className="border-b border-slate-100 py-2 pr-3 text-slate-700">{row.count}</td>
-                {row.importableRows !== undefined ? (
-                  <td className="border-b border-slate-100 py-2 pr-3 text-slate-700">{row.importableRows}</td>
-                ) : null}
-              </tr>
-            ))}
-            {rows.length === 0 ? (
-              <tr>
-                <td className="py-2 text-slate-500" colSpan={3}>
-                  Sin datos.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  )
-}
+            </p>
+          ) : null}
 
-function Metric({ label, value, wide = false }: { label: string; value: string | number; wide?: boolean }) {
-  return (
-    <div className={`rounded-md border border-slate-200 bg-slate-50 p-3 ${wide ? 'lg:col-span-3' : ''}`}>
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-1 break-words text-sm font-semibold text-slate-950">{value}</p>
+          {status.state === 'error' ? (
+            <p className="mt-2 text-xs text-red-700">❌ {status.message}</p>
+          ) : null}
+        </div>
+
+        <div className="shrink-0">
+          {status.state === 'ready' && (
+            <span className="rounded-full bg-slate-200 px-2 py-1 text-xs text-slate-500">Pendiente</span>
+          )}
+          {status.state === 'processing' && (
+            <span className="rounded-full bg-blue-100 px-2 py-1 text-xs text-blue-700">Procesando...</span>
+          )}
+          {status.state === 'done' && (
+            <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700">Completado</span>
+          )}
+          {status.state === 'error' && (
+            <button
+              className="rounded-md border border-red-300 bg-white px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+              disabled={isProcessing}
+              onClick={onRetry}
+              type="button"
+            >
+              Reintentar
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
 
-function groupWarnings(items: ImportPreviewResult['validation']['warnings']) {
-  const counts = new Map<string, number>()
-
-  for (const item of items) {
-    counts.set(item.code, (counts.get(item.code) ?? 0) + 1)
+function EmpresaRow({
+  empresa,
+  isProcessing,
+  onDecision,
+}: {
+  empresa: EmpresaInfo
+  isProcessing: boolean
+  onDecision: (decision: EmpresaDecision) => void
+}) {
+  if (!empresa.yaExiste) {
+    // No conflict — just show the empresa name
+    return (
+      <div className="flex items-center gap-2 text-xs text-slate-600">
+        <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+        <span>{empresa.nombre}</span>
+      </div>
+    )
   }
 
-  return [...counts.entries()]
-    .map(([code, count]) => ({ code, count }))
-    .sort((left, right) => right.count - left.count || left.code.localeCompare(right.code))
+  // Conflict — show decision controls
+  return (
+    <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <span className="text-xs font-medium text-amber-900">{empresa.nombre}</span>
+          <span className="ml-2 text-xs text-amber-700">— ya existe importación para este período</span>
+        </div>
+        <div className="flex gap-2">
+          <button
+            className={`rounded px-2 py-1 text-xs font-semibold transition-colors ${
+              empresa.decision === 'sobreescribir'
+                ? 'bg-amber-600 text-white'
+                : 'border border-amber-400 bg-white text-amber-800 hover:bg-amber-100'
+            } disabled:opacity-50`}
+            disabled={isProcessing}
+            onClick={() => onDecision('sobreescribir')}
+            type="button"
+          >
+            Sobreescribir
+          </button>
+          <button
+            className={`rounded px-2 py-1 text-xs font-semibold transition-colors ${
+              empresa.decision === 'omitir'
+                ? 'bg-slate-600 text-white'
+                : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-100'
+            } disabled:opacity-50`}
+            disabled={isProcessing}
+            onClick={() => onDecision('omitir')}
+            type="button"
+          >
+            Omitir
+          </button>
+          {empresa.decision === 'pendiente' ? (
+            <span className="self-center text-xs font-medium text-amber-700">← Decidí</span>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  )
 }
 
-function warningLabel(code: string) {
-  const labels: Record<string, string> = {
-    FECHA_TECNICA: 'Fechas técnicas',
-    ESTADO_NO_OK: 'Estados no OK',
-    TECHNICAL_ACTIVATION_DATE: 'Fechas técnicas',
-    NON_OK_STATE: 'Estados no OK',
-    PARAMETERS_UNAVAILABLE: 'Parámetros no disponibles',
-  }
-
-  return labels[code] ?? code
+function InfoCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 break-all text-sm font-semibold text-slate-950">{value}</p>
+    </div>
+  )
 }

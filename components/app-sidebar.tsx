@@ -2,7 +2,7 @@ import Link from 'next/link'
 import {
   LayoutDashboard, Upload, Zap, FileText, CreditCard, Building2,
   Receipt, PlusCircle, Calculator, Lock, BarChart2, Settings,
-  Users, UserCog, Shield, LogOut, Bug, FileCode2, type LucideIcon
+  Users, UserCog, Shield, LogOut, Bug, FileCode2, X, type LucideIcon
 } from 'lucide-react'
 
 import type { CurrentUser } from '@/lib/auth'
@@ -32,10 +32,12 @@ function LogoMark() {
   )
 }
 
-export function AppSidebar({ user }: { user: CurrentUser }) {
+export function AppSidebar({ user, onClose }: { user: CurrentUser; onClose?: () => void }) {
   const allItems = navigationItems.filter((item) => {
     if (item.adminOnly) return user.rol === 'ADMIN'
-    if (user.rol === 'ISSUES') return item.issuesOnly === true
+    if (item.roles) return item.roles.includes(user.rol)
+    // No roles restriction — hide from ISSUES (they only see explicitly listed items)
+    if (user.rol === 'ISSUES') return false
     return true
   })
   const regularItems = allItems.filter((item) => !item.adminOnly)
@@ -50,10 +52,16 @@ export function AppSidebar({ user }: { user: CurrentUser }) {
       {/* Brand */}
       <div className="shrink-0 flex items-center gap-3 px-5 py-5">
         <LogoMark />
-        <div>
-          <p className="text-base font-bold" style={{ color: '#0B1F3A', letterSpacing: '-0.01em' }}>AMENSG</p>
-          <p className="text-xs font-medium uppercase tracking-widest" style={{ color: '#8ba3c7' }}>Activaciones</p>
-        </div>
+        <p className="text-base font-bold flex-1" style={{ color: '#0B1F3A', letterSpacing: '-0.01em' }}>amensg</p>
+        {onClose ? (
+          <button
+            className="rounded-lg p-1 text-[#5a6a82] hover:bg-[#EEF4FF] md:hidden"
+            onClick={onClose}
+            aria-label="Cerrar menú"
+          >
+            <X size={18} />
+          </button>
+        ) : null}
       </div>
 
       {/* Navigation */}
@@ -65,8 +73,7 @@ export function AppSidebar({ user }: { user: CurrentUser }) {
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-[#EEF4FF] hover:text-[#1769E0]"
-                  style={{ color: '#5a6a82' }}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[#5a6a82] transition-colors hover:bg-[#EEF4FF] hover:text-[#1769E0]"
                 >
                   {Icon ? <Icon size={16} className="shrink-0" /> : null}
                   {item.label}
@@ -95,8 +102,7 @@ export function AppSidebar({ user }: { user: CurrentUser }) {
                   <li key={item.href}>
                     <Link
                       href={item.href}
-                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-[#EEF4FF] hover:text-[#1769E0]"
-                      style={{ color: '#5a6a82' }}
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[#5a6a82] transition-colors hover:bg-[#EEF4FF] hover:text-[#1769E0]"
                     >
                       {Icon ? <Icon size={16} className="shrink-0" /> : null}
                       {item.label}

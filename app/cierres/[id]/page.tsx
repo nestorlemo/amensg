@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { ReactNode } from 'react'
 
+import { PageHeader } from '@/components/page-header'
 import { ReabrirCierreForm } from '@/components/reabrir-cierre-form'
 import { getCurrentUser, isAdmin } from '@/lib/auth'
 import { getCierre } from '@/lib/liquidaciones'
@@ -35,26 +36,25 @@ export default async function CierreDetailPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <header className="border-b border-slate-200 pb-5">
-        <Link className="text-sm font-semibold text-slate-600 underline" href="/cierres">
-          Volver a cierres
-        </Link>
-        <p className="mt-4 text-sm font-medium uppercase text-slate-500">Cierre mensual</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-950">{formatPeriod(cierre.anio, cierre.mes)}</h1>
-        <p className="mt-2 text-sm text-slate-600">Snapshot cerrado el {formatDate(cierre.cerradoAt)}.</p>
-        {isAdmin(user) && isCerrado(cierre.estado) ? (
-          <div className="mt-4">
-            <ReabrirCierreForm buttonLabel="Reabrir cierre" cierreId={cierre.id} />
-          </div>
-        ) : null}
-        {isReabierto(cierre.estado) ? (
-          <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-            <p className="font-semibold">Este cierre fue reabierto.</p>
-            <p className="mt-1">Fecha de reapertura: {formatDate(cierre.reabiertoAt)}</p>
-            <p className="mt-1">Motivo: {cierre.motivoReapertura ?? 'Sin motivo registrado'}</p>
-          </div>
-        ) : null}
-      </header>
+      <Link className="mb-2 inline-flex text-sm font-semibold text-slate-600 hover:text-slate-950" href="/cierres">
+        ← Volver a cierres
+      </Link>
+      <PageHeader
+        section="Cierre mensual"
+        title={formatPeriod(cierre.anio, cierre.mes)}
+        description={`Snapshot cerrado el ${formatDate(cierre.cerradoAt)}.`}
+        action={isAdmin(user) && isCerrado(cierre.estado)
+          ? <ReabrirCierreForm buttonLabel="Reabrir cierre" cierreId={cierre.id} />
+          : undefined
+        }
+      />
+      {isReabierto(cierre.estado) ? (
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          <p className="font-semibold">Este cierre fue reabierto.</p>
+          <p className="mt-1">Fecha de reapertura: {formatDate(cierre.reabiertoAt)}</p>
+          <p className="mt-1">Motivo: {cierre.motivoReapertura ?? 'Sin motivo registrado'}</p>
+        </div>
+      ) : null}
 
       <section className="grid gap-3 md:grid-cols-4">
         <Metric label="Estado" value={cierre.estado} />
@@ -194,7 +194,7 @@ export default async function CierreDetailPage({ params }: PageProps) {
       </section>
 
       <section className="rounded-md border border-slate-200 bg-white p-4">
-        <h2 className="text-lg font-semibold text-slate-950">Distribucion por socio</h2>
+        <h2 className="text-lg font-semibold text-slate-950">Distribución por socio</h2>
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="bg-slate-100 text-left text-xs uppercase text-slate-600">

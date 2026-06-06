@@ -36,7 +36,7 @@ export function ReabrirCierreForm({ cierreId, buttonLabel = 'Reabrir' }: Reabrir
       body: JSON.stringify({ motivo: trimmedMotivo }),
     }, 'No se pudo reabrir el cierre.')
 
-    if (!result.ok) {
+    if (result.ok === false) {
       setError(result.error)
       setIsSubmitting(false)
       return

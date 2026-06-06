@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react'
+import { Fragment, type ReactNode } from 'react'
 
 import { CerrarLiquidacionButton } from '@/components/cerrar-liquidacion-button'
+import { PageHeader } from '@/components/page-header'
 import { getCurrentUser, isAdmin } from '@/lib/auth'
 import { buildLiquidacionPreview } from '@/lib/liquidaciones'
 
@@ -23,11 +24,11 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
 
   return (
     <div className="min-w-0 max-w-full space-y-6">
-      <header className="border-b border-slate-200 pb-5">
-        <p className="text-sm font-medium uppercase text-slate-500">Liquidaciones</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-950">Preview de liquidacion mensual</h1>
-        <p className="mt-2 text-sm text-slate-600">Liquidacion basada en facturado, no en cobrado.</p>
-      </header>
+      <PageHeader
+        section="Liquidaciones"
+        title="Liquidación mensual"
+        description="Liquidación basada en facturado, no en cobrado."
+      />
 
       <form className="grid gap-3 rounded-md border border-slate-200 bg-white p-4 md:grid-cols-3" method="get">
         <FilterInput label="Anio" name="anio" value={String(anio)} />
@@ -61,13 +62,18 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
         </section>
       ) : null}
 
-      <section className="grid min-w-0 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <Metric label="Total ingresos sin IVA" value={preview.ingresos.totalIngresosSinIva} />
-        <Metric label="IVA total" value={preview.ingresos.totalIva} />
-        <Metric label="Total ingresos con IVA" value={preview.ingresos.ingresosConIva} />
-        <Metric label="Total gastos" value={preview.gastos.totalGastos} />
-        <Metric label="Resultado distribuible" value={preview.resultado.resultadoDistribuible} />
-        <Metric label="Tipo cambio USD" value={preview.resultado.tipoCambioUsd ?? 'Sin configurar'} />
+      <section className="grid min-w-0 gap-3 md:grid-cols-2 lg:grid-cols-4">
+        <Metric label="Total ingresos S/IVA (UYU)" value={preview.ingresos.totalIngresosSinIva} />
+        <Metric label="IVA total (UYU)" value={preview.ingresos.totalIva} />
+        <Metric label="Total ingresos C/IVA (UYU)" value={preview.ingresos.ingresosConIva} />
+        <Metric label="Total gastos S/IVA (UYU)" value={preview.gastos.totalGastos} />
+      </section>
+
+      <section className="grid min-w-0 gap-3 md:grid-cols-2 lg:grid-cols-4">
+        <Metric label="Resultado activaciones (UYU)" value={preview.resultado.resultadoActivaciones} />
+        <Metric label="Resultado adicionales (USD)" value={preview.resultado.resultadoAdicionales} />
+        <Metric label="Resultado desarrollo (USD)" value={preview.resultado.resultadoDesarrolloUSD} />
+        <Metric label="Resultado distribuible (UYU)" value={preview.resultado.resultadoDistribuible} />
       </section>
 
       <section className="rounded-md border border-slate-200 bg-white p-4">
@@ -83,14 +89,14 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
             <thead className="bg-slate-100 text-left text-xs uppercase text-slate-600">
               <tr>
                 <Th>Concepto</Th>
-                <Th align="right">Sin IVA</Th>
+                <Th align="right">Monto S/IVA</Th>
                 <Th align="right">IVA</Th>
-                <Th align="right">Con IVA</Th>
+                <Th align="right">Monto C/IVA</Th>
               </tr>
             </thead>
             <tbody>
               <FinancialRow
-                concept="Facturacion"
+                concept="Facturación"
                 iva={facturacionIva}
                 total={facturacionConIva}
                 withoutIva={preview.ingresos.facturacionSinIva}
@@ -116,7 +122,7 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
       <section className="rounded-md border border-slate-200 bg-white p-4">
         <SectionHeader
           description={`${preview.resultado.totalEmpresas} empresas y ${preview.resultado.totalActivaciones} activaciones facturables.`}
-          title="Detalle de facturacion"
+          title="Detalle de facturación"
         />
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full text-sm">
@@ -124,9 +130,9 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
               <tr>
                 <Th>Empresa</Th>
                 <Th align="right">Activaciones</Th>
-                <Th align="right">Sin IVA</Th>
+                <Th align="right">Monto S/IVA</Th>
                 <Th align="right">IVA</Th>
-                <Th align="right">Total</Th>
+                <Th align="right">Monto C/IVA</Th>
               </tr>
             </thead>
             <tbody>
@@ -140,7 +146,7 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
                 </tr>
               ))}
               {preview.ingresos.facturaciones.length === 0 ? (
-                <EmptyRow colSpan={5} message="No hay facturacion activa para este periodo." />
+                <EmptyRow colSpan={5} message="No hay facturación activa para este periodo." />
               ) : null}
             </tbody>
           </table>
@@ -158,9 +164,9 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
               <tr>
                 <Th>Concepto</Th>
                 <Th>Empresa</Th>
-                <Th align="right">Sin IVA</Th>
+                <Th align="right">Monto S/IVA</Th>
                 <Th align="right">IVA</Th>
-                <Th align="right">Total</Th>
+                <Th align="right">Monto C/IVA</Th>
               </tr>
             </thead>
             <tbody>
@@ -182,6 +188,50 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
       </section>
 
       <section className="rounded-md border border-slate-200 bg-white p-4">
+        <SectionHeader title="Facturación de desarrollo" description="Facturas de desarrollo del período." />
+        <div className="mt-4 overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="bg-slate-100 text-left text-xs uppercase text-slate-600">
+              <tr>
+                <Th>Empresa</Th>
+                <Th align="right">Horas</Th>
+                <Th align="right">Total USD s/IVA</Th>
+                <Th align="right">IVA USD</Th>
+                <Th align="right">Total c/IVA USD</Th>
+                <Th align="right">Tipo cambio</Th>
+                <Th align="right">Total c/IVA UYU</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {preview.ingresos.desarrolloFacturas.length === 0 ? (
+                <EmptyRow colSpan={7} message="No hay facturas de desarrollo para este periodo." />
+              ) : null}
+              {preview.ingresos.desarrolloFacturas.map((f) => (
+                <Fragment key={f.id}>
+                  <tr className="border-t border-slate-200">
+                    <Td>{f.empresa}</Td>
+                    <Td align="right">{f.totalHoras}</Td>
+                    <Td align="right">{formatMoney(f.totalUSD)}</Td>
+                    <Td align="right">{formatMoney(f.ivaUSD)}</Td>
+                    <Td align="right">{formatMoney(f.totalConIvaUSD)}</Td>
+                    <Td align="right">{formatMoney(f.tipoCambio)}</Td>
+                    <Td align="right">{formatMoney(f.totalConIvaUYU)}</Td>
+                  </tr>
+                  {f.distribuciones.map((d) => (
+                    <tr key={d.id} className="bg-slate-50 text-xs text-slate-500">
+                      <td className="px-4 py-1.5 pl-8 italic" colSpan={2}>{d.socioNombre} · {d.porcentaje}%</td>
+                      <td className="px-4 py-1.5 text-right tabular-nums">{formatMoney(d.montoUSD)} USD</td>
+                      <td colSpan={4} />
+                    </tr>
+                  ))}
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="rounded-md border border-slate-200 bg-white p-4">
         <SectionHeader description="Gastos que reducen el resultado distribuible." title="Gastos" />
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full text-sm">
@@ -189,7 +239,7 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
               <tr>
                 <Th>Concepto</Th>
                 <Th>Tipo</Th>
-                <Th align="right">Importe</Th>
+                <Th align="right">Importe S/IVA</Th>
               </tr>
             </thead>
             <tbody>
@@ -204,7 +254,7 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
                 <EmptyRow colSpan={3} message="No hay gastos cargados para este periodo." />
               ) : null}
               <tr className="border-t border-slate-300 bg-slate-50 font-semibold text-slate-950">
-                <Td colSpan={2}>Total gastos</Td>
+                <Td colSpan={2}>Total gastos S/IVA</Td>
                 <Td align="right">{formatMoney(preview.gastos.totalGastos)}</Td>
               </tr>
             </tbody>
@@ -215,7 +265,7 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
       <section className="rounded-md border border-slate-200 bg-white p-4">
         <SectionHeader
           description={`${preview.socios.length} socios activos para distribuir resultado.`}
-          title="Distribucion por socio"
+          title="Distribución por socio"
         />
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full text-sm">
@@ -223,8 +273,11 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
               <tr>
                 <Th>Socio</Th>
                 <Th align="right">Porcentaje</Th>
-                <Th align="right">Monto pesos</Th>
-                <Th align="right">Monto USD</Th>
+                <Th align="right">Activaciones</Th>
+                <Th align="right">Adicionales</Th>
+                <Th align="right">Desarrollo</Th>
+                <Th align="right">Total UYU</Th>
+                <Th align="right">Total USD</Th>
               </tr>
             </thead>
             <tbody>
@@ -232,11 +285,14 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
                 <tr className="border-t border-slate-200" key={socio.id}>
                   <Td>{socio.nombre}</Td>
                   <Td align="right">{formatPercent(socio.porcentaje)}</Td>
+                  <Td align="right">{formatMoney(socio.montoActivaciones)}</Td>
+                  <Td align="right">{formatMoney(socio.montoAdicionales)}</Td>
+                  <Td align="right">{formatMoney(socio.montoDesarrollo)}</Td>
                   <Td align="right">{formatMoney(socio.montoPesos)}</Td>
                   <Td align="right">{socio.montoUsd ? formatMoney(socio.montoUsd) : 'Sin configurar'}</Td>
                 </tr>
               ))}
-              {preview.socios.length === 0 ? <EmptyRow colSpan={4} message="No hay socios activos configurados." /> : null}
+              {preview.socios.length === 0 ? <EmptyRow colSpan={7} message="No hay socios activos configurados." /> : null}
             </tbody>
           </table>
         </div>
@@ -245,19 +301,19 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
   )
 }
 
-function Metric({ label, value }: { label: string; value: string | number }) {
+function Metric({ label, value, suffix }: { label: string; value: string | number; suffix?: string }) {
   const renderedValue = typeof value === 'number' ? String(value) : formatMoney(value)
   const isNumericValue = typeof value === 'number' || isFiniteMoney(value)
 
   return (
-    <div className="flex h-full min-h-32 flex-col justify-between rounded-md border border-slate-200 bg-white p-4">
-      <p className="min-h-10 text-xs font-semibold uppercase leading-5 text-slate-500">{label}</p>
+    <div className="flex h-full min-h-28 flex-col justify-between rounded-md border border-slate-200 bg-white p-4">
+      <p className="text-xs font-semibold uppercase leading-4 text-slate-500">{label}</p>
       <p
-        className={`mt-3 min-h-14 break-words font-semibold leading-tight text-slate-950 ${
-          isNumericValue ? 'text-2xl tabular-nums' : 'text-xl'
+        className={`mt-2 font-semibold leading-tight text-slate-950 ${
+          isNumericValue ? 'text-xl tabular-nums' : 'text-lg'
         }`}
       >
-        {renderedValue}
+        {renderedValue}{suffix}
       </p>
     </div>
   )

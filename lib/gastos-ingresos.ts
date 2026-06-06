@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client'
 
+import { handlePrismaLibError } from '@/lib/api-errors'
 import { prisma } from '@/lib/prisma'
 import { closedPeriodError, isPeriodClosed } from '@/lib/periods'
 import type { SearchParamsInput } from '@/lib/read-models'
@@ -128,6 +129,7 @@ export async function getGastoConceptos() {
       id: row.id,
       nombre: row.nombre,
       tipo: row.tipo,
+      monto: row.monto?.toString() ?? null,
       activo: row.activo,
     })),
   }
@@ -136,59 +138,98 @@ export async function getGastoConceptos() {
 export async function createGastoConcepto(body: Record<string, unknown>) {
   const nombre = requiredString(body, 'nombre')
   const tipo = requiredString(body, 'tipo') ?? 'VARIABLE'
+  const montoRaw = body.monto !== undefined && body.monto !== '' ? body.monto : null
 
   if (!nombre || !CONCEPTO_TIPOS.has(tipo)) {
     return { error: { error: 'CONCEPTO_INVALIDO', message: 'Nombre y tipo valido son requeridos.' }, status: 422 }
   }
 
-  const concepto = await prisma.$transaction(async (tx) => {
-    const created = await tx.gastoConcepto.create({
-      data: { nombre, tipo },
+  let monto: Prisma.Decimal | null = null
+  if (tipo === 'FIJO' && montoRaw !== null) {
+    try {
+      monto = new Prisma.Decimal(String(montoRaw))
+    } catch {
+      return { error: { error: 'MONTO_INVALIDO', message: 'El monto debe ser un número válido.' }, status: 422 }
+    }
+  }
+
+  try {
+    const concepto = await prisma.$transaction(async (tx) => {
+      const created = await tx.gastoConcepto.create({
+        data: { nombre, tipo, monto },
+      })
+
+      await tx.auditoria.create({
+        data: {
+          entidad: 'GastoConcepto',
+          entidadId: created.id,
+          accion: 'CREAR_CONCEPTO_GASTO',
+          detalle: { nombre, tipo, monto: monto?.toString() ?? null },
+        },
+      })
+
+      return created
     })
 
-    await tx.auditoria.create({
-      data: {
-        entidad: 'GastoConcepto',
-        entidadId: created.id,
-        accion: 'CREAR_CONCEPTO_GASTO',
-        detalle: { nombre, tipo },
-      },
-    })
-
-    return created
-  })
-
-  return { data: concepto, status: 201 }
+    return {
+      data: { id: concepto.id, nombre: concepto.nombre, tipo: concepto.tipo, monto: concepto.monto?.toString() ?? null, activo: concepto.activo },
+      status: 201,
+    }
+  } catch (err) {
+    return handlePrismaLibError(err, { nombre: 'nombre' })
+  }
 }
 
 export async function updateGastoConcepto(id: string, body: Record<string, unknown>) {
   const nombre = requiredString(body, 'nombre')
   const tipo = requiredString(body, 'tipo')
   const activo = typeof body.activo === 'boolean' ? body.activo : undefined
+  const montoRaw = body.monto !== undefined && body.monto !== '' ? body.monto : null
 
-  if (!nombre || !tipo || !CONCEPTO_TIPOS.has(tipo)) {
-    return { error: { error: 'CONCEPTO_INVALIDO', message: 'Nombre y tipo valido son requeridos.' }, status: 422 }
+  if (!tipo || !CONCEPTO_TIPOS.has(tipo)) {
+    return { error: { error: 'CONCEPTO_INVALIDO', message: 'Tipo válido es requerido.' }, status: 422 }
   }
 
-  const concepto = await prisma.$transaction(async (tx) => {
-    const updated = await tx.gastoConcepto.update({
-      where: { id },
-      data: { nombre, tipo, ...(activo === undefined ? {} : { activo }) },
+  let monto: Prisma.Decimal | null = null
+  if (tipo === 'FIJO' && montoRaw !== null) {
+    try {
+      monto = new Prisma.Decimal(String(montoRaw))
+    } catch {
+      return { error: { error: 'MONTO_INVALIDO', message: 'El monto debe ser un número válido.' }, status: 422 }
+    }
+  }
+
+  const current = await prisma.gastoConcepto.findUnique({ where: { id }, select: { nombre: true } })
+  const data: Prisma.GastoConceptoUpdateInput = {
+    tipo,
+    monto,
+    ...(activo === undefined ? {} : { activo }),
+    ...(nombre && nombre !== current?.nombre ? { nombre } : {}),
+  }
+
+  try {
+    const concepto = await prisma.$transaction(async (tx) => {
+      const updated = await tx.gastoConcepto.update({ where: { id }, data })
+
+      await tx.auditoria.create({
+        data: {
+          entidad: 'GastoConcepto',
+          entidadId: id,
+          accion: 'EDITAR_CONCEPTO_GASTO',
+          detalle: { nombre, tipo, monto: monto?.toString() ?? null, activo },
+        },
+      })
+
+      return updated
     })
 
-    await tx.auditoria.create({
-      data: {
-        entidad: 'GastoConcepto',
-        entidadId: id,
-        accion: 'EDITAR_CONCEPTO_GASTO',
-        detalle: { nombre, tipo, activo },
-      },
-    })
-
-    return updated
-  })
-
-  return { data: concepto, status: 200 }
+    return {
+      data: { id: concepto.id, nombre: concepto.nombre, tipo: concepto.tipo, monto: concepto.monto?.toString() ?? null, activo: concepto.activo },
+      status: 200,
+    }
+  } catch (err) {
+    return handlePrismaLibError(err, { nombre: 'nombre' })
+  }
 }
 
 export async function deactivateGastoConcepto(id: string) {
@@ -425,6 +466,14 @@ export async function deleteIngresoAdicional(id: string) {
   if (closed) return { error: closedPeriodError('El período ya está cerrado. No se pueden modificar ingresos adicionales.'), status: 409 }
 
   await prisma.$transaction(async (tx) => {
+    // If this ingreso has an associated FacturaDesarrollo, remove FacturaIssue records
+    // so those issues appear as "sin facturar" again
+    const factura = await tx.facturaDesarrollo.findFirst({ where: { ingresoAdicionalId: id }, select: { id: true } })
+    if (factura) {
+      await tx.facturaIssue.deleteMany({ where: { facturaId: factura.id } })
+      await tx.distribucionFactura.deleteMany({ where: { facturaId: factura.id } })
+      await tx.facturaDesarrollo.delete({ where: { id: factura.id } })
+    }
     await tx.ingresoAdicional.delete({ where: { id } })
     await tx.auditoria.create({
       data: {
@@ -525,11 +574,12 @@ function parseIngresoBody(body: Record<string, unknown>) {
   }
 }
 
-function serializeConcepto(row: { id: string; nombre: string; tipo: string; activo: boolean }) {
+function serializeConcepto(row: { id: string; nombre: string; tipo: string; monto?: { toString(): string } | null; activo: boolean }) {
   return {
     id: row.id,
     nombre: row.nombre,
     tipo: row.tipo,
+    monto: row.monto?.toString() ?? null,
     activo: row.activo,
   }
 }

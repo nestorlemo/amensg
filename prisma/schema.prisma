@@ -37,6 +37,7 @@ model Empresa {
   cierresSocio    CierreSocio[]
   issues          Issue[]
   facturasDesarrollo FacturaDesarrollo[]
+  cobros             Cobro[]
 }
 
 model Socio {
@@ -81,6 +82,7 @@ model ImportacionActivacion {
   facturaciones        FacturacionMensual[]
   @@index([anio, mes])
   @@index([estado])
+  @@index([anio, mes, estado])
 }
 
 model ActivacionImportada {
@@ -103,9 +105,15 @@ model ActivacionImportada {
   importacion          ImportacionActivacion  @relation(fields: [importacionId], references: [id])
   empresa              Empresa                @relation(fields: [empresaId], references: [id])
 
+  @@index([importacionId])
+  @@index([empresaId])
+  @@index([mid])
+  @@index([chip])
+  @@index([estadoActivacion])
+  @@index([anio, mes])
+  @@index([anio, mes, empresaId])
   @@index([empresaId, anio, mes, mid])
   @@index([empresaId, anio, mes, chip])
-  @@index([importacionId])
 }
 
 model FacturacionMensual {
@@ -221,20 +229,20 @@ model Issue {
   totalHoras        Decimal   @db.Decimal(8, 2)
   estado            String
   fechaProduccion   DateTime?
+  motivoCancelacion String?
   reportadoPor      String
   prioridad         String
   empresaId         String?   @db.Uuid
+  sistema           String?
   empresa           Empresa?  @relation(fields: [empresaId], references: [id])
   facturaIssues     FacturaIssue[]
+  eliminado         Boolean   @default(false)
   creadoEn          DateTime  @default(now())
   actualizadoEn     DateTime  @updatedAt
 
   @@index([empresaId])
   @@index([estado])
   @@index([fecha])
-  @@index([fechaProduccion])
-  @@index([estado, empresaId])
-  @@index([estado, fechaProduccion])
 }
 
 model ValorHoraDesarrollo {
@@ -273,8 +281,6 @@ model FacturaIssue {
   issue     Issue             @relation(fields: [issueId], references: [id])
 
   @@id([facturaId, issueId])
-  @@index([issueId])
-  @@index([facturaId])
 }
 
 model DistribucionFactura {
@@ -287,6 +293,32 @@ model DistribucionFactura {
   montoUYU  Decimal           @db.Decimal(12, 2)
 
   @@index([facturaId])
+}
+
+model Cobro {
+  id                    String    @id @default(uuid()) @db.Uuid
+  tipo                  String    // 'ACTIVACIONES' | 'DESARROLLO' | 'ADICIONAL'
+  empresaId             String    @db.Uuid
+  empresa               Empresa   @relation(fields: [empresaId], references: [id])
+  anio                  Int
+  mes                   Int
+  montoSinIva           Decimal   @db.Decimal(12, 2)
+  iva                   Decimal   @db.Decimal(12, 2)
+  montoConIva           Decimal   @db.Decimal(12, 2)
+  moneda                String    @default("UYU")
+  estado                String    @default("FACTURADO_PENDIENTE")
+  fechaCobro            DateTime?
+  urlPdfFactura         String?
+  facturacionMensualId  String?   @db.Uuid
+  facturaDesarrolloId   String?   @db.Uuid
+  ingresoAdicionalId    String?   @db.Uuid
+  creadoEn              DateTime  @default(now())
+  actualizadoEn         DateTime  @updatedAt
+
+  @@index([empresaId])
+  @@index([anio, mes])
+  @@index([estado])
+  @@index([tipo])
 }
 
 model Auditoria {

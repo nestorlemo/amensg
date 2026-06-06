@@ -25,7 +25,7 @@ export function CerrarLiquidacionButton({ anio, mes, disabled = false }: { anio:
       body: JSON.stringify({ anio, mes, confirmacion: true }),
     }, 'No se pudo cerrar la liquidación.')
 
-    if (!result.ok) {
+    if (result.ok === false) {
       setError(result.error)
       setIsClosing(false)
       return

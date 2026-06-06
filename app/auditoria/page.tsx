@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 
 import { AccessDenied } from '@/components/access-denied'
+import { DateInput } from '@/components/date-input'
+import { PageHeader } from '@/components/page-header'
 import { requireAdminPage } from '@/lib/auth'
 import { getAuditoria } from '@/lib/auditoria'
 
@@ -19,17 +21,21 @@ export default async function AuditoriaPage({ searchParams }: PageProps) {
 
   return (
     <div className="min-w-0 max-w-full space-y-6">
-      <header className="border-b border-slate-200 pb-5">
-        <p className="text-sm font-medium uppercase text-slate-500">Auditoria</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-950">Trazabilidad operativa</h1>
-        <p className="mt-2 max-w-3xl text-sm text-slate-600">
-          Consulta de acciones relevantes del sistema. Los registros son historicos y no se editan desde esta pantalla.
-        </p>
-      </header>
+      <PageHeader
+        section="Administración"
+        title="Trazabilidad operativa"
+        description="Consulta de acciones relevantes del sistema. Los registros son históricos y no se editan desde esta pantalla."
+      />
 
       <form className="grid min-w-0 gap-3 rounded-md border border-slate-200 bg-white p-4 md:grid-cols-2 xl:grid-cols-6" method="get">
-        <FilterInput label="Fecha desde" name="fechaDesde" type="date" value={stringValue(params.fechaDesde)} />
-        <FilterInput label="Fecha hasta" name="fechaHasta" type="date" value={stringValue(params.fechaHasta)} />
+        <label className="min-w-0 space-y-1 text-sm font-medium text-slate-700">
+          Fecha desde
+          <DateInput className="h-10 w-full min-w-0 rounded-md border border-slate-300 px-3 text-sm" name="fechaDesde" defaultValue={stringValue(params.fechaDesde)} />
+        </label>
+        <label className="min-w-0 space-y-1 text-sm font-medium text-slate-700">
+          Fecha hasta
+          <DateInput className="h-10 w-full min-w-0 rounded-md border border-slate-300 px-3 text-sm" name="fechaHasta" defaultValue={stringValue(params.fechaHasta)} />
+        </label>
         <FilterInput label="Entidad" name="entidad" placeholder="Parametro" value={stringValue(params.entidad)} />
         <FilterInput label="Accion" name="accion" placeholder="ACTUALIZAR" value={stringValue(params.accion)} />
         <FilterInput label="Usuario" name="usuario" placeholder="Sistema" value={stringValue(params.usuario)} />

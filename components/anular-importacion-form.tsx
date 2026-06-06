@@ -38,7 +38,7 @@ export function AnularImportacionForm({ importacionId, buttonLabel = 'Anular' }:
     }, 'No se pudo anular la importacion.')
 
     setIsSubmitting(false)
-    if (!result.ok) {
+    if (result.ok === false) {
       setError(result.error)
       return
     }

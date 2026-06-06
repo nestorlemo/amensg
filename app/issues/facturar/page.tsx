@@ -581,7 +581,7 @@ export default function FacturarDesarrolloPage() {
                         : f.distribuciones.map((d) => (
                             <div key={d.id} className="text-xs">
                               {d.socio.nombre}: {d.porcentaje}% · $
-                              {fmt(d.montoUYU / f.tipoCambio)} USD
+                              {fmt((f.totalConIva * d.porcentaje) / 100)} USD
                             </div>
                           ))}
                     </td>

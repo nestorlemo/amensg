@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 
 import { ChangeEstadoCobroForm } from '@/components/change-estado-cobro-form'
+import { PageHeader } from '@/components/page-header'
 import { getFacturacion } from '@/lib/read-models'
 
 type PageProps = {
@@ -16,11 +17,11 @@ export default async function FacturacionPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <header className="border-b border-slate-200 pb-5">
-        <p className="text-sm font-medium uppercase text-slate-500">Facturacion</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-950">Facturacion mensual</h1>
-        <p className="mt-2 text-sm text-slate-600">Consulta de facturaciones generadas por importacion.</p>
-      </header>
+      <PageHeader
+        section="Facturación"
+        title="Facturación mensual"
+        description="Consulta de facturaciones generadas por importación."
+      />
 
       <form className="grid gap-3 rounded-md border border-slate-200 bg-white p-4 md:grid-cols-4" method="get">
         <FilterInput label="Anio" name="anio" value={stringValue(params.anio)} placeholder="2026" />
@@ -40,7 +41,7 @@ export default async function FacturacionPage({ searchParams }: PageProps) {
             ))}
           </select>
         </label>
-        <FilterInput label="Importacion ID" name="importacionId" value={stringValue(params.importacionId)} />
+        <FilterInput label="Importación ID" name="importacionId" value={stringValue(params.importacionId)} />
         <label className="space-y-1 text-sm font-medium text-slate-700">
           Estado cobro
           <select
@@ -74,7 +75,7 @@ export default async function FacturacionPage({ searchParams }: PageProps) {
               <h2 className="mt-1 text-lg font-semibold text-slate-950">
                 {selectedFacturacion.empresa} - {formatPeriod(selectedFacturacion.anio, selectedFacturacion.mes)}
               </h2>
-              <p className="mt-1 text-sm text-slate-600">Total: {selectedFacturacion.total}</p>
+              <p className="mt-1 text-sm text-slate-600">Total C/IVA: {selectedFacturacion.total}</p>
               {selectedFacturacion.periodoCerrado ? (
                 <p className="mt-2 text-sm font-medium text-amber-700">
                   El período ya está cerrado. No se puede modificar el estado de cobro.
@@ -111,9 +112,9 @@ export default async function FacturacionPage({ searchParams }: PageProps) {
               <Th>Periodo</Th>
               <Th align="right">Cantidad facturable</Th>
               <Th align="right">Precio unitario</Th>
-              <Th align="right">Subtotal</Th>
+              <Th align="right">Monto S/IVA</Th>
               <Th align="right">IVA</Th>
-              <Th align="right">Total</Th>
+              <Th align="right">Monto C/IVA</Th>
               <Th>Estado cobro</Th>
               <Th>Fecha cobro</Th>
               <Th>Acciones</Th>

@@ -42,7 +42,7 @@ export type ReportPreview = {
 const reportConfig: Record<ReportSlug, { title: string; description: string; enabledFilters: ReportFilterKey[] }> = {
   'mensual-empresa': {
     title: 'Mensual por empresa',
-    description: 'Resumen mensual por empresa con activaciones facturables, facturacion e ingresos adicionales.',
+    description: 'Resumen mensual por empresa con activaciones facturables, facturación e ingresos adicionales.',
     enabledFilters: ['anio', 'mes', 'empresaId'],
   },
   activaciones: {
@@ -51,8 +51,8 @@ const reportConfig: Record<ReportSlug, { title: string; description: string; ena
     enabledFilters: ['anio', 'mes', 'empresaId'],
   },
   facturacion: {
-    title: 'Facturacion',
-    description: 'Resumen de facturacion mensual por empresa con estados de cobro.',
+    title: 'Facturación',
+    description: 'Resumen de facturación mensual por empresa con estados de cobro.',
     enabledFilters: ['anio', 'mes', 'empresaId', 'estado'],
   },
   'cobros-pendientes': {
@@ -71,8 +71,8 @@ const reportConfig: Record<ReportSlug, { title: string; description: string; ena
     enabledFilters: ['anio', 'mes', 'empresaId'],
   },
   liquidacion: {
-    title: 'Liquidacion / cierre',
-    description: 'Preview del periodo abierto o snapshot del cierre cuando el periodo esta cerrado.',
+    title: 'Liquidación / cierre',
+    description: 'Preview del periodo abierto o snapshot del cierre cuando el periodo está cerrado.',
     enabledFilters: ['anio', 'mes'],
   },
 }
@@ -155,11 +155,11 @@ export async function getReportPreview(slug: ReportSlug, params: SearchParamsInp
       filterOptions,
       exportPath: buildExportPath(slug, params),
       metrics: [
-        { label: 'Total activaciones', value: data.pagination.total },
-        { label: 'Filas en preview', value: data.rows.length },
+        { label: 'Total activaciones', value: data.total },
+        { label: 'Filas en preview', value: data.data.length },
       ],
-      columns: ['Empresa', 'Periodo', 'MID', 'Chip', 'Lote', 'Estado', 'Fecha importacion', 'Fecha activacion', 'Situacion'],
-      rows: data.rows.map((row) => [
+      columns: ['Empresa', 'Periodo', 'MID', 'Chip', 'Lote', 'Estado', 'Fecha importación', 'Fecha activación', 'Situación'],
+      rows: data.data.map((row) => [
         row.empresa,
         periodLabel(row.anio, row.mes),
         row.mid,
@@ -185,12 +185,12 @@ export async function getReportPreview(slug: ReportSlug, params: SearchParamsInp
       filterOptions,
       exportPath: buildExportPath(slug, params),
       metrics: [
-        { label: 'Facturacion sin IVA', value: money(subtotal) },
+        { label: 'Facturación S/IVA', value: money(subtotal) },
         { label: 'IVA', value: money(iva) },
-        { label: 'Facturacion con IVA', value: money(total) },
+        { label: 'Facturación C/IVA', value: money(total) },
         { label: 'Empresas', value: new Set(data.rows.map((row) => row.empresaId)).size },
       ],
-      columns: ['Empresa', 'Periodo', 'Activaciones', 'Precio unitario', 'Subtotal', 'IVA', 'Total', 'Estado cobro', 'Fecha cobro'],
+      columns: ['Empresa', 'Periodo', 'Activaciones', 'Precio unitario', 'Monto S/IVA', 'IVA', 'Monto C/IVA', 'Estado cobro', 'Fecha cobro'],
       rows: data.rows.map((row) => [
         row.empresa,
         periodLabel(row.anio, row.mes),
@@ -216,12 +216,12 @@ export async function getReportPreview(slug: ReportSlug, params: SearchParamsInp
       filterOptions,
       exportPath: buildExportPath(slug, params),
       metrics: [
-        { label: 'Pendiente sin IVA', value: money(subtotal) },
-        { label: 'Pendiente con IVA', value: money(total) },
+        { label: 'Pendiente S/IVA', value: money(subtotal) },
+        { label: 'Pendiente C/IVA', value: money(total) },
         { label: 'Empresas con deuda', value: new Set(pendingRows.map((row) => row.empresaId)).size },
         { label: 'Filas pendientes', value: pendingRows.length },
       ],
-      columns: ['Empresa', 'Periodo', 'Subtotal', 'IVA', 'Total', 'Estado', 'Fecha cobro'],
+      columns: ['Empresa', 'Periodo', 'Monto S/IVA', 'IVA', 'Monto C/IVA', 'Estado', 'Fecha cobro'],
       rows: pendingRows.map((row) => [
         row.empresa,
         periodLabel(row.anio, row.mes),
@@ -242,12 +242,12 @@ export async function getReportPreview(slug: ReportSlug, params: SearchParamsInp
       filterOptions,
       exportPath: buildExportPath(slug, params),
       metrics: [
-        { label: 'Total gastos', value: data.resumen.totalGastosMes },
-        { label: 'Gastos fijos', value: data.resumen.totalGastosFijos },
-        { label: 'Gastos variables', value: data.resumen.totalGastosVariables },
+        { label: 'Total gastos S/IVA', value: data.resumen.totalGastosMes },
+        { label: 'Gastos fijos S/IVA', value: data.resumen.totalGastosFijos },
+        { label: 'Gastos variables S/IVA', value: data.resumen.totalGastosVariables },
         { label: 'Cantidad', value: data.resumen.cantidadGastos },
       ],
-      columns: ['Concepto', 'Tipo', 'Periodo', 'Fecha', 'Importe', 'Observaciones'],
+      columns: ['Concepto', 'Tipo', 'Periodo', 'Fecha', 'Importe S/IVA', 'Observaciones'],
       rows: data.rows.map((row) => [row.concepto, row.tipo, periodLabel(row.anio, row.mes), formatDate(row.fecha), row.importe, row.observaciones ?? '']),
     }
   }
@@ -263,9 +263,9 @@ export async function getReportPreview(slug: ReportSlug, params: SearchParamsInp
       filterOptions,
       exportPath: buildExportPath(slug, params),
       metrics: [
-        { label: 'Total sin IVA UYU', value: money(sinIva) },
+        { label: 'Total S/IVA UYU', value: money(sinIva) },
         { label: 'IVA UYU', value: money(iva) },
-        { label: 'Total con IVA UYU', value: money(conIva) },
+        { label: 'Total C/IVA UYU', value: money(conIva) },
         { label: 'Cantidad', value: data.rows.length },
       ],
       columns: ['Concepto', 'Empresa', 'Periodo', 'Moneda origen', 'Monto origen', 'Sin IVA UYU', 'IVA UYU', 'Con IVA UYU'],
@@ -347,10 +347,10 @@ async function getMensualEmpresaPreview(params: SearchParamsInput) {
     metrics: [
       { label: 'Empresas', value: rows.length },
       { label: 'Activaciones', value: rows.reduce((acc, row) => acc + row.activaciones, 0) },
-      { label: 'Facturacion con IVA', value: money(totalFacturacion) },
-      { label: 'Ingresos adicionales con IVA', value: money(totalIngresos) },
+      { label: 'Facturación C/IVA', value: money(totalFacturacion) },
+      { label: 'Ingresos adicionales C/IVA', value: money(totalIngresos) },
     ],
-    columns: ['Empresa', 'Periodo', 'Activaciones facturables', 'Facturacion sin IVA', 'IVA facturacion', 'Facturacion con IVA', 'Ingresos adicionales sin IVA', 'Ingresos adicionales con IVA'],
+    columns: ['Empresa', 'Periodo', 'Activaciones facturables', 'Facturación S/IVA', 'IVA facturación', 'Facturación C/IVA', 'Ingresos adicionales S/IVA', 'Ingresos adicionales C/IVA'],
     rows: rows.map((row) => [
       row.empresa,
       row.periodo,
@@ -381,11 +381,11 @@ async function getLiquidacionPreview(params: SearchParamsInput) {
     return {
       metrics: [
         { label: 'Estado', value: 'CERRADO' },
-        { label: 'Ingresos sin IVA', value: stringValue(snapshot.totalIngresosSinIva ?? ingresos.totalIngresosSinIva, '0.00') },
-        { label: 'Total gastos', value: stringValue(snapshot.totalGastos ?? gastos.totalGastos, '0.00') },
+        { label: 'Ingresos S/IVA', value: stringValue(snapshot.totalIngresosSinIva ?? ingresos.totalIngresosSinIva, '0.00') },
+        { label: 'Total gastos S/IVA', value: stringValue(snapshot.totalGastos ?? gastos.totalGastos, '0.00') },
         { label: 'Resultado distribuible', value: stringValue(snapshot.resultadoDistribuible ?? resultado.resultadoDistribuible, '0.00') },
       ],
-      columns: ['Socio', 'Porcentaje', 'Monto pesos', 'Monto USD'],
+      columns: ['Socio', 'Porcentaje', 'Monto UYU', 'Monto USD'],
       rows: socios.map((socio) => [
         stringValue(socio.socioNombre, ''),
         `${Number(stringValue(socio.socioPorcentaje, '0')) * 100}%`,
@@ -400,11 +400,11 @@ async function getLiquidacionPreview(params: SearchParamsInput) {
   return {
     metrics: [
       { label: 'Estado', value: 'ABIERTO' },
-      { label: 'Ingresos sin IVA', value: preview.ingresos.totalIngresosSinIva },
-      { label: 'Total gastos', value: preview.gastos.totalGastos },
+      { label: 'Ingresos S/IVA', value: preview.ingresos.totalIngresosSinIva },
+      { label: 'Total gastos S/IVA', value: preview.gastos.totalGastos },
       { label: 'Resultado distribuible', value: preview.resultado.resultadoDistribuible },
     ],
-    columns: ['Socio', 'Porcentaje', 'Monto pesos', 'Monto USD'],
+    columns: ['Socio', 'Porcentaje', 'Monto UYU', 'Monto USD'],
     rows: preview.socios.map((socio) => [socio.nombre, `${Number(socio.porcentaje) * 100}%`, socio.montoPesos, socio.montoUsd ?? 'Sin tipo de cambio']),
     note: preview.validaciones.length > 0 ? `Validaciones pendientes: ${preview.validaciones.length}` : 'El periodo abierto muestra el preview calculado de liquidacion.',
   }

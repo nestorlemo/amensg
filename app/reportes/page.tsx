@@ -1,26 +1,34 @@
 import Link from 'next/link'
 
+import { PageHeader } from '@/components/page-header'
+
 const reportGroups = [
   {
     title: 'Operación',
     reports: [
       {
+        href: '/reportes/facturacion-empresas',
+        title: 'Facturación por empresa',
+        description: 'Activaciones agrupadas por empresa y fecha de importación con cálculo de IVA. Exportable a Excel con una hoja por empresa.',
+        filters: 'Año, mes',
+      },
+      {
         href: '/reportes/mensual-empresa',
         title: 'Mensual por empresa',
-        description: 'Resumen de actividad mensual por empresa con activaciones, facturacion e ingresos adicionales.',
-        filters: 'Anio, mes, empresa',
+        description: 'Resumen de actividad mensual por empresa con activaciones, facturación e ingresos adicionales.',
+        filters: 'Año, mes, empresa',
       },
       {
         href: '/reportes/activaciones',
         title: 'Activaciones',
         description: 'Preview de activaciones importadas con conteo total y primeras 100 filas.',
-        filters: 'Anio, mes, empresa',
+        filters: 'Año, mes, empresa',
       },
       {
         href: '/reportes/facturacion',
-        title: 'Facturacion',
-        description: 'Facturacion por empresa, montos con IVA y estado de cobro.',
-        filters: 'Anio, mes, empresa, estado',
+        title: 'Facturación',
+        description: 'Facturación por empresa, montos con IVA y estado de cobro.',
+        filters: 'Año, mes, empresa, estado',
       },
     ],
   },
@@ -31,19 +39,19 @@ const reportGroups = [
         href: '/reportes/cobros-pendientes',
         title: 'Cobros pendientes',
         description: 'Facturaciones pendientes o enviadas para seguimiento de cobranza.',
-        filters: 'Anio, mes, empresa',
+        filters: 'Año, mes, empresa',
       },
       {
         href: '/reportes/gastos',
         title: 'Gastos',
-        description: 'Detalle y totalizacion de gastos mensuales registrados.',
-        filters: 'Anio, mes',
+        description: 'Detalle y totalización de gastos mensuales registrados.',
+        filters: 'Año, mes',
       },
       {
         href: '/reportes/ingresos-adicionales',
         title: 'Ingresos adicionales',
         description: 'Detalle de ingresos adicionales con totales en UYU.',
-        filters: 'Anio, mes, empresa',
+        filters: 'Año, mes, empresa',
       },
     ],
   },
@@ -53,8 +61,8 @@ const reportGroups = [
       {
         href: '/reportes/liquidacion',
         title: 'Liquidación / cierre',
-        description: 'Preview de liquidacion para periodos abiertos o snapshot congelado si el periodo esta cerrado.',
-        filters: 'Anio, mes',
+        description: 'Preview de liquidación para periodos abiertos o snapshot congelado si el periodo está cerrado.',
+        filters: 'Año, mes',
       },
     ],
   },
@@ -63,13 +71,23 @@ const reportGroups = [
 export default function ReportesPage() {
   return (
     <div className="min-w-0 max-w-full space-y-8">
-      <header className="border-b border-slate-200 pb-5">
-        <p className="text-sm font-medium uppercase text-slate-500">Reportes</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-950">Centro de reportes</h1>
-        <p className="mt-2 max-w-3xl text-sm text-slate-600">
-          Seleccione un reporte para revisar una vista previa filtrada antes de exportar el CSV.
-        </p>
-      </header>
+      <PageHeader
+        section="Reportes"
+        title="Centro de reportes"
+        description="Seleccione un reporte para revisar una vista previa filtrada antes de exportar el CSV."
+      />
+
+      <Link
+        href="/reportes/graficos"
+        className="flex items-center gap-4 rounded-xl border-2 border-[#1769E0] bg-[#EEF4FF] p-5 hover:bg-[#dce9ff] transition-colors"
+      >
+        <span className="text-3xl">📊</span>
+        <div>
+          <p className="font-semibold text-[#1769E0]">Reportes y Gráficos</p>
+          <p className="text-sm text-slate-600">KPIs anuales, evolución mensual, distribución por socio y más.</p>
+        </div>
+        <span className="ml-auto text-[#1769E0] font-semibold text-sm">Abrir →</span>
+      </Link>
 
       {reportGroups.map((group) => (
         <section className="space-y-3" key={group.title}>

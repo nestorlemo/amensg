@@ -35,7 +35,7 @@ export function periodFromUrl(params: URLSearchParams) {
 }
 
 export async function buildLiquidacionPreview(period: PeriodInput) {
-  const [facturaciones, ingresosAdicionales, gastos, socios, tipoCambioParametro, cierrePeriodo] =
+  const [facturaciones, ingresosAdicionales, gastos, gastosFijosConceptos, socios, tipoCambioParametro, cierrePeriodo, facturaDesarrollo] =
     await Promise.all([
       prisma.facturacionMensual.findMany({
         where: {
@@ -65,6 +65,11 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
         where: { anio: period.anio, mes: period.mes },
         include: { concepto: true },
       }),
+      // Fixed expenses are calculated dynamically from active concepts with monto
+      prisma.gastoConcepto.findMany({
+        where: { tipo: 'FIJO', activo: true, monto: { not: null } },
+        orderBy: { nombre: 'asc' },
+      }),
       prisma.socio.findMany({
         where: { activo: true },
         orderBy: { nombre: 'asc' },
@@ -76,6 +81,13 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
       prisma.cierreMensual.findUnique({
         where: { anio_mes: { anio: period.anio, mes: period.mes } },
         select: { id: true, estado: true, snapshot: true },
+      }),
+      prisma.facturaDesarrollo.findMany({
+        where: { anio: period.anio, mes: period.mes },
+        include: {
+          empresa: { select: { id: true, nombre: true } },
+          distribuciones: { include: { socio: { select: { id: true, nombre: true } } } },
+        },
       }),
     ])
   const cierreEstado = normalizeEstado(cierrePeriodo?.estado)
@@ -91,8 +103,22 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
   const totalIngresosSinIva = facturacionSinIva.add(ingresosAdicionalesSinIva)
   const totalIva = facturacionIva.add(ingresosAdicionalesIva)
   const totalIngresosConIva = facturacionConIva.add(ingresosAdicionalesConIva)
-  const totalGastos = sumDecimal(gastos.map((row) => row.importe))
-  const resultadoDistribuible = totalIngresosSinIva.sub(totalGastos)
+  const totalGastosVariables = sumDecimal(gastos.map((row) => row.importe))
+  const totalGastosFijos = sumDecimal(gastosFijosConceptos.map((c) => c.monto!))
+  const totalGastos = totalGastosVariables.add(totalGastosFijos)
+
+  const facturaDesarrolloIngresoIds = new Set(
+    facturaDesarrollo.map(f => f.ingresoAdicionalId).filter((id): id is string => id !== null)
+  )
+  const ingresosAdicionalesPuros = ingresosAdicionales.filter(i => !facturaDesarrolloIngresoIds.has(i.id))
+
+  const resultadoActivaciones = facturacionSinIva.sub(totalGastos)
+  const ingresosAdicionalesPurosSinIva = sumDecimal(ingresosAdicionalesPuros.map(i => i.montoSinIva))
+  const resultadoAdicionales = ingresosAdicionalesPurosSinIva
+  const desarrolloTotalUYU = sumDecimal(facturaDesarrollo.map(f => f.totalUYU))
+  const resultadoDesarrollo = desarrolloTotalUYU
+  const resultadoDesarrolloUSD = sumDecimal(facturaDesarrollo.map(f => f.totalConIva))
+  const resultadoDistribuible = resultadoActivaciones.add(resultadoAdicionales).add(resultadoDesarrollo)
   const tipoCambioSnapshot =
     cierreCerrado && cierrePeriodo ? decimalSnapshot(safeSnapshot(cierrePeriodo.snapshot), 'tipoCambioUsd') : null
   const tipoCambioUsd = resolveTipoCambioUsd({
@@ -141,7 +167,14 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
 
   const validTipoCambio = tipoCambioUsd && tipoCambioUsd.greaterThan(0) ? tipoCambioUsd : null
   const sociosPreview = socios.map((socio) => {
-    const montoPesos = resultadoDistribuible.mul(socio.porcentajeParticipacion)
+    const montoActivaciones = resultadoActivaciones.mul(socio.porcentajeParticipacion)
+    const montoAdicionales = resultadoAdicionales.mul(socio.porcentajeParticipacion)
+    const montoDesarrollo = sumDecimal(
+      facturaDesarrollo.flatMap(f =>
+        f.distribuciones.filter(d => d.socioId === socio.id).map(d => d.montoUYU)
+      )
+    )
+    const montoPesos = montoActivaciones.add(montoAdicionales).add(montoDesarrollo)
     const montoUsd = validTipoCambio ? money(montoPesos.div(validTipoCambio)) : null
 
     return {
@@ -149,6 +182,9 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
       nombre: socio.nombre,
       porcentaje: rate(socio.porcentajeParticipacion),
       cuentas: socio.cuentas,
+      montoActivaciones: money(montoActivaciones),
+      montoAdicionales: money(montoAdicionales),
+      montoDesarrollo: money(montoDesarrollo),
       montoPesos: money(montoPesos),
       montoUsd,
     }
@@ -182,18 +218,57 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
         iva: money(row.iva),
         montoConIva: money(row.montoConIva),
       })),
+      ingresosAdicionalesPurosSinIva: money(ingresosAdicionalesPurosSinIva),
+      desarrolloFacturas: facturaDesarrollo.map(f => {
+        const ivaUYU = f.totalUYU.mul('0.22').toDecimalPlaces(2)
+        const totalConIvaUYU = f.totalUYU.add(ivaUYU).toDecimalPlaces(2)
+        return {
+          id: f.id,
+          empresa: f.empresa.nombre,
+          totalHoras: f.totalHoras.toString(),
+          totalUSD: money(f.totalUSD),
+          ivaUSD: money(f.iva),
+          totalConIvaUSD: money(f.totalConIva),
+          tipoCambio: money(f.tipoCambio),
+          totalConIvaUYU: money(totalConIvaUYU),
+          distribuciones: f.distribuciones.map(d => {
+            const pct = d.porcentaje.div(100)
+            return {
+              id: d.id,
+              socioNombre: d.socio.nombre,
+              porcentaje: d.porcentaje.toDecimalPlaces(2).toString(),
+              montoUSD: money(f.totalUSD.mul(pct).toDecimalPlaces(2)),
+              montoUYU: money(f.totalUYU.mul(pct).toDecimalPlaces(2)),
+            }
+          }),
+        }
+      }),
     },
     gastos: {
       totalGastos: money(totalGastos),
-      detalle: gastos.map((row) => ({
-        id: row.id,
-        concepto: row.concepto.nombre,
-        tipo: row.concepto.tipo,
-        importe: money(row.importe),
-      })),
+      totalGastosFijos: money(totalGastosFijos),
+      totalGastosVariables: money(totalGastosVariables),
+      detalle: [
+        ...gastosFijosConceptos.map((c) => ({
+          id: c.id,
+          concepto: c.nombre,
+          tipo: 'FIJO' as const,
+          importe: money(c.monto!),
+        })),
+        ...gastos.map((row) => ({
+          id: row.id,
+          concepto: row.concepto.nombre,
+          tipo: row.concepto.tipo,
+          importe: money(row.importe),
+        })),
+      ],
     },
     resultado: {
       resultadoDistribuible: money(resultadoDistribuible),
+      resultadoActivaciones: money(resultadoActivaciones),
+      resultadoAdicionales: money(resultadoAdicionales),
+      resultadoDesarrollo: money(resultadoDesarrollo),
+      resultadoDesarrolloUSD: money(resultadoDesarrolloUSD),
       tipoCambioUsd: tipoCambioUsd ? rate(tipoCambioUsd) : null,
       totalActivaciones,
       totalEmpresas,

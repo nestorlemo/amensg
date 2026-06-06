@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import type { ReactNode } from 'react'
 
 import { AnularImportacionForm } from '@/components/anular-importacion-form'
+import { PageHeader } from '@/components/page-header'
 import { getCurrentUser, isAdmin } from '@/lib/auth'
 import { getImportacionDetail } from '@/lib/read-models'
 
@@ -21,26 +22,25 @@ export default async function ImportacionDetailPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <header className="border-b border-slate-200 pb-5">
-        <Link className="text-sm font-semibold text-slate-600 underline" href="/importaciones">
-          Volver a importaciones
-        </Link>
-        <p className="mt-4 text-sm font-medium uppercase text-slate-500">Importacion</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-950">{formatPeriod(importacion.anio, importacion.mes)}</h1>
-        <p className="mt-2 text-sm text-slate-600">{importacion.nombreArchivo ?? 'Sin nombre de archivo'}</p>
-        {isAdmin(user) && isConfirmada(importacion.estado) ? (
-          <div className="mt-4">
-            <AnularImportacionForm buttonLabel="Anular importación" importacionId={importacion.id} />
-          </div>
-        ) : null}
-        {isAnulada(importacion.estado) ? (
-          <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-950">
-            <p className="font-semibold">Esta importación fue anulada.</p>
-            <p className="mt-1">Fecha de anulación: {formatDate(importacion.anuladaEn)}</p>
-            <p className="mt-1">Motivo: {importacion.motivoAnulacion ?? 'Sin motivo registrado'}</p>
-          </div>
-        ) : null}
-      </header>
+      <Link className="mb-2 inline-flex text-sm font-semibold text-slate-600 hover:text-slate-950" href="/importaciones">
+        ← Volver a importaciones
+      </Link>
+      <PageHeader
+        section="Importaciones"
+        title={formatPeriod(importacion.anio, importacion.mes)}
+        description={importacion.nombreArchivo ?? 'Sin nombre de archivo'}
+        action={isAdmin(user) && isConfirmada(importacion.estado)
+          ? <AnularImportacionForm buttonLabel="Anular importación" importacionId={importacion.id} />
+          : undefined
+        }
+      />
+      {isAnulada(importacion.estado) ? (
+        <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-950">
+          <p className="font-semibold">Esta importación fue anulada.</p>
+          <p className="mt-1">Fecha de anulación: {formatDate(importacion.anuladaEn)}</p>
+          <p className="mt-1">Motivo: {importacion.motivoAnulacion ?? 'Sin motivo registrado'}</p>
+        </div>
+      ) : null}
 
       <section className="grid gap-3 md:grid-cols-4">
         <Metric label="Estado" value={importacion.estado} />
@@ -91,7 +91,7 @@ export default async function ImportacionDetailPage({ params }: PageProps) {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-slate-950">Facturacion generada</h2>
+        <h2 className="text-lg font-semibold text-slate-950">Facturación generada</h2>
         <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
           <table className="min-w-full text-sm">
             <thead className="bg-slate-100 text-left text-xs uppercase text-slate-600">

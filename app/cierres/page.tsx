@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 
 import { ReabrirCierreForm } from '@/components/reabrir-cierre-form'
+import { PageHeader } from '@/components/page-header'
 import { getCurrentUser, isAdmin } from '@/lib/auth'
 import { getCierres } from '@/lib/liquidaciones'
 
@@ -13,13 +14,11 @@ export default async function CierresPage() {
 
   return (
     <div className="space-y-6">
-      <header className="border-b border-slate-200 pb-5">
-        <p className="text-sm font-medium uppercase text-slate-500">Cierres</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-950">Cierres mensuales</h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Desde esta pantalla se consultan cierres históricos y se pueden reabrir períodos cerrados.
-        </p>
-      </header>
+      <PageHeader
+        section="Cierres"
+        title="Cierres mensuales"
+        description="Consulta de cierres históricos y reapertura de períodos cerrados."
+      />
 
       <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
         <table className="min-w-full text-sm">

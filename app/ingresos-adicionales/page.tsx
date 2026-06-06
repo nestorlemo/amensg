@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 
 import { IngresoAdicionalForm, IngresoRowActions } from '@/components/ingresos-adicionales-manager'
+import { PageHeader } from '@/components/page-header'
 import { getIngresosAdicionales } from '@/lib/gastos-ingresos'
 
 type PageProps = {
@@ -14,11 +15,11 @@ export default async function IngresosAdicionalesPage({ searchParams }: PageProp
 
   return (
     <div className="min-w-0 max-w-full space-y-6">
-      <header className="border-b border-slate-200 pb-5">
-        <p className="text-sm font-medium uppercase text-slate-500">Ingresos adicionales</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-950">Ingresos adicionales</h1>
-        <p className="mt-2 text-sm text-slate-600">Ingresos no provenientes de activaciones, con IVA calculado.</p>
-      </header>
+      <PageHeader
+        section="Ingresos adicionales"
+        title="Ingresos adicionales"
+        description="Ingresos no provenientes de activaciones, con IVA calculado."
+      />
 
       <form className="grid min-w-0 gap-3 rounded-md border border-slate-200 bg-white p-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" method="get">
         <FilterInput label="Anio" name="anio" value={stringValue(params.anio)} placeholder="2026" />
@@ -55,13 +56,8 @@ export default async function IngresosAdicionalesPage({ searchParams }: PageProp
               <Th>Periodo</Th>
               <Th>Fecha facturacion</Th>
               <Th>Moneda</Th>
-              <Th>Monto origen</Th>
-              <Th>Tipo cambio</Th>
-              <Th>Monto sin IVA</Th>
-              <Th>IVA %</Th>
-              <Th>IVA</Th>
-              <Th>Monto con IVA</Th>
-              <Th>Observaciones</Th>
+              <Th>Monto S/IVA</Th>
+              <Th>Monto C/IVA</Th>
               <Th>Acciones</Th>
             </tr>
           </thead>
@@ -73,18 +69,13 @@ export default async function IngresosAdicionalesPage({ searchParams }: PageProp
                 <Td>{formatPeriod(row.anio, row.mes)}</Td>
                 <Td>{formatDate(row.fechaFacturacion)}</Td>
                 <Td>{row.moneda}</Td>
-                <Td>{row.montoOrigen}</Td>
-                <Td>{row.tipoCambioAplicado ?? 'No aplica'}</Td>
                 <Td>{row.montoSinIva}</Td>
-                <Td>{row.porcentajeIva}</Td>
-                <Td>{row.iva}</Td>
                 <Td>{row.montoConIva}</Td>
-                <Td>{row.observaciones ?? 'Sin observaciones'}</Td>
-                <Td><IngresoRowActions disabled={periodoCerrado} empresas={empresas} ingreso={row} /></Td>
+                <Td><IngresoRowActions disabled={periodoCerrado} ingreso={row} /></Td>
               </tr>
             ))}
             {rows.length === 0 ? (
-              <tr><Td colSpan={13}>No hay ingresos adicionales para los filtros seleccionados.</Td></tr>
+              <tr><Td colSpan={8}>No hay ingresos adicionales para los filtros seleccionados.</Td></tr>
             ) : null}
           </tbody>
         </table>
