@@ -106,6 +106,7 @@ export async function DELETE(_req: Request, { params }: Params) {
   await prisma.$transaction(async (tx) => {
     await tx.facturaIssue.deleteMany({ where: { facturaId: id } })
     await tx.distribucionFactura.deleteMany({ where: { facturaId: id } })
+    await tx.cobro.deleteMany({ where: { facturaDesarrolloId: id } })
     await tx.facturaDesarrollo.delete({ where: { id } })
     if (factura.ingresoAdicionalId) {
       await tx.ingresoAdicional.delete({ where: { id: factura.ingresoAdicionalId } })
