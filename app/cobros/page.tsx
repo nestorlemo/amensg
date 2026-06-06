@@ -52,10 +52,6 @@ function formatDate(iso: string | null) {
   return new Intl.DateTimeFormat('es-UY').format(new Date(iso))
 }
 
-const today = new Date()
-const defaultDesde = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`
-const defaultHasta = defaultDesde
-
 function EstadoBadge({ estado }: { estado: string }) {
   if (estado === 'COBRADO')   return <span className="inline-block rounded-full px-2 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-800">COBRADO</span>
   if (estado === 'FACTURADO') return <span className="inline-block rounded-full px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-800">FACTURADO</span>
@@ -66,8 +62,8 @@ function EstadoBadge({ estado }: { estado: string }) {
 
 export default function FacturacionActivacionesPage() {
   // Section 1
-  const [fDesde,   setFDesde]   = useState(defaultDesde)
-  const [fHasta,   setFHasta]   = useState(defaultHasta)
+  const [fDesde,   setFDesde]   = useState('')
+  const [fHasta,   setFHasta]   = useState('')
   const [fEmpresa, setFEmpresa] = useState('')
   const [facturaciones, setFacturaciones] = useState<FacturacionRow[]>([])
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -109,7 +105,9 @@ export default function FacturacionActivacionesPage() {
     setSuccessMsg(null)
     setErrorMsg(null)
     try {
-      const qs = new URLSearchParams({ desde: fDesde, hasta: fHasta })
+      const qs = new URLSearchParams()
+      if (fDesde)   qs.set('desde', fDesde)
+      if (fHasta)   qs.set('hasta', fHasta)
       if (fEmpresa) qs.set('empresaId', fEmpresa)
       const res = await fetch(`/api/cobros-activaciones?${qs}`)
       const data = (await res.json()) as { facturaciones?: FacturacionRow[]; error?: string }

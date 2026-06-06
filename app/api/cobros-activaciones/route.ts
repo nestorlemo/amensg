@@ -22,38 +22,51 @@ export async function GET(req: NextRequest) {
   const hasta     = searchParams.get('hasta')     ?? undefined // 'YYYY-MM'
   const empresaId = searchParams.get('empresaId') ?? undefined
 
-  if (!desde || !hasta) {
-    return NextResponse.json({ error: 'desde y hasta son requeridos (YYYY-MM)' }, { status: 422 })
-  }
+  const desdeP = desde ? parseIsoMonth(desde) : null
+  const hastaP = hasta ? parseIsoMonth(hasta) : null
 
-  const desdeP = parseIsoMonth(desde)
-  const hastaP = parseIsoMonth(hasta)
-  if (!desdeP || !hastaP) {
+  if (desde && !desdeP) {
+    return NextResponse.json({ error: 'Formato de fecha inválido (esperado YYYY-MM)' }, { status: 422 })
+  }
+  if (hasta && !hastaP) {
     return NextResponse.json({ error: 'Formato de fecha inválido (esperado YYYY-MM)' }, { status: 422 })
   }
 
-  // Build range condition: (anio, mes) in [desde, hasta]
-  const rangeWhere = {
-    OR: [
-      // Same year range
-      {
-        AND: [
-          { anio: desdeP.anio },
-          { anio: hastaP.anio },
-          { mes: { gte: desdeP.mes, lte: hastaP.mes } },
-        ],
-      },
-      // Multi-year: start year with mes >= desde
-      { anio: desdeP.anio, mes: { gte: desdeP.mes } },
-      // Multi-year: middle years
-      ...(hastaP.anio - desdeP.anio > 1
-        ? [{ anio: { gt: desdeP.anio, lt: hastaP.anio } }]
-        : []),
-      // Multi-year: end year with mes <= hasta
-      ...(hastaP.anio > desdeP.anio
-        ? [{ anio: hastaP.anio, mes: { lte: hastaP.mes } }]
-        : []),
-    ],
+  // Build optional range condition
+  let rangeWhere: Record<string, unknown> = {}
+  if (desdeP && hastaP) {
+    rangeWhere = {
+      OR: [
+        {
+          AND: [
+            { anio: desdeP.anio },
+            { anio: hastaP.anio },
+            { mes: { gte: desdeP.mes, lte: hastaP.mes } },
+          ],
+        },
+        { anio: desdeP.anio, mes: { gte: desdeP.mes } },
+        ...(hastaP.anio - desdeP.anio > 1
+          ? [{ anio: { gt: desdeP.anio, lt: hastaP.anio } }]
+          : []),
+        ...(hastaP.anio > desdeP.anio
+          ? [{ anio: hastaP.anio, mes: { lte: hastaP.mes } }]
+          : []),
+      ],
+    }
+  } else if (desdeP) {
+    rangeWhere = {
+      OR: [
+        { anio: { gt: desdeP.anio } },
+        { anio: desdeP.anio, mes: { gte: desdeP.mes } },
+      ],
+    }
+  } else if (hastaP) {
+    rangeWhere = {
+      OR: [
+        { anio: { lt: hastaP.anio } },
+        { anio: hastaP.anio, mes: { lte: hastaP.mes } },
+      ],
+    }
   }
 
   const facturaciones = await prisma.facturacionMensual.findMany({
