@@ -276,8 +276,8 @@ export default function FacturarDesarrolloPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        section="DESARROLLO"
-        title="Facturación de desarrollo"
+        section="Facturación Desarrollo"
+        title="Facturación Desarrollo"
         description="Generá facturas de desarrollo por empresa a partir de issues en producción."
       />
 

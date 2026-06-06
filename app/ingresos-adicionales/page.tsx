@@ -16,8 +16,8 @@ export default async function IngresosAdicionalesPage({ searchParams }: PageProp
   return (
     <div className="min-w-0 max-w-full space-y-6">
       <PageHeader
-        section="Ingresos adicionales"
-        title="Ingresos adicionales"
+        section="Facturación Adicional"
+        title="Facturación Adicional"
         description="Ingresos no provenientes de activaciones, con IVA calculado."
       />
 
