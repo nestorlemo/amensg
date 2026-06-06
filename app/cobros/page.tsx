@@ -342,37 +342,41 @@ export default function FacturacionActivacionesPage() {
 
       {/* ── Section 2: Historial ─────────────────────────────────────────── */}
       <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-100 px-6 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 px-6 py-4">
           <h2 className="text-base font-semibold text-slate-800">Historial de facturación</h2>
-        </div>
-        <div className="p-6 space-y-5">
-          <form onSubmit={(e) => { e.preventDefault(); void fetchHistorial() }} className="flex flex-wrap gap-3 items-end">
-            <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+
+          {/* Historial filters */}
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="block text-xs font-medium text-slate-600">
               Empresa
               <select
+                className="mt-1 block h-8 w-44 rounded-md border border-slate-300 px-2 text-xs"
                 value={hEmpresa} onChange={(e) => setHEmpresa(e.target.value)}
-                className="h-10 w-48 rounded-md border border-slate-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
               >
                 <option value="">Todas</option>
                 {empresasOpts.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
               </select>
             </label>
-            <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-              Estado
+            <label className="block text-xs font-medium text-slate-600">
+              Estado cobro
               <select
+                className="mt-1 block h-8 w-36 rounded-md border border-slate-300 px-2 text-xs"
                 value={hEstado} onChange={(e) => setHEstado(e.target.value)}
-                className="h-10 w-36 rounded-md border border-slate-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
               >
                 <option value="">Todos</option>
                 <option value="FACTURADO">FACTURADO</option>
                 <option value="COBRADO">COBRADO</option>
               </select>
             </label>
-            <button type="submit" className="h-10 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 transition-colors">
-              Buscar
+            <button
+              onClick={() => void fetchHistorial()}
+              className="h-8 rounded-md border border-slate-300 px-3 text-xs text-slate-600 hover:bg-slate-50"
+            >
+              Actualizar
             </button>
-          </form>
-
+          </div>
+        </div>
+        <div className="p-6 space-y-5">
           {loadingH ? (
             <p className="text-sm text-slate-500">Cargando...</p>
           ) : (
