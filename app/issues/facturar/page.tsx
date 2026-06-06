@@ -39,6 +39,7 @@ type FacturaHistorial = {
   estado: string
   ingresoAdicionalId: string | null
   cobroId: string | null
+  cobroEstado: string | null
   urlPdfFactura: string | null
   fechaCobro: string | null
   distribuciones: {
@@ -610,8 +611,8 @@ export default function FacturarDesarrolloPage() {
                           ))}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${f.estado === 'COBRADO' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
-                        {f.estado}
+                      <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${f.cobroEstado === 'COBRADO' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                        {f.cobroEstado ?? 'FACTURADO'}
                       </span>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">
