@@ -64,6 +64,7 @@ export async function GET(request: Request) {
       empresa: { select: { id: true, nombre: true } },
       distribuciones: { include: { socio: { select: { id: true, nombre: true } } } },
       facturaIssues: { include: { issue: true } },
+      cobros: { select: { id: true, urlPdfFactura: true }, take: 1, orderBy: { creadoEn: 'desc' } },
     },
     orderBy: [{ anio: 'desc' }, { mes: 'desc' }, { creadoEn: 'desc' }],
   })
@@ -181,7 +182,7 @@ export async function POST(request: Request) {
           iva: Math.round(totalUSD * IVA * 100) / 100,
           montoConIva: Math.round(totalUSD * (1 + IVA) * 100) / 100,
           moneda: 'USD',
-          estado: 'FACTURADO_PENDIENTE',
+          estado: 'FACTURADO',
           facturaDesarrolloId: fd.id,
         },
       })

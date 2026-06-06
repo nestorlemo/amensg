@@ -38,10 +38,10 @@ export async function GET(req: NextRequest) {
   // KPI summary (no filter on anio/mes for totals)
   const now = new Date()
   const [totalPendiente, cobradoEsteMes, pendienteCount, empresasDeuda] = await Promise.all([
-    prisma.cobro.aggregate({ where: { estado: 'FACTURADO_PENDIENTE', moneda: 'UYU' }, _sum: { montoConIva: true } }),
-    prisma.cobro.aggregate({ where: { estado: 'FACTURADO_COBRADO', anio: now.getFullYear(), mes: now.getMonth() + 1, moneda: 'UYU' }, _sum: { montoConIva: true } }),
-    prisma.cobro.count({ where: { estado: 'FACTURADO_PENDIENTE' } }),
-    prisma.cobro.groupBy({ by: ['empresaId'], where: { estado: 'FACTURADO_PENDIENTE' } }),
+    prisma.cobro.aggregate({ where: { estado: 'FACTURADO', moneda: 'UYU' }, _sum: { montoConIva: true } }),
+    prisma.cobro.aggregate({ where: { estado: 'COBRADO', anio: now.getFullYear(), mes: now.getMonth() + 1, moneda: 'UYU' }, _sum: { montoConIva: true } }),
+    prisma.cobro.count({ where: { estado: 'FACTURADO' } }),
+    prisma.cobro.groupBy({ by: ['empresaId'], where: { estado: 'FACTURADO' } }),
   ])
 
   return NextResponse.json({

@@ -120,7 +120,9 @@ export function serializeFactura(f: {
   empresa: { id: string; nombre: string }
   distribuciones: { id: string; porcentaje: { toString(): string }; montoUYU: { toString(): string }; socio: { id: string; nombre: string } }[]
   facturaIssues: { issue: { id: string; descripcion: string; totalHoras: { toString(): string } } }[]
+  cobros?: { id: string; urlPdfFactura: string | null }[]
 }) {
+  const cobro = f.cobros?.[0] ?? null
   return {
     id: f.id,
     anio: f.anio,
@@ -136,6 +138,8 @@ export function serializeFactura(f: {
     ingresoAdicionalId: f.ingresoAdicionalId,
     estado: f.estado,
     creadoEn: f.creadoEn.toISOString(),
+    cobroId: cobro?.id ?? null,
+    urlPdfFactura: cobro?.urlPdfFactura ?? null,
     distribuciones: f.distribuciones.map((d) => ({
       id: d.id,
       socio: d.socio,

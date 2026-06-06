@@ -136,6 +136,7 @@ model FacturacionMensual {
   importacion    ImportacionActivacion @relation(fields: [importacionId], references: [id])
   empresa        Empresa  @relation(fields: [empresaId], references: [id])
   estadoCobro    EstadoCobro @relation(fields: [estadoCobroId], references: [id])
+  cobros         Cobro[]
 
   @@index([empresaId, anio, mes])
   @@index([importacionId])
@@ -270,6 +271,7 @@ model FacturaDesarrollo {
   ingresoAdicionalId String?  @db.Uuid
   estado             String   @default("PENDIENTE") // PENDIENTE | COBRADO
   creadoEn           DateTime @default(now())
+  cobros             Cobro[]
 
   @@index([empresaId, anio, mes])
 }
@@ -306,11 +308,13 @@ model Cobro {
   iva                   Decimal   @db.Decimal(12, 2)
   montoConIva           Decimal   @db.Decimal(12, 2)
   moneda                String    @default("UYU")
-  estado                String    @default("FACTURADO_PENDIENTE")
+  estado                String    @default("FACTURADO")
   fechaCobro            DateTime?
   urlPdfFactura         String?
   facturacionMensualId  String?   @db.Uuid
+  facturacionMensual    FacturacionMensual?  @relation(fields: [facturacionMensualId], references: [id])
   facturaDesarrolloId   String?   @db.Uuid
+  facturaDesarrollo     FacturaDesarrollo?   @relation(fields: [facturaDesarrolloId],  references: [id])
   ingresoAdicionalId    String?   @db.Uuid
   creadoEn              DateTime  @default(now())
   actualizadoEn         DateTime  @updatedAt
@@ -319,6 +323,8 @@ model Cobro {
   @@index([anio, mes])
   @@index([estado])
   @@index([tipo])
+  @@index([facturacionMensualId])
+  @@index([facturaDesarrolloId])
 }
 
 model Auditoria {

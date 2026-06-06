@@ -67,16 +67,12 @@ function TipoBadge({ tipo }: { tipo: string }) {
 
 function EstadoBadge({ estado }: { estado: string }) {
   const colors: Record<string, string> = {
-    FACTURADO_PENDIENTE: 'bg-yellow-100 text-yellow-800',
-    FACTURADO_COBRADO: 'bg-green-100 text-green-800',
-  }
-  const labels: Record<string, string> = {
-    FACTURADO_PENDIENTE: 'Pendiente',
-    FACTURADO_COBRADO: 'Cobrado',
+    FACTURADO: 'bg-amber-100 text-amber-800',
+    COBRADO:   'bg-emerald-100 text-emerald-800',
   }
   return (
     <span className={`inline-block rounded px-2 py-0.5 text-xs font-semibold ${colors[estado] ?? 'bg-slate-100 text-slate-700'}`}>
-      {labels[estado] ?? estado}
+      {estado}
     </span>
   )
 }
@@ -154,7 +150,7 @@ export default function CobrosUnificadoPage() {
     await fetch(`/api/cobros-unificado/${cobrandoId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ estado: 'FACTURADO_COBRADO', fechaCobro: fechaCobro || null }),
+      body: JSON.stringify({ estado: 'COBRADO', fechaCobro: fechaCobro || null }),
     })
     setCobrandoId(null)
     setFechaCobro('')
@@ -165,7 +161,7 @@ export default function CobrosUnificadoPage() {
     const fd = new FormData()
     fd.append('file', file)
     await fetch(`/api/cobros-unificado/${id}/pdf`, { method: 'POST', body: fd })
-    setFilters((f) => ({ ...f })) // re-fetch
+    setFilters((f) => ({ ...f }))
   }
 
   const startIndex = (page - 1) * pageSize + 1
@@ -268,8 +264,8 @@ export default function CobrosUnificadoPage() {
             onChange={(e) => setPendingFilters((f) => ({ ...f, estado: e.target.value }))}
           >
             <option value="">Todos</option>
-            <option value="FACTURADO_PENDIENTE">Pendiente</option>
-            <option value="FACTURADO_COBRADO">Cobrado</option>
+            <option value="FACTURADO">Facturado</option>
+            <option value="COBRADO">Cobrado</option>
           </select>
         </label>
 
@@ -343,46 +339,47 @@ export default function CobrosUnificadoPage() {
                   </td>
                   <td className="px-4 py-3">
                     {row.urlPdfFactura ? (
-                      <a
-                        className="text-blue-600 underline text-xs"
-                        href={row.urlPdfFactura}
-                        rel="noopener noreferrer"
-                        target="_blank"
-                      >
-                        Ver PDF
-                      </a>
+                      <div className="flex gap-1">
+                        <a
+                          className="rounded border border-blue-300 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
+                          href={`/api/cobros-unificado/${row.id}/pdf`}
+                          rel="noopener noreferrer"
+                          target="_blank"
+                        >
+                          Ver PDF
+                        </a>
+                        <label className="cursor-pointer rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                          Reemplazar
+                          <input
+                            accept="application/pdf" className="hidden" type="file"
+                            onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleUploadPdf(row.id, f) }}
+                          />
+                        </label>
+                      </div>
                     ) : (
-                      <span className="text-slate-400 text-xs">-</span>
+                      <label className="cursor-pointer rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                        Subir PDF
+                        <input
+                          accept="application/pdf"
+                          className="hidden"
+                          ref={(el) => { fileInputRefs.current[row.id] = el }}
+                          type="file"
+                          onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleUploadPdf(row.id, f) }}
+                        />
+                      </label>
                     )}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-col gap-1">
-                      {row.estado === 'FACTURADO_PENDIENTE' && (
+                      {row.estado === 'FACTURADO' && (
                         <button
-                          className="rounded bg-green-600 px-2 py-1 text-xs font-semibold text-white hover:bg-green-700 transition-colors"
+                          className="rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors"
                           type="button"
                           onClick={() => { setCobrandoId(row.id); setFechaCobro('') }}
                         >
                           Marcar cobrado
                         </button>
                       )}
-                      <button
-                        className="rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
-                        type="button"
-                        onClick={() => fileInputRefs.current[row.id]?.click()}
-                      >
-                        Subir PDF
-                      </button>
-                      <input
-                        accept="application/pdf"
-                        className="hidden"
-                        ref={(el) => { fileInputRefs.current[row.id] = el }}
-                        type="file"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0]
-                          if (file) handleUploadPdf(row.id, file)
-                        }}
-                      />
                     </div>
                   </td>
                 </tr>

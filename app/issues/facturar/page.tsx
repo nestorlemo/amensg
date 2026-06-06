@@ -34,8 +34,11 @@ type FacturaHistorial = {
   totalUSD: number
   iva: number
   totalConIva: number
+  tipoCambio: number
   estado: string
   ingresoAdicionalId: string | null
+  cobroId: string | null
+  urlPdfFactura: string | null
   distribuciones: {
     id: string
     porcentaje: number
@@ -77,6 +80,7 @@ export default function FacturarDesarrolloPage() {
   const [fEstadoCobro, setFEstadoCobro] = useState('')
   const [facturas, setFacturas] = useState<FacturaHistorial[]>([])
   const [loadingHistorial, setLoadingHistorial] = useState(false)
+  const [uploadingPdf, setUploadingPdf] = useState<string | null>(null) // facturaId being uploaded
 
   // ── Initial data fetch ────────────────────────────────────────────────────
   useEffect(() => {
@@ -253,6 +257,18 @@ export default function FacturarDesarrolloPage() {
     if (!confirm('¿Eliminar esta factura y su ingreso adicional asociado?')) return
     await fetch(`/api/facturas-desarrollo/${facturaId}`, { method: 'DELETE' })
     void fetchHistorial()
+  }
+
+  async function subirPdf(cobroId: string, facturaId: string, file: File) {
+    setUploadingPdf(facturaId)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      await fetch(`/api/cobros-unificado/${cobroId}/pdf`, { method: 'POST', body: fd })
+      void fetchHistorial()
+    } finally {
+      setUploadingPdf(null)
+    }
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -597,7 +613,7 @@ export default function FacturarDesarrolloPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         {f.estado !== 'COBRADO' && (
                           <button
                             onClick={() => void marcarCobrado(f.id)}
@@ -605,6 +621,35 @@ export default function FacturarDesarrolloPage() {
                           >
                             Marcar cobrado
                           </button>
+                        )}
+                        {f.cobroId && (
+                          f.urlPdfFactura ? (
+                            <>
+                              <a
+                                href={`/api/cobros-unificado/${f.cobroId}/pdf`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="rounded border border-blue-300 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
+                              >
+                                Ver PDF
+                              </a>
+                              <label className="cursor-pointer rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                                {uploadingPdf === f.id ? 'Subiendo...' : 'Reemplazar PDF'}
+                                <input
+                                  type="file" accept=".pdf" className="hidden"
+                                  onChange={(e) => { const file = e.target.files?.[0]; if (file && f.cobroId) void subirPdf(f.cobroId, f.id, file) }}
+                                />
+                              </label>
+                            </>
+                          ) : (
+                            <label className="cursor-pointer rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                              {uploadingPdf === f.id ? 'Subiendo...' : 'Subir PDF'}
+                              <input
+                                type="file" accept=".pdf" className="hidden"
+                                onChange={(e) => { const file = e.target.files?.[0]; if (file && f.cobroId) void subirPdf(f.cobroId, f.id, file) }}
+                              />
+                            </label>
+                          )
                         )}
                         <button
                           onClick={() => void eliminarFactura(f.id)}

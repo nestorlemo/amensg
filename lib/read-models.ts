@@ -500,7 +500,7 @@ async function getCobrosResumenForWhere(where: Prisma.FacturacionMensualWhereInp
       {
         estadoCobro: {
           codigo: {
-            in: ['PENDIENTE', 'ENVIADO'],
+            in: ['FACTURADO'],
           },
         },
       },
