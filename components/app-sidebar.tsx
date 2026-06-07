@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Upload, Zap, FileText, CreditCard, Building2,
   Receipt, PlusCircle, Calculator, Lock, BarChart2, Settings,
@@ -50,6 +53,7 @@ function SectionDivider({ label }: { label: string }) {
 }
 
 export function AppSidebar({ user, onClose }: { user: CurrentUser; onClose?: () => void }) {
+  const pathname = usePathname()
   const visibleItems = navigationItems.filter((item) => {
     if (item.adminOnly) return user.rol === 'ADMIN'
     if (item.roles) return item.roles.includes(user.rol)
@@ -97,11 +101,19 @@ export function AppSidebar({ user, onClose }: { user: CurrentUser; onClose?: () 
               elements.push(<SectionDivider key="sec-admin" label="Administración" />)
             }
 
+            const isActive = item.href === '/'
+              ? pathname === '/'
+              : pathname === item.href || pathname.startsWith(item.href + '/')
+
             elements.push(
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[#5a6a82] transition-colors hover:bg-[#EEF4FF] hover:text-[#1769E0]"
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-[#EEF4FF] hover:text-[#1769E0]"
+                style={isActive
+                  ? { background: '#EEF4FF', color: '#1769E0', fontWeight: 600, borderLeft: '3px solid #1769E0', paddingLeft: '9px' }
+                  : { color: '#5a6a82' }
+                }
               >
                 {Icon ? <Icon size={16} className="shrink-0" /> : null}
                 {item.label}
