@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { useState } from 'react'
 
+import { parseSemicolonCsv } from '@/lib/import-preview/csv'
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type EmpresaDecision = 'pendiente' | 'sobreescribir' | 'omitir'
@@ -22,8 +24,8 @@ type PeriodoResumen = {
 }
 
 type ParsedFile = {
-  header: string
-  byPeriod: Map<string, string[]>
+  headers: string[]
+  byPeriod: Map<string, Record<string, string>[]>
   periodos: PeriodoResumen[]
 }
 
@@ -37,56 +39,46 @@ type PeriodoStatus =
 
 // ─── CSV client-side parsing ──────────────────────────────────────────────────
 
-const FECHA_IMPORTACION_IDX = 6
-const EMPRESA_IDX = 2
+const FECHA_FIELD = 'Fecha de importación'
+const EMPRESA_FIELD = 'Empresa'
 
-function parseCSVClient(text: string): Omit<ParsedFile, 'periodos'> & { periodos: (Omit<PeriodoResumen, 'empresas'> & { empresasNombres: string[] })[] } {
-  const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
-  const lines = normalized.split('\n')
-  const header = lines[0] ?? ''
+function parseCsvByPeriod(text: string): Omit<ParsedFile, 'periodos'> & { periodos: (Omit<PeriodoResumen, 'empresas'> & { empresasNombres: string[] })[] } {
+  const { headers, rows } = parseSemicolonCsv(text)
 
-  const headers = header.split(';').map((h) => h.trim().replace(/^﻿/, ''))
-  const fechaIdx = headers.indexOf('Fecha de importación') !== -1 ? headers.indexOf('Fecha de importación') : FECHA_IMPORTACION_IDX
-  const empresaIdx = headers.indexOf('Empresa') !== -1 ? headers.indexOf('Empresa') : EMPRESA_IDX
-
-  const byPeriod = new Map<string, string[]>()
+  const byPeriod = new Map<string, Record<string, string>[]>()
   const empresasByPeriod = new Map<string, Set<string>>()
 
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i]
-    if (!line || !line.trim()) continue
-
-    const fields = line.split(';')
-    const fechaStr = (fields[fechaIdx] ?? '').trim()
+  for (const row of rows) {
+    const fechaStr = row[FECHA_FIELD] ?? ''
     const periodo = extractPeriodo(fechaStr)
     if (!periodo) continue
 
-    const rows = byPeriod.get(periodo)
-    if (rows) {
-      rows.push(line)
+    const existing = byPeriod.get(periodo)
+    if (existing) {
+      existing.push(row)
     } else {
-      byPeriod.set(periodo, [line])
+      byPeriod.set(periodo, [row])
       empresasByPeriod.set(periodo, new Set())
     }
 
-    const empresa = (fields[empresaIdx] ?? '').trim()
+    const empresa = row[EMPRESA_FIELD] ?? ''
     if (empresa) empresasByPeriod.get(periodo)!.add(empresa)
   }
 
   const periodos = [...byPeriod.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([periodo, rows]) => {
+    .map(([periodo, periodRows]) => {
       const [anioStr, mesStr] = periodo.split('-')
       return {
         periodo,
         anio: Number(anioStr),
         mes: Number(mesStr),
-        filas: rows.length,
+        filas: periodRows.length,
         empresasNombres: [...(empresasByPeriod.get(periodo) ?? [])].sort(),
       }
     })
 
-  return { header, byPeriod, periodos }
+  return { headers, byPeriod, periodos }
 }
 
 function extractPeriodo(fechaStr: string): string | null {
@@ -95,7 +87,9 @@ function extractPeriodo(fechaStr: string): string | null {
   return `${m[3]}-${m[2]}`
 }
 
-function buildPartialFile(header: string, lines: string[], periodo: string): File {
+function buildPartialFile(headers: string[], rows: Record<string, string>[], periodo: string): File {
+  const header = headers.join(';')
+  const lines = rows.map((row) => headers.map((h) => row[h] ?? '').join(';'))
   const csv = [header, ...lines].join('\n')
   return new File([csv], `importacion-${periodo}.csv`, { type: 'text/csv' })
 }
@@ -141,7 +135,7 @@ export function ImportPreviewForm() {
     try {
       const text = await file.text()
       await new Promise<void>((r) => setTimeout(r, 0))
-      const raw = parseCSVClient(text)
+      const raw = parseCsvByPeriod(text)
 
       if (raw.periodos.length === 0) {
         setParseError('No se encontraron períodos válidos. Verificá que "Fecha de importación" tenga fechas en formato dd/mm/yyyy.')
@@ -168,7 +162,7 @@ export function ImportPreviewForm() {
         periodos.push({ periodo: p.periodo, anio: p.anio, mes: p.mes, filas: p.filas, empresas })
       }
 
-      const result: ParsedFile = { header: raw.header, byPeriod: raw.byPeriod, periodos }
+      const result: ParsedFile = { headers: raw.headers, byPeriod: raw.byPeriod, periodos }
       setParsed(result)
 
       const initial = new Map<string, PeriodoStatus>()
@@ -204,7 +198,7 @@ export function ImportPreviewForm() {
   }
 
   async function processPeriodo(resumen: PeriodoResumen, parsedData: ParsedFile): Promise<boolean> {
-    const lines = parsedData.byPeriod.get(resumen.periodo) ?? []
+    const rows = parsedData.byPeriod.get(resumen.periodo) ?? []
 
     // Determine empresa sets based on user decisions
     const sobreescribir = resumen.empresas
@@ -221,7 +215,7 @@ export function ImportPreviewForm() {
       return true
     }
 
-    const csvFile = buildPartialFile(parsedData.header, lines, resumen.periodo)
+    const csvFile = buildPartialFile(parsedData.headers, rows, resumen.periodo)
     setStatus(resumen.periodo, { state: 'processing' })
 
     const formData = new FormData()
