@@ -19,6 +19,7 @@ export async function GET(_req: Request, { params }: Params) {
       empresa: { select: { id: true, nombre: true } },
       distribuciones: { include: { socio: { select: { id: true, nombre: true } } } },
       facturaIssues: { include: { issue: true } },
+      cobros: { select: { id: true, estado: true, urlPdfFactura: true, fechaCobro: true }, take: 1, orderBy: { creadoEn: 'desc' } },
     },
   })
   if (!factura) return NextResponse.json({ error: 'NOT_FOUND', message: 'Factura no encontrada.' }, { status: 404 })
@@ -36,24 +37,22 @@ export async function PUT(request: Request, { params }: Params) {
 
   const body = await request.json().catch(() => ({})) as Record<string, unknown>
 
-  // If body has estado, update only estado
+  // If body has estado, update cobro estado (and fechaCobro when marking COBRADO)
   if (typeof body.estado === 'string') {
-    if (body.estado === 'COBRADO') {
-      const fechaCobro = typeof body.fechaCobro === 'string' && body.fechaCobro
-        ? new Date(body.fechaCobro)
-        : new Date()
-      await prisma.cobro.updateMany({
-        where: { facturaDesarrolloId: id, fechaCobro: null },
-        data: { fechaCobro },
-      })
-    }
-    const updated = await prisma.facturaDesarrollo.update({
+    const fechaCobro = body.estado === 'COBRADO'
+      ? (typeof body.fechaCobro === 'string' && body.fechaCobro ? new Date(body.fechaCobro) : new Date())
+      : undefined
+    await prisma.cobro.updateMany({
+      where: { facturaDesarrolloId: id },
+      data: { estado: body.estado, ...(fechaCobro ? { fechaCobro } : {}) },
+    })
+    const updated = await prisma.facturaDesarrollo.findUniqueOrThrow({
       where: { id },
-      data: { estado: body.estado },
       include: {
         empresa: { select: { id: true, nombre: true } },
         distribuciones: { include: { socio: { select: { id: true, nombre: true } } } },
         facturaIssues: { include: { issue: true } },
+        cobros: { select: { id: true, estado: true, urlPdfFactura: true, fechaCobro: true }, take: 1, orderBy: { creadoEn: 'desc' } },
       },
     })
     return NextResponse.json(serializeFactura(updated))
@@ -88,6 +87,7 @@ export async function PUT(request: Request, { params }: Params) {
         empresa: { select: { id: true, nombre: true } },
         distribuciones: { include: { socio: { select: { id: true, nombre: true } } } },
         facturaIssues: { include: { issue: true } },
+        cobros: { select: { id: true, estado: true, urlPdfFactura: true, fechaCobro: true }, take: 1, orderBy: { creadoEn: 'desc' } },
       },
     })
   })
