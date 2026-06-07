@@ -39,14 +39,11 @@ function SectionDivider({ label }: { label: string }) {
   return (
     <div className="pt-4 pb-1 px-1">
       <div className="flex items-center gap-2">
-        <div className="h-px flex-1" style={{ background: '#e6eefc' }} />
-        <span
-          className="text-xs font-semibold uppercase tracking-widest whitespace-nowrap"
-          style={{ color: '#8ba3c7' }}
-        >
+        <div className="h-px flex-1 bg-amensg-border" />
+        <span className="text-xs font-semibold uppercase tracking-widest whitespace-nowrap text-amensg-subtle">
           {label}
         </span>
-        <div className="h-px flex-1" style={{ background: '#e6eefc' }} />
+        <div className="h-px flex-1 bg-amensg-border" />
       </div>
     </div>
   )
@@ -67,17 +64,14 @@ export function AppSidebar({ user, onClose }: { user: CurrentUser; onClose?: () 
   const renderedSections = new Set<string>()
 
   return (
-    <aside
-      className="flex h-screen w-64 shrink-0 flex-col"
-      style={{ background: '#ffffff', borderRight: '1px solid #e6eefc' }}
-    >
+    <aside className="flex h-screen w-64 shrink-0 flex-col bg-white border-r border-amensg-border">
       {/* Brand */}
       <div className="shrink-0 flex items-center gap-3 px-5 py-5">
         <LogoMark />
-        <p className="text-base font-bold flex-1" style={{ color: '#0B1F3A', letterSpacing: '-0.01em' }}>amensg</p>
+        <p className="text-base font-bold flex-1 text-amensg-navy" style={{ letterSpacing: '-0.01em' }}>amensg</p>
         {onClose ? (
           <button
-            className="rounded-lg p-1 text-[#5a6a82] hover:bg-[#EEF4FF] md:hidden"
+            className="rounded-lg p-1 text-amensg-muted hover:bg-amensg-hover md:hidden"
             onClick={onClose}
             aria-label="Cerrar menú"
           >
@@ -109,10 +103,10 @@ export function AppSidebar({ user, onClose }: { user: CurrentUser; onClose?: () 
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-[#EEF4FF] hover:text-[#1769E0]"
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-amensg-hover hover:text-amensg-blue"
                 style={isActive
-                  ? { background: '#EEF4FF', color: '#1769E0', fontWeight: 600, borderLeft: '3px solid #1769E0', paddingLeft: '9px' }
-                  : { color: '#5a6a82' }
+                  ? { background: 'var(--hover-bg)', color: 'var(--tech-blue)', fontWeight: 600, borderLeft: '3px solid var(--tech-blue)', paddingLeft: '9px' }
+                  : { color: 'var(--muted-text)' }
                 }
               >
                 {Icon ? <Icon size={16} className="shrink-0" /> : null}
@@ -125,27 +119,26 @@ export function AppSidebar({ user, onClose }: { user: CurrentUser; onClose?: () 
       </nav>
 
       {/* User + Logout */}
-      <div className="shrink-0 p-4" style={{ borderTop: '1px solid #e6eefc' }}>
+      <div className="shrink-0 p-4 border-t border-amensg-border">
         <div className="flex min-w-0 items-center gap-3">
           <div
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white"
-            style={{ background: 'linear-gradient(135deg, #1769E0, #19C3FF)' }}
+            style={{ background: 'var(--gradient-avatar)' }}
           >
             {displayName.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold" style={{ color: '#0B1F3A' }} title={displayName}>
+            <p className="truncate text-sm font-semibold text-amensg-navy" title={displayName}>
               {displayName}
             </p>
-            <p className="mt-0.5 text-xs font-medium uppercase tracking-wide" style={{ color: '#8ba3c7' }}>
+            <p className="mt-0.5 text-xs font-medium uppercase tracking-wide text-amensg-subtle">
               {user.rol}
             </p>
           </div>
         </div>
         <form action="/api/auth/logout" className="mt-3" method="post">
           <button
-            className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-colors hover:bg-[#dbeafe]"
-            style={{ background: '#EEF4FF', color: '#1769E0' }}
+            className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-colors bg-amensg-hover text-amensg-blue hover:bg-blue-100"
             type="submit"
           >
             <LogOut size={14} />
