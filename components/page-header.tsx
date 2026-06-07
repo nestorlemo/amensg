@@ -9,7 +9,7 @@ export function PageHeader({ section, title, description, action }: PageHeaderPr
   return (
     <header
       className="relative mb-6 overflow-hidden rounded-2xl px-8 py-7"
-      style={{ background: 'linear-gradient(135deg, #0B1F3A 0%, #1769E0 100%)' }}
+      style={{ background: 'var(--gradient-header)' }}
     >
       {/* Decorative blobs */}
       <div

@@ -6,6 +6,17 @@
 
 :root {
   color-scheme: light;
+  --navy-deep:   #0B1F3A;
+  --tech-blue:   #1769E0;
+  --cyan-bright: #19C3FF;
+  --teal-accent: #20E0B2;
+  --surface:     #F5F7FA;
+  --border-col:  #e6eefc;
+  --muted-text:  #5a6a82;
+  --subtle-text: #8ba3c7;
+  --hover-bg:    #EEF4FF;
+  --gradient-header: linear-gradient(135deg, #0B1F3A 0%, #1769E0 100%);
+  --gradient-avatar: linear-gradient(135deg, #1769E0, #19C3FF);
 }
 
 * {
