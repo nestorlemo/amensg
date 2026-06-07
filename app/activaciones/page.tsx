@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { PageHeader } from '@/components/page-header'
 
 type ActivacionRow = {
   id: string
@@ -155,11 +156,11 @@ export default function ActivacionesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl p-6 text-white" style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%)' }}>
-        <p className="text-xs font-semibold uppercase tracking-wider opacity-70">Activaciones</p>
-        <h1 className="mt-1 text-2xl font-bold">Activaciones importadas</h1>
-        <p className="mt-1 text-sm opacity-80">Consulta paginada de filas importadas desde CSV.</p>
-      </div>
+      <PageHeader
+        section="ACTIVACIONES"
+        title="Activaciones"
+        description="Consulta paginada de filas importadas desde CSV."
+      />
 
       <form className="grid gap-3 rounded-md border border-slate-200 bg-white p-4 md:grid-cols-4" onSubmit={handleSubmit}>
         <label className="space-y-1 text-sm font-medium text-slate-700">

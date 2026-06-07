@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { PageHeader } from '@/components/page-header'
 
 type ImportacionRow = {
   id: string
@@ -85,11 +86,11 @@ export default function ImportacionesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl p-6 text-white" style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%)' }}>
-        <p className="text-xs font-semibold uppercase tracking-wider opacity-70">Importaciones</p>
-        <h1 className="mt-1 text-2xl font-bold">Importaciones confirmadas</h1>
-        <p className="mt-1 text-sm opacity-80">Consulta de archivos importados y sus totales operativos.</p>
-        <div className="mt-4">
+      <PageHeader
+        section="IMPORTACIONES"
+        title="Importaciones confirmadas"
+        description="Consulta de archivos importados y sus totales operativos."
+        action={
           <Link
             className="inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90"
             style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)' }}
@@ -97,8 +98,8 @@ export default function ImportacionesPage() {
           >
             Nueva importacion
           </Link>
-        </div>
-      </div>
+        }
+      />
 
       <form className="grid gap-3 rounded-md border border-slate-200 bg-white p-4 md:grid-cols-4" onSubmit={handleSubmit}>
         <label className="space-y-1 text-sm font-medium text-slate-700">
