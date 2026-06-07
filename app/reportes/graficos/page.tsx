@@ -133,19 +133,31 @@ function pivotByEmpresa(rows: { mes: number; empresa: string; [k: string]: numbe
   return { data: Array.from(byMes.values()).sort((a, b) => Number(a.mes) - Number(b.mes)), empresas }
 }
 
+type EmpresaOpt = { id: string; nombre: string }
+
 export default function GraficosPage() {
   const [anio, setAnio] = useState(new Date().getFullYear())
+  const [empresaId, setEmpresaId] = useState('')
+  const [empresas, setEmpresas] = useState<EmpresaOpt[]>([])
   const [data, setData] = useState<GraficosData | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    fetch('/api/empresas')
+      .then(r => r.json())
+      .then((d: { empresas?: EmpresaOpt[] }) => setEmpresas(d.empresas ?? []))
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
     setLoading(true)
     setData(null)
-    fetch(`/api/reportes/graficos?anio=${anio}`)
+    const url = `/api/reportes/graficos?anio=${anio}${empresaId ? `&empresaId=${empresaId}` : ''}`
+    fetch(url)
       .then(r => r.json())
       .then((d: GraficosData) => { setData(d); setLoading(false) })
       .catch(() => setLoading(false))
-  }, [anio])
+  }, [anio, empresaId])
 
   const kpis = data ? {
     activaciones: data.activacionesPorMesEmpresa.reduce((s, r) => s + r.cantidad, 0),
@@ -175,9 +187,15 @@ export default function GraficosPage() {
 
   return (
     <div className="min-w-0 max-w-full space-y-8">
-      <PageHeader section="REPORTES" title="Reportes y Gráficos" description="Evolución mensual, KPIs y distribución por socio." />
+      <PageHeader
+        section="REPORTES"
+        title="Reportes y Gráficos"
+        description={empresaId
+          ? `Mostrando datos de ${empresas.find(e => e.id === empresaId)?.nombre ?? 'empresa seleccionada'} — ${anio}`
+          : `Evolución mensual, KPIs y distribución por socio — ${anio}`}
+      />
 
-      <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4">
+      <div className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 bg-white p-4">
         <label className="text-sm font-medium text-slate-700">
           Año
           <select
@@ -188,6 +206,17 @@ export default function GraficosPage() {
             {[2023, 2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </label>
+        <label className="text-sm font-medium text-slate-700">
+          Empresa
+          <select
+            className="ml-2 h-9 rounded-md border border-slate-300 px-3 text-sm"
+            value={empresaId}
+            onChange={e => setEmpresaId(e.target.value)}
+          >
+            <option value="">Todas las empresas</option>
+            {empresas.map(emp => <option key={emp.id} value={emp.id}>{emp.nombre}</option>)}
+          </select>
+        </label>
       </div>
 
       {loading ? <Skeleton /> : !data ? (
@@ -196,7 +225,7 @@ export default function GraficosPage() {
         <div className="space-y-8">
           {/* KPIs */}
           <section className="space-y-4">
-            <SectionTitle title="KPIs del año" color="#1769E0" />
+            <SectionTitle title={empresaId ? `KPIs del año — ${empresas.find(e => e.id === empresaId)?.nombre ?? ''}` : 'KPIs del año'} color="#1769E0" />
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
               <KpiCard label="Total activaciones" value={fmt(kpis!.activaciones)} />
               <KpiCard label="Facturado activaciones S/IVA (UYU)" value={fmt(kpis!.facturadoActivaciones)} />
@@ -286,7 +315,7 @@ export default function GraficosPage() {
             <SectionTitle title="Financiero" color="#20E0B2" />
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               {/* Chart 4: ComposedChart resultado mensual */}
-              <ChartCard title="Resultado mensual (UYU)">
+              <ChartCard title={empresaId ? `Resultado mensual — ${empresas.find(e => e.id === empresaId)?.nombre ?? ''} (gastos totales compartidos)` : 'Resultado mensual (UYU)'}>
                 <ResponsiveContainer width="100%" height={300}>
                   <ComposedChart data={resultadoData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />

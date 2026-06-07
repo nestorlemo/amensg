@@ -11,12 +11,14 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url)
   const anio = parseInt(searchParams.get('anio') ?? String(new Date().getFullYear()), 10)
+  const empresaId = searchParams.get('empresaId') ?? undefined
 
   // 1. activacionesPorMesEmpresa & facturacionPorMesEmpresa
   const facturacionRows = await prisma.facturacionMensual.findMany({
     where: {
       anio,
       estadoCobro: { nombre: { not: 'ANULADO' } },
+      ...(empresaId ? { empresaId } : {}),
     },
     select: {
       mes: true,
@@ -56,7 +58,7 @@ export async function GET(req: NextRequest) {
   const gastoFijoTotal = gastosConceptoFijo.reduce((sum, g) => sum + Number(g.monto ?? 0), 0)
 
   const ingresosAdicRows = await prisma.ingresoAdicional.findMany({
-    where: { anio },
+    where: { anio, ...(empresaId ? { empresaId } : {}) },
     select: { mes: true, montoSinIva: true },
   })
 
@@ -64,6 +66,7 @@ export async function GET(req: NextRequest) {
     where: {
       anio,
       estadoCobro: { nombre: { not: 'ANULADO' } },
+      ...(empresaId ? { empresaId } : {}),
     },
     select: { mes: true, totalSinIva: true },
   })
@@ -91,7 +94,7 @@ export async function GET(req: NextRequest) {
 
   // 3. distribucionSocios: DistribucionFactura (desarrollo) + distribución proporcional de activaciones
   const distribDesarrollo = await prisma.distribucionFactura.findMany({
-    where: { factura: { anio } },
+    where: { factura: { anio, ...(empresaId ? { empresaId } : {}) } },
     select: { socio: { select: { nombre: true } }, montoUYU: true },
   })
 
@@ -122,7 +125,7 @@ export async function GET(req: NextRequest) {
 
   // 5. horasDesarrolloPorMes & facturacionDesarrolloPorMes
   const facturasDesarrollo = await prisma.facturaDesarrollo.findMany({
-    where: { anio },
+    where: { anio, ...(empresaId ? { empresaId } : {}) },
     select: { mes: true, totalHoras: true, totalUSD: true, totalUYU: true },
   })
 
