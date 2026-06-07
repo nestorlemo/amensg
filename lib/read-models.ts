@@ -3,8 +3,6 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getClosedPeriodKeys, periodKey } from '@/lib/periods'
 
-const DEFAULT_PAGE_SIZE = 50
-const MAX_PAGE_SIZE = 100
 
 export type SearchParamsInput = URLSearchParams | Record<string, string | string[] | undefined>
 
@@ -32,17 +30,6 @@ function stringParam(params: SearchParamsInput, key: string) {
   return value ? value : undefined
 }
 
-function pageParams(params: SearchParamsInput) {
-  const page = Math.max(numberParam(params, 'page') ?? 1, 1)
-  const pageSize = Math.min(Math.max(numberParam(params, 'pageSize') ?? DEFAULT_PAGE_SIZE, 1), MAX_PAGE_SIZE)
-
-  return {
-    page,
-    pageSize,
-    skip: (page - 1) * pageSize,
-    take: pageSize,
-  }
-}
 
 function money(value: Prisma.Decimal) {
   return value.toDecimalPlaces(2).toFixed(2)

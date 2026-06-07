@@ -52,8 +52,7 @@ export function DateInput({ className, placeholder = 'dd/mm/yyyy', required, dis
   )
 
   if (isControlled) {
-    const { value, onChange } = rest as ControlledProps
-    const expectedDisplay = isoToDisplay(value)
+    const { value, onChange } = rest as ControlledProps // eslint-disable-line @typescript-eslint/no-unused-vars
     // Solo sincronizar si el valor externo cambió programáticamente (no por el usuario escribiendo)
     return (
       <input

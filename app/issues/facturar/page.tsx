@@ -56,7 +56,6 @@ type FacturaHistorial = {
 const fmt = (n: number) =>
   new Intl.NumberFormat('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 
-const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 
 function formatDate(iso: string | null) {
   if (!iso) return '—'
@@ -126,7 +125,6 @@ export default function FacturarDesarrolloPage() {
       .catch(() => null)
 
     void fetchHistorial()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // ── Section 1 helpers ─────────────────────────────────────────────────────

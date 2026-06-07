@@ -38,11 +38,6 @@ const ESTADO_BADGE: Record<string, string> = {
   CANCELADO:     'bg-red-100 text-red-700',
 }
 
-const PRIORIDAD_BADGE: Record<string, string> = {
-  ALTA:  'bg-red-100 text-red-700',
-  MEDIA: 'bg-yellow-100 text-yellow-800',
-  BAJA:  'bg-slate-100 text-slate-600',
-}
 
 const EMPTY_FORM = {
   fecha: '',
