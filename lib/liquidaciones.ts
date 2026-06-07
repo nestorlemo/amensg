@@ -497,6 +497,7 @@ function buildCierreSnapshot(preview: Awaited<ReturnType<typeof buildLiquidacion
       montoPesos: socio.montoPesos,
       montoUsd: socio.montoUsd,
     })),
+    cobros: preview.cobros,
   }
 }
 
