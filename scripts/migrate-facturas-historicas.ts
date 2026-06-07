@@ -106,7 +106,6 @@ async function main() {
           iva:               new Prisma.Decimal(ivaUYU.toFixed(2)),
           totalConIva:       new Prisma.Decimal(totalConIvaUYU.toFixed(2)),
           ingresoAdicionalId: ingreso.id,
-          estado:            'PENDIENTE',
         }
       })
 

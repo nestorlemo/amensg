@@ -38,7 +38,7 @@ async function main() {
 
   let desarrolloCount = 0
   for (const fd of facturasDesarrollo) {
-    const estado = fd.estado === 'COBRADO' ? 'FACTURADO_COBRADO' : 'FACTURADO_PENDIENTE'
+    const estado = 'FACTURADO_PENDIENTE'
     const sinIva = fd.totalConIva.minus !== undefined
       ? (Number(fd.totalConIva) / (1 + Number(fd.iva) / 100))
       : Number(fd.totalUYU)
