@@ -35,8 +35,8 @@ test('distribución 50/50 entre dos socios calcula correctamente', () => {
 })
 
 test('distribución 44/44/12 entre tres socios suma 100%', () => {
-  const porcentajes: Prisma.Decimal.Value[] = ['0.44', '0.44', '0.12']
-  const suma = porcentajes.reduce((acc, p) => acc.add(p), money(0))
+  const porcentajes = ['0.44', '0.44', '0.12']
+  const suma = porcentajes.reduce((acc, p) => money(acc).add(p), money(0))
   assert.equal(suma.toDecimalPlaces(4).toFixed(4), '1.0000')
 
   const partes = distribuirMonto('20000', porcentajes)
