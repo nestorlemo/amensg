@@ -44,8 +44,8 @@ export async function GET(request: Request) {
   }
 
   const [pendingCobros, activeImports, importsThisMonth, activeEmpresas] = await Promise.all([
-    prisma.facturacionMensual.count({
-      where: { estadoCobro: { codigo: { in: ['PENDIENTE', 'ENVIADO'] } } },
+    prisma.cobro.count({
+      where: { estado: 'FACTURADO' },
     }),
     prisma.importacionActivacion.count({
       where: { estado: 'ACTIVA' },
