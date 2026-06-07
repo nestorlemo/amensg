@@ -236,7 +236,7 @@ function ConfirmToast({ empresa, onConfirm, onCancel }: {
   return (
     <div
       className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-2xl px-6 py-4 shadow-xl"
-      style={{ background: '#0B1F3A', color: 'white', minWidth: '360px' }}
+      style={{ background: 'var(--navy-deep)', color: 'white', minWidth: '360px' }}
     >
       <AlertTriangle size={18} style={{ color: '#fbbf24', flexShrink: 0 }} />
       <p className="flex-1 text-sm">¿Desactivar <strong>{empresa.nombre}</strong>?</p>

@@ -86,7 +86,7 @@ export function DashboardHeader({ subtitle }: { subtitle: string }) {
   return (
     <header
       className="relative overflow-hidden rounded-2xl px-8 py-8"
-      style={{ background: 'linear-gradient(135deg, #0B1F3A 0%, #1769E0 100%)' }}
+      style={{ background: 'var(--gradient-header)' }}
     >
       <div
         aria-hidden="true"
