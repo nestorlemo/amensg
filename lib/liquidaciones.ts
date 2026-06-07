@@ -35,7 +35,7 @@ export function periodFromUrl(params: URLSearchParams) {
 }
 
 export async function buildLiquidacionPreview(period: PeriodInput) {
-  const [facturaciones, ingresosAdicionales, gastos, gastosFijosConceptos, socios, tipoCambioParametro, cierrePeriodo, facturaDesarrollo] =
+  const [facturaciones, ingresosAdicionales, gastos, gastosFijosConceptos, socios, tipoCambioParametro, cierrePeriodo, facturaDesarrollo, cobros] =
     await Promise.all([
       prisma.facturacionMensual.findMany({
         where: {
@@ -87,6 +87,18 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
         include: {
           empresa: { select: { id: true, nombre: true } },
           distribuciones: { include: { socio: { select: { id: true, nombre: true } } } },
+        },
+      }),
+      prisma.cobro.findMany({
+        where: { anio: period.anio, mes: period.mes },
+        select: {
+          id: true,
+          tipo: true,
+          estado: true,
+          montoSinIva: true,
+          montoConIva: true,
+          moneda: true,
+          empresa: { select: { nombre: true } },
         },
       }),
     ])
@@ -274,6 +286,7 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
       totalEmpresas,
     },
     socios: sociosPreview,
+    cobros: buildCobrosResumen(cobros),
     validaciones,
     avisos,
     puedeCerrar: validaciones.length === 0,
@@ -429,6 +442,35 @@ export async function getCierre(id: string) {
       socioId: row.socioId,
       socioNombre: row.socio.nombre,
       snapshot: row.snapshot,
+    })),
+  }
+}
+
+function buildCobrosResumen(cobros: {
+  id: string
+  tipo: string
+  estado: string
+  montoSinIva: Prisma.Decimal
+  montoConIva: Prisma.Decimal
+  moneda: string
+  empresa: { nombre: string } | null
+}[]) {
+  const cobrados = cobros.filter((c) => c.estado === 'COBRADO')
+  const facturados = cobros.filter((c) => c.estado === 'FACTURADO')
+  const toUYU = (c: { montoConIva: Prisma.Decimal; moneda: string }) =>
+    c.moneda === 'UYU' ? c.montoConIva : new Prisma.Decimal(0)
+  return {
+    total: cobros.length,
+    cobrados: cobrados.length,
+    facturados: facturados.length,
+    totalCobradoUYU: money(sumDecimal(cobrados.map(toUYU))),
+    totalPendienteUYU: money(sumDecimal(facturados.map(toUYU))),
+    detalle: cobros.map((c) => ({
+      tipo: c.tipo,
+      empresa: c.empresa?.nombre ?? '—',
+      estado: c.estado,
+      montoConIva: money(c.montoConIva),
+      moneda: c.moneda,
     })),
   }
 }
