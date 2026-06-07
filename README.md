@@ -1,276 +1,60 @@
-# AMENSG Activation Billing System
+# AMENSG — Sistema de Gestión Comercial
 
-Initial foundation for the AMENSG monthly activation billing platform.
-
-This repository currently contains only the technical foundation, documentation, local execution setup, Prisma data model, seed data, and placeholder UI. CSV import logic, full authentication, billing workflows, and production deployment are intentionally out of scope for this phase.
+Sistema interno de gestión para AMENSG IT Automation. Desplegado en producción en https://amensg-production.up.railway.app
 
 ## Stack
 
-- Next.js App Router
-- TypeScript
-- PostgreSQL
-- Prisma
-- Tailwind CSS
-- shadcn/ui-ready configuration
-- Docker and Docker Compose
+- **Frontend/Backend**: Next.js 15, App Router, TypeScript
+- **Base de datos**: PostgreSQL (AWS RDS) via Prisma ORM 5.22
+- **Deploy**: Railway (Docker)
+- **Desarrollo**: GitHub Codespaces
 
-## Prerequisites
+## Módulos
 
+- **Importaciones**: Carga de activaciones desde CSV (hasta 50MB, múltiples períodos)
+- **Activaciones**: Consulta y exportación de activaciones importadas
+- **Gestión de Facturación**: Facturación de activaciones, desarrollo e ingresos adicionales
+- **Gestión de Cobros**: Vista unificada de cobros por tipo, subida de PDFs
+- **Issues**: Gestión de issues de desarrollo con estados y facturación
+- **Gestión Mensual**: Gastos, liquidaciones y cierres mensuales
+- **Reportes**: Gráficos de facturación, activaciones y resultados
+- **Administración**: Empresas, socios, usuarios, parámetros, auditoría
+
+## Desarrollo
+
+### Requisitos
 - Node.js 20+
-- npm 10+
-- Docker Desktop or Docker Engine with Docker Compose
+- Acceso a AWS RDS (variable DATABASE_URL)
 
-## Environment
-
-Create a local environment file from the example:
-
+### Setup
 ```bash
 cp .env.example .env
-```
-
-For local development outside Docker, set `DATABASE_URL` to a database reachable from the host, for example:
-
-```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/amensg?schema=public"
-```
-
-For Docker Compose, the example value uses the Compose service name:
-
-```env
-DATABASE_URL="postgresql://postgres:postgres@postgres:5432/amensg?schema=public"
-```
-
-## Local Setup
-
-Install dependencies:
-
-```bash
+# Completar DATABASE_URL con la conexión a AWS RDS
 npm install
-```
-
-Start PostgreSQL with Docker Compose:
-
-```bash
-docker compose up -d postgres
-```
-
-Generate the Prisma client:
-
-```bash
-npm run prisma:generate
-```
-
-Create and apply the initial migration:
-
-```bash
-npm run prisma:migrate
-```
-
-Seed initial data:
-
-```bash
-npm run prisma:seed
-```
-
-Start the development server:
-
-```bash
-npm run dev
-```
-
-The app runs at `http://localhost:3000`. A basic health endpoint is available at `http://localhost:3000/api/health`.
-
-## Docker
-
-Build and start the app plus PostgreSQL:
-
-```bash
-docker compose up --build
-```
-
-Start only PostgreSQL for local host development:
-
-```bash
-docker compose up -d postgres
-```
-
-Stop services:
-
-```bash
-docker compose down
-```
-
-Remove services and the local PostgreSQL volume:
-
-```bash
-docker compose down -v
-```
-
-## Prisma
-
-Generate Prisma client:
-
-```bash
-npm run prisma:generate
-```
-
-Create and apply a development migration:
-
-```bash
-npm run prisma:migrate
-```
-
-Apply existing migrations in a deployed environment:
-
-```bash
-npm run prisma:deploy
-```
-
-Seed required foundation data:
-
-```bash
-npm run prisma:seed
-```
-
-The seed creates:
-
-- Admin user from `ADMIN_NAME`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD`
-- Estados de cobro: `PENDIENTE`, `ENVIADO`, `PAGADO`, `CONTADO`, `CHEQUE`, `ANULADO`
-- Parametros: `precio_unitario_activacion`, `porcentaje_iva`, `tipo_cambio_usd`
-- Gasto conceptos: `Estudio contable`, `IRAE`, `AWS`, `Compra de captchas`, `Certificado AMENSG`, `Facturación electrónica`, `Otros`
-
-## Project Structure
-
-- `app/`: Next.js App Router layout, health endpoint, and placeholder pages.
-- `components/`: shared UI shell components.
-- `lib/`: shared navigation and utility helpers.
-- `docs/`: product, import, data model, business, UI, API, deployment, operations, and acceptance specs.
-- `prisma/`: schema, seed, and migrations.
-- `storage/importaciones/`: local import file storage placeholder.
-- `backups/`: local backup placeholder.
-
-## Validation
-
-Run the foundation checks before adding business logic:
-
-```bash
+npx prisma migrate deploy
 npx prisma generate
-npm run typecheck
-npm run lint
-npm run build
-```
-
-No test runner is configured yet. Add `npm run test` only when tests are introduced.
-
-## Working with Codex Web
-
-Use this section as the default local workflow after receiving Codex Web commits.
-
-### 1) Install dependencies
-
-```bash
-npm install
-```
-
-If PowerShell blocks npm script execution on Windows, use:
-
-```powershell
-npm.cmd install
-```
-
-### 2) Local database requirements
-
-- PostgreSQL is required (no SQLite/MySQL fallback).
-- A reachable `DATABASE_URL` is required in `.env`.
-- Recommended local startup with Docker:
-
-```bash
-docker compose up -d postgres
-```
-
-### 3) Environment variables
-
-Create `.env` from `.env.example` and adjust values for your machine:
-
-```bash
-cp .env.example .env
-```
-
-Required values include:
-- `DATABASE_URL`
-- `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`
-- `NEXTAUTH_SECRET` (or `JWT_SECRET` if your auth strategy uses it)
-- `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`
-- `STORAGE_DRIVER`, `STORAGE_PATH`
-- `MAX_UPLOAD_SIZE_MB`
-
-### 4) Prisma commands
-
-Generate Prisma client:
-
-```bash
-npm run prisma:generate
-```
-
-Apply existing migrations locally (recommended after pulling Codex Web changes):
-
-```bash
-npm run prisma:deploy
-```
-
-Create a new development migration when `prisma/schema.prisma` changes:
-
-```bash
-npm run prisma:migrate
-```
-
-Optional seed for baseline data:
-
-```bash
-npm run prisma:seed
-```
-
-### 5) Run app locally after pulling changes
-
-After pulling from GitHub:
-
-```bash
-npm install
-npm run prisma:generate
-npm run prisma:deploy
 npm run dev
 ```
 
-Open `http://localhost:3000`.
-
-### 6) Apply migrations generated by Codex Web
-
-When Codex Web changes include new files under `prisma/migrations/`:
-
-1. Pull latest changes.
-2. Ensure PostgreSQL is running.
-3. Run:
-
+### Scripts útiles
 ```bash
-npm run prisma:deploy
+npm run dev        # Servidor de desarrollo
+npm run build      # Build de producción
+npm test           # Tests unitarios (19 tests)
+npm run lint       # Linting
 ```
 
-4. Regenerate the Prisma client:
+### Deploy
+Railway detecta automáticamente los pushes a `main` y redespliega.
+Las migraciones de DB se aplican manualmente con `npx prisma migrate deploy`.
 
-```bash
-npm run prisma:generate
+## Estructura
+
 ```
-
-### 7) Validation commands (required before merge)
-
-```bash
-npm run typecheck
-npm run lint
-npm run build
-```
-
-Run tests when present:
-
-```bash
-npm run test
+app/          # Páginas y API routes (Next.js App Router)
+components/   # Componentes React reutilizables
+lib/          # Lógica de negocio, helpers y acceso a datos
+prisma/       # Schema, migraciones y seed
+scripts/      # Scripts de migración de datos históricos
+tests/        # Tests unitarios
 ```
