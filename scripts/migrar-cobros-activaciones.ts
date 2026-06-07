@@ -47,18 +47,6 @@ async function main() {
   })
   const alreadyCovered = new Set(existingCF.map((cf) => cf.facturacionMensualId))
 
-  // Also check old-style: direct facturacionMensualId on Cobro
-  const existingDirect = await prisma.cobro.findMany({
-    where: {
-      tipo: 'ACTIVACIONES',
-      facturacionMensualId: { in: facturaciones.map((f) => f.id), not: null },
-    },
-    select: { facturacionMensualId: true },
-  })
-  for (const c of existingDirect) {
-    if (c.facturacionMensualId) alreadyCovered.add(c.facturacionMensualId)
-  }
-
   const pending = facturaciones.filter((f) => !alreadyCovered.has(f.id))
   console.log(`Total facturaciones: ${facturaciones.length}, already covered: ${alreadyCovered.size}, pending: ${pending.length}`)
 

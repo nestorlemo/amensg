@@ -27,7 +27,6 @@ async function main() {
         moneda: 'UYU',
         estado,
         fechaCobro: f.fechaCobro ?? null,
-        facturacionMensualId: f.id,
       },
     })
     activacionesCount++

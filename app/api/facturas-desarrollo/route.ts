@@ -93,10 +93,10 @@ export async function POST(request: Request) {
   if (!tipoCambio || tipoCambio <= 0) return NextResponse.json({ error: 'VALIDATION_ERROR', message: 'Tipo de cambio inválido.' }, { status: 422 })
   if (issueIds.length === 0)      return NextResponse.json({ error: 'VALIDATION_ERROR', message: 'Debe seleccionar al menos un issue.' }, { status: 422 })
 
-  // Derive anio/mes from fechaDesde for record-keeping
-  const [anioStr, mesStr] = fechaDesde.split('-')
-  const anio = parseInt(anioStr ?? '', 10)
-  const mes  = parseInt(mesStr  ?? '', 10)
+  // Use current date for período, not the issue date range
+  const ahora = new Date()
+  const anio = ahora.getFullYear()
+  const mes  = ahora.getMonth() + 1
 
   // Read valor hora from parametros
   const valorHoraParam = await prisma.parametro.findUnique({ where: { clave: 'valor_hora_desarrollo_usd' } })
