@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -10,6 +11,7 @@ import {
 
 import type { CurrentUser } from '@/lib/auth'
 import { navigationItems } from '@/lib/navigation'
+import { PerfilModal } from '@/components/perfil-modal'
 
 const iconMap: Record<string, LucideIcon> = {
   LayoutDashboard, Upload, Zap, FileText, CreditCard, Building2,
@@ -51,6 +53,7 @@ function SectionDivider({ label }: { label: string }) {
 
 export function AppSidebar({ user, onClose }: { user: CurrentUser; onClose?: () => void }) {
   const pathname = usePathname()
+  const [showPerfil, setShowPerfil] = useState(false)
   const visibleItems = navigationItems.filter((item) => {
     if (item.adminOnly) return user.rol === 'ADMIN'
     if (item.roles) return item.roles.includes(user.rol)
@@ -120,14 +123,20 @@ export function AppSidebar({ user, onClose }: { user: CurrentUser; onClose?: () 
 
       {/* User + Logout */}
       <div className="shrink-0 p-4 border-t border-amensg-border">
-        <div className="flex min-w-0 items-center gap-3">
+        {showPerfil ? <PerfilModal user={user} onClose={() => setShowPerfil(false)} /> : null}
+        <button
+          className="flex min-w-0 w-full items-center gap-3 rounded-lg px-1 py-1 hover:bg-amensg-hover transition-colors text-left"
+          onClick={() => setShowPerfil(true)}
+          title="Editar mi perfil"
+          type="button"
+        >
           <div
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white"
             style={{ background: 'var(--gradient-avatar)' }}
           >
             {displayName.charAt(0).toUpperCase()}
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-amensg-navy" title={displayName}>
               {displayName}
             </p>
@@ -135,7 +144,7 @@ export function AppSidebar({ user, onClose }: { user: CurrentUser; onClose?: () 
               {user.rol}
             </p>
           </div>
-        </div>
+        </button>
         <form action="/api/auth/logout" className="mt-3" method="post">
           <button
             className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-colors bg-amensg-hover text-amensg-blue hover:bg-blue-100"
