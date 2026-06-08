@@ -188,28 +188,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No se encontraron socios o distribuciones para los cobros seleccionados.' }, { status: 422 })
   }
 
-  // createMany doesn't return IDs, so create one by one to get them
-  const createdIds: string[] = []
-  for (const t of transferenciasData) {
-    const created = await prisma.transferencia.create({ data: t, select: { id: true } })
-    createdIds.push(created.id)
-  }
+  await prisma.transferencia.createMany({ data: transferenciasData })
 
-  // Link each transferencia to all cobros via TransferenciaCobro
-  // UYU transferencias link to all UYU cobros; USD to all USD cobros
-  const cobrosUYUIds = cobrosUYU.map(c => c.id)
-  const cobrosUSDIds = cobrosUSD.map(c => c.id)
+  // Fetch the just-created transferencias by matching the reference cobroIds
+  const refIds = [cobrosUYU[0]?.id, cobrosUSD[0]?.id].filter((x): x is string => Boolean(x))
+  const creadas = await prisma.transferencia.findMany({
+    where: { cobroId: { in: refIds } },
+    select: { id: true, moneda: true },
+  })
 
-  const transferenciaCobroData: { transferenciaId: string; cobroId: string }[] = []
-  for (const id of createdIds) {
-    const t = transferenciasData[createdIds.indexOf(id)]!
-    const relevantCobroIds = t.moneda === 'USD' ? cobrosUSDIds : cobrosUYUIds
-    for (const cobroId of relevantCobroIds) {
-      transferenciaCobroData.push({ transferenciaId: id, cobroId })
+  // Link each transferencia to all cobros of its moneda via TransferenciaCobro
+  const tcData: { transferenciaId: string; cobroId: string }[] = []
+  for (const t of creadas) {
+    const cobrosDeEstaMoneda = t.moneda === 'UYU' ? cobrosUYU : cobrosUSD
+    for (const cobro of cobrosDeEstaMoneda) {
+      tcData.push({ transferenciaId: t.id, cobroId: cobro.id })
     }
   }
-  if (transferenciaCobroData.length > 0) {
-    await prisma.transferenciaCobro.createMany({ data: transferenciaCobroData })
+  if (tcData.length > 0) {
+    await prisma.transferenciaCobro.createMany({ data: tcData, skipDuplicates: true })
   }
 
   await prisma.auditoria.create({
