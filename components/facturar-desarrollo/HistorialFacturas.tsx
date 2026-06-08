@@ -141,7 +141,6 @@ export const HistorialFacturas = forwardRef<HistorialHandle, {
                   <th className="px-4 py-3 text-right">S/IVA (USD)</th>
                   <th className="px-4 py-3 text-right">IVA (USD)</th>
                   <th className="px-4 py-3 text-right">C/IVA (USD)</th>
-                  <th className="px-4 py-3 text-left">Distribución</th>
                   <th className="px-4 py-3 text-left">Estado</th>
                   <th className="px-4 py-3 text-left">Fecha Cobro</th>
                   <th className="px-4 py-3 text-left">PDF</th>
@@ -159,15 +158,6 @@ export const HistorialFacturas = forwardRef<HistorialHandle, {
                     <td className="px-4 py-3 text-right">${fmt(f.totalUSD)}</td>
                     <td className="px-4 py-3 text-right">${fmt(f.iva)}</td>
                     <td className="px-4 py-3 text-right font-semibold">${fmt(f.totalConIva)}</td>
-                    <td className="px-4 py-3">
-                      {f.distribuciones.length === 0
-                        ? '—'
-                        : f.distribuciones.map((d) => (
-                            <div key={d.id} className="text-xs">
-                              {d.socio.nombre}: {d.porcentaje}% · ${fmt((f.totalConIva * d.porcentaje) / 100)}
-                            </div>
-                          ))}
-                    </td>
                     <td className="px-4 py-3">
                       <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${f.estado === 'COBRADO' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
                         {f.estado}
@@ -204,7 +194,7 @@ export const HistorialFacturas = forwardRef<HistorialHandle, {
                             onClick={() => setIssuesModal(f)}
                             className="rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
                           >
-                            Ver issues ({f.issues.length})
+                            Detalles
                           </button>
                         )}
                         {f.estado !== 'COBRADO' && (
@@ -300,6 +290,32 @@ export const HistorialFacturas = forwardRef<HistorialHandle, {
                 </tbody>
               </table>
             </div>
+            {/* Distribución */}
+            {issuesModal.distribuciones.length > 0 && (
+              <div className="shrink-0 border-t border-slate-200 px-6 py-4">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Distribución entre socios</h3>
+                <table className="min-w-full text-sm">
+                  <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
+                    <tr>
+                      <th className="px-3 py-2 text-left">Socio</th>
+                      <th className="px-3 py-2 text-right">Porcentaje</th>
+                      <th className="px-3 py-2 text-right">Monto (USD)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {issuesModal.distribuciones.map((d) => (
+                      <tr key={d.id} className="hover:bg-slate-50">
+                        <td className="px-3 py-2 text-slate-700">{d.socio.nombre}</td>
+                        <td className="px-3 py-2 text-right text-slate-700">{d.porcentaje}%</td>
+                        <td className="px-3 py-2 text-right font-semibold text-slate-950">
+                          ${fmt((issuesModal.totalConIva * d.porcentaje) / 100)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
             {/* Footer */}
             <div className="flex justify-end border-t border-slate-200 px-6 py-4 shrink-0">
               <button
