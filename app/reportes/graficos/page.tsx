@@ -24,6 +24,7 @@ import {
 import { PageHeader } from '@/components/page-header'
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+const CURRENT_YEAR = new Date().getFullYear()
 
 const EMPRESA_COLORS: Record<string, string> = {
   Elared: '#1769E0',
@@ -45,15 +46,20 @@ function empresaColor(nombre: string) {
   return EMPRESA_COLORS[nombre] ?? EMPRESA_FALLBACK
 }
 
-type GraficosData = {
+type AnioData = {
   activacionesPorMesEmpresa: { mes: number; empresa: string; cantidad: number }[]
   facturacionPorMesEmpresa: { mes: number; empresa: string; totalSinIva: number }[]
   resultadoMensual: { mes: number; ingresos: number; gastos: number; resultado: number }[]
   resultadoFinancieroTotal: { mes: number; ingresosActivaciones: number; ingresosAdicionales: number; desarrolloUYU: number; gastos: number; resultado: number }[]
-  distribucionSocios: { socio: string; monto: number }[]
-  issuesPorEstado: { estado: string; count: number }[]
   horasDesarrolloPorMes: { mes: number; horas: number }[]
   facturacionDesarrolloPorMes: { mes: number; totalUSD: number; acumulado: number }[]
+  activacionesTotalesPorMes: { mes: number; total: number }[]
+}
+
+type GraficosData = AnioData & {
+  distribucionSocios: { socio: string; monto: number }[]
+  issuesPorEstado: { estado: string; count: number }[]
+  comparativo: (AnioData & { anio: number }) | null
 }
 
 function fmt(n: number) {
@@ -133,10 +139,23 @@ function pivotByEmpresa(rows: { mes: number; empresa: string; [k: string]: numbe
   return { data: Array.from(byMes.values()).sort((a, b) => Number(a.mes) - Number(b.mes)), empresas }
 }
 
+// Merge comparative data into the main array by mes index
+function mergeComparativo<T extends { mes: number }>(main: T[], comp: { mes: number; [k: string]: number }[], fields: string[], suffix: string): (T & Record<string, number>)[] {
+  const compMap = new Map<number, { [k: string]: number }>()
+  for (const r of comp) compMap.set(r.mes, r)
+  return main.map(row => {
+    const compRow = compMap.get(row.mes)
+    const extra: Record<string, number> = {}
+    for (const f of fields) extra[`${f}${suffix}`] = compRow ? (compRow[f] ?? 0) : 0
+    return { ...row, ...extra }
+  })
+}
+
 type EmpresaOpt = { id: string; nombre: string }
 
 export default function GraficosPage() {
-  const [anio, setAnio] = useState(new Date().getFullYear())
+  const [anio, setAnio] = useState(CURRENT_YEAR)
+  const [anioComparativo, setAnioComparativo] = useState<number | null>(null)
   const [empresaId, setEmpresaId] = useState('')
   const [empresas, setEmpresas] = useState<EmpresaOpt[]>([])
   const [data, setData] = useState<GraficosData | null>(null)
@@ -152,12 +171,16 @@ export default function GraficosPage() {
   useEffect(() => {
     setLoading(true)
     setData(null)
-    const url = `/api/reportes/graficos?anio=${anio}${empresaId ? `&empresaId=${empresaId}` : ''}`
+    let url = `/api/reportes/graficos?anio=${anio}${empresaId ? `&empresaId=${empresaId}` : ''}`
+    if (anioComparativo) url += `&anioComparativo=${anioComparativo}`
     fetch(url)
       .then(r => r.json())
       .then((d: GraficosData) => { setData(d); setLoading(false) })
       .catch(() => setLoading(false))
-  }, [anio, empresaId])
+  }, [anio, anioComparativo, empresaId])
+
+  const comp = data?.comparativo ?? null
+  const compSuffix = comp ? `_${comp.anio}` : ''
 
   const kpis = data ? {
     activaciones: data.activacionesPorMesEmpresa.reduce((s, r) => s + r.cantidad, 0),
@@ -180,10 +203,58 @@ export default function GraficosPage() {
     return Array.from(map.entries()).map(([name, value]) => ({ name, value }))
   })() : []
 
-  const resultadoData = data?.resultadoMensual.map(r => ({ ...r, mes: MESES[r.mes - 1] })) ?? []
-  const finTotalData = data?.resultadoFinancieroTotal.map(r => ({ ...r, mes: MESES[r.mes - 1] })) ?? []
+  // Build merged datasets for line charts
+  const resultadoBase = data?.resultadoMensual.map(r => ({ ...r, mes: MESES[r.mes - 1] })) ?? []
+  const resultadoData = (comp && data)
+    ? mergeComparativo(
+        data.resultadoMensual,
+        comp.resultadoMensual as { mes: number; [k: string]: number }[],
+        ['resultado'],
+        compSuffix,
+      ).map(r => ({ ...r, mes: MESES[r.mes - 1] }))
+    : resultadoBase
+
+  const finTotalBase = data?.resultadoFinancieroTotal.map(r => ({ ...r, mes: MESES[r.mes - 1] })) ?? []
+  const finTotalData = (comp && data)
+    ? mergeComparativo(
+        data.resultadoFinancieroTotal,
+        comp.resultadoFinancieroTotal as { mes: number; [k: string]: number }[],
+        ['resultado'],
+        compSuffix,
+      ).map(r => ({ ...r, mes: MESES[r.mes - 1] }))
+    : finTotalBase
+
+  const acumuladoBase = data?.facturacionDesarrolloPorMes.map(r => ({ ...r, mes: MESES[r.mes - 1] })) ?? []
+  const acumuladoData = (comp && data)
+    ? mergeComparativo(
+        data.facturacionDesarrolloPorMes,
+        comp.facturacionDesarrolloPorMes as { mes: number; [k: string]: number }[],
+        ['totalUSD', 'acumulado'],
+        compSuffix,
+      ).map(r => ({ ...r, mes: MESES[r.mes - 1] }))
+    : acumuladoBase
+
+  // AreaChart: merge total activaciones from comparative
+  const activDataWithComp = (comp && data)
+    ? (() => {
+        const compTotalMap = new Map<number, number>()
+        for (const r of comp.activacionesTotalesPorMes) compTotalMap.set(r.mes, r.total)
+        return activData.map(d => ({
+          ...d,
+          mes: MESES[Number(d.mes) - 1],
+          Total: activEmpresas.reduce((s, emp) => s + Number(d[emp] ?? 0), 0),
+          [`Total${compSuffix}`]: compTotalMap.get(Number(d.mes)) ?? 0,
+        }))
+      })()
+    : activData.map(d => ({
+        ...d,
+        mes: MESES[Number(d.mes) - 1],
+        Total: activEmpresas.reduce((s, emp) => s + Number(d[emp] ?? 0), 0),
+      }))
+
   const horasData = data?.horasDesarrolloPorMes.map(r => ({ ...r, mes: MESES[r.mes - 1] })) ?? []
-  const acumuladoData = data?.facturacionDesarrolloPorMes.map(r => ({ ...r, mes: MESES[r.mes - 1] })) ?? []
+
+  const COMP_COLOR = '#94a3b8'
 
   return (
     <div className="min-w-0 max-w-full space-y-8">
@@ -201,9 +272,22 @@ export default function GraficosPage() {
           <select
             className="ml-2 h-9 rounded-md border border-slate-300 px-3 text-sm"
             value={anio}
-            onChange={e => setAnio(Number(e.target.value))}
+            onChange={e => { setAnio(Number(e.target.value)); setAnioComparativo(null) }}
           >
-            {Array.from({ length: new Date().getFullYear() - 2022 }, (_, i) => 2023 + i).map(y => <option key={y} value={y}>{y}</option>)}
+            {Array.from({ length: CURRENT_YEAR - 2022 }, (_, i) => 2023 + i).map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </label>
+        <label className="text-sm font-medium text-slate-700">
+          Comparar con
+          <select
+            className="ml-2 h-9 rounded-md border border-slate-300 px-3 text-sm"
+            value={anioComparativo ?? ''}
+            onChange={e => setAnioComparativo(e.target.value ? Number(e.target.value) : null)}
+          >
+            <option value="">Sin comparativo</option>
+            {Array.from({ length: CURRENT_YEAR - 2022 }, (_, i) => 2023 + i)
+              .filter(y => y !== anio)
+              .map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </label>
         <label className="text-sm font-medium text-slate-700">
@@ -217,6 +301,14 @@ export default function GraficosPage() {
             {empresas.map(emp => <option key={emp.id} value={emp.id}>{emp.nombre}</option>)}
           </select>
         </label>
+        {comp && (
+          <span className="flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1.5 text-xs text-slate-600">
+            <span className="inline-block h-2 w-6 rounded border-b-2 border-dashed border-slate-400" />
+            {comp.anio} (comparativo)
+            <span className="ml-1 inline-block h-2 w-6 rounded border-b-2 border-solid border-[#1769E0]" />
+            {anio} (principal)
+          </span>
+        )}
       </div>
 
       {loading ? <Skeleton /> : !data ? (
@@ -238,47 +330,25 @@ export default function GraficosPage() {
           <section className="space-y-4">
             <SectionTitle title="Activaciones" color="#1769E0" />
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              {/* Chart 1: AreaChart evolución activaciones */}
               <ChartCard title="Evolución mensual de activaciones">
                 <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={activData.map(d => {
-                    const row = { ...d, mes: MESES[Number(d.mes) - 1] } as Record<string, number | string>
-                    const total = activEmpresas.reduce((s, emp) => s + Number(row[emp] ?? 0), 0)
-                    return { ...row, Total: total }
-                  })}>
+                  <AreaChart data={activDataWithComp}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={fmtShort} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend />
                     {activEmpresas.map((emp) => (
-                      <Area
-                        key={emp}
-                        type="monotone"
-                        dataKey={emp}
-                        stroke={empresaColor(emp)}
-                        fill={empresaColor(emp)}
-                        fillOpacity={0.15}
-                        strokeWidth={2}
-                        dot={{ r: 4 }}
-                        activeDot={{ r: 6 }}
-                      />
+                      <Area key={emp} type="monotone" dataKey={emp} stroke={empresaColor(emp)} fill={empresaColor(emp)} fillOpacity={0.15} strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                     ))}
-                    <Area
-                      type="monotone"
-                      dataKey="Total"
-                      stroke="#0B1F3A"
-                      fill="#0B1F3A"
-                      fillOpacity={0.05}
-                      strokeWidth={3}
-                      dot={{ r: 4 }}
-                      activeDot={{ r: 6 }}
-                    />
+                    <Area type="monotone" dataKey="Total" name={`Total ${anio}`} stroke="#0B1F3A" fill="#0B1F3A" fillOpacity={0.05} strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                    {comp && (
+                      <Line type="monotone" dataKey={`Total${compSuffix}`} name={`Total ${comp.anio}`} stroke={COMP_COLOR} strokeWidth={2} strokeDasharray="5 4" dot={false} />
+                    )}
                   </AreaChart>
                 </ResponsiveContainer>
               </ChartCard>
 
-              {/* Chart 2: BarChart apilado facturación */}
               <ChartCard title="Facturación por empresa (UYU s/IVA)">
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={facturData.map(d => ({ ...d, mes: MESES[Number(d.mes) - 1] }))}>
@@ -294,7 +364,6 @@ export default function GraficosPage() {
                 </ResponsiveContainer>
               </ChartCard>
 
-              {/* Chart 3: PieChart mix */}
               <ChartCard title="Activaciones por empresa (año completo)">
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
@@ -314,7 +383,6 @@ export default function GraficosPage() {
           <section className="space-y-4">
             <SectionTitle title="Financiero" color="#20E0B2" />
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              {/* Chart 4: ComposedChart resultado mensual */}
               <ChartCard title={empresaId ? `Resultado mensual — ${empresas.find(e => e.id === empresaId)?.nombre ?? ''} (gastos totales compartidos)` : 'Resultado mensual (UYU)'}>
                 <ResponsiveContainer width="100%" height={300}>
                   <ComposedChart data={resultadoData}>
@@ -325,12 +393,14 @@ export default function GraficosPage() {
                     <Legend />
                     <Bar dataKey="ingresos" name="Ingresos S/IVA (UYU)" stackId="stack" fill="#93c5fd" />
                     <Bar dataKey="gastos" name="Gastos S/IVA (UYU)" stackId="stack" fill="#fca5a5" />
-                    <Line type="monotone" dataKey="resultado" name="Resultado (UYU)" stroke="#20E0B2" strokeWidth={2} dot />
+                    <Line type="monotone" dataKey="resultado" name={`Resultado ${anio}`} stroke="#20E0B2" strokeWidth={2} dot />
+                    {comp && (
+                      <Line type="monotone" dataKey={`resultado${compSuffix}`} name={`Resultado ${comp.anio}`} stroke={COMP_COLOR} strokeWidth={2} strokeDasharray="5 4" dot={false} />
+                    )}
                   </ComposedChart>
                 </ResponsiveContainer>
               </ChartCard>
 
-              {/* Chart 4b: ComposedChart resultado financiero total */}
               <ChartCard title="Resultado financiero total mensual (UYU)">
                 <ResponsiveContainer width="100%" height={300}>
                   <ComposedChart data={finTotalData}>
@@ -343,12 +413,14 @@ export default function GraficosPage() {
                     <Bar dataKey="ingresosAdicionales" name="Adicionales S/IVA (UYU)" stackId="ing" fill="#19C3FF" />
                     <Bar dataKey="desarrolloUYU" name="Desarrollo (UYU)" stackId="ing" fill="#20E0B2" />
                     <Bar dataKey="gastos" name="Gastos S/IVA (UYU)" fill="#f87171" />
-                    <Line type="monotone" dataKey="resultado" name="Resultado (UYU)" stroke="#0B6B3A" strokeWidth={3} dot={{ r: 4 }} />
+                    <Line type="monotone" dataKey="resultado" name={`Resultado ${anio}`} stroke="#0B6B3A" strokeWidth={3} dot={{ r: 4 }} />
+                    {comp && (
+                      <Line type="monotone" dataKey={`resultado${compSuffix}`} name={`Resultado ${comp.anio}`} stroke={COMP_COLOR} strokeWidth={2} strokeDasharray="5 4" dot={false} />
+                    )}
                   </ComposedChart>
                 </ResponsiveContainer>
               </ChartCard>
 
-              {/* Chart 5: BarChart horizontal distribución socios */}
               <ChartCard title="Distribución acumulada por socio (UYU)">
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={data.distribucionSocios} layout="vertical">
@@ -367,7 +439,6 @@ export default function GraficosPage() {
           <section className="space-y-4">
             <SectionTitle title="Desarrollo" color="#F0B840" />
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              {/* Chart 6: PieChart issues por estado */}
               <ChartCard title="Issues por estado">
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
@@ -381,7 +452,6 @@ export default function GraficosPage() {
                 </ResponsiveContainer>
               </ChartCard>
 
-              {/* Chart 7: BarChart horas */}
               <ChartCard title="Horas de desarrollo por mes">
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={horasData}>
@@ -394,7 +464,6 @@ export default function GraficosPage() {
                 </ResponsiveContainer>
               </ChartCard>
 
-              {/* Chart 8: LineChart facturación acumulada */}
               <ChartCard title="Facturación desarrollo acumulada (USD)">
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={acumuladoData}>
@@ -403,8 +472,12 @@ export default function GraficosPage() {
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={fmtShort} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend />
-                    <Line type="monotone" dataKey="totalUSD" name="S/IVA USD mes" stroke="#F0B840" strokeWidth={2} dot />
-                    <Line type="monotone" dataKey="acumulado" name="Acumulado S/IVA USD" stroke="#1769E0" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="totalUSD" name={`S/IVA USD ${anio}`} stroke="#F0B840" strokeWidth={2} dot />
+                    <Line type="monotone" dataKey="acumulado" name={`Acumulado ${anio}`} stroke="#1769E0" strokeWidth={2} dot={false} />
+                    {comp && <>
+                      <Line type="monotone" dataKey={`totalUSD${compSuffix}`} name={`S/IVA USD ${comp.anio}`} stroke="#F0B840" strokeWidth={1.5} strokeDasharray="5 4" dot={false} strokeOpacity={0.6} />
+                      <Line type="monotone" dataKey={`acumulado${compSuffix}`} name={`Acumulado ${comp.anio}`} stroke={COMP_COLOR} strokeWidth={1.5} strokeDasharray="5 4" dot={false} />
+                    </>}
                   </LineChart>
                 </ResponsiveContainer>
               </ChartCard>
