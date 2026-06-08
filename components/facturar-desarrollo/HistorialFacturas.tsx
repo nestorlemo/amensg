@@ -242,15 +242,23 @@ export const HistorialFacturas = forwardRef<HistorialHandle, {
 
       {issuesModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-3xl rounded-2xl overflow-hidden bg-white shadow-xl">
+          <div className="w-full max-w-3xl rounded-2xl overflow-hidden bg-white shadow-xl flex flex-col max-h-[80vh]">
             {/* Header */}
-            <div className="px-6 py-5" style={{ background: 'var(--gradient-header)' }}>
+            <div className="flex items-center justify-between px-6 py-5 shrink-0" style={{ background: 'var(--gradient-header)' }}>
               <h2 className="text-base font-semibold text-white">
                 Issues facturados — {issuesModal.empresa.nombre} {String(issuesModal.mes).padStart(2, '0')}/{issuesModal.anio}
               </h2>
+              <button
+                className="ml-4 flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30"
+                onClick={() => setIssuesModal(null)}
+                type="button"
+                aria-label="Cerrar"
+              >
+                ✕
+              </button>
             </div>
-            {/* Table */}
-            <div className="overflow-x-auto">
+            {/* Scrollable table */}
+            <div className="overflow-y-auto overflow-x-auto flex-1">
               <table className="min-w-full text-sm">
                 <thead style={{ background: '#1F3864' }}>
                   <tr>
@@ -292,7 +300,8 @@ export const HistorialFacturas = forwardRef<HistorialHandle, {
                 </tbody>
               </table>
             </div>
-            <div className="flex justify-end px-6 py-4">
+            {/* Footer */}
+            <div className="flex justify-end border-t border-slate-200 px-6 py-4 shrink-0">
               <button
                 className="h-9 rounded-md border border-slate-300 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 onClick={() => setIssuesModal(null)}
