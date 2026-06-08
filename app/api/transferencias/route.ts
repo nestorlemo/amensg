@@ -188,7 +188,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No se encontraron socios o distribuciones para los cobros seleccionados.' }, { status: 422 })
   }
 
-  await prisma.transferencia.createMany({ data: transferenciasData })
+  // createMany doesn't return IDs, so create one by one to get them
+  const createdIds: string[] = []
+  for (const t of transferenciasData) {
+    const created = await prisma.transferencia.create({ data: t, select: { id: true } })
+    createdIds.push(created.id)
+  }
+
+  // Link each transferencia to all cobros via TransferenciaCobro
+  // UYU transferencias link to all UYU cobros; USD to all USD cobros
+  const cobrosUYUIds = cobrosUYU.map(c => c.id)
+  const cobrosUSDIds = cobrosUSD.map(c => c.id)
+
+  const transferenciaCobroData: { transferenciaId: string; cobroId: string }[] = []
+  for (const id of createdIds) {
+    const t = transferenciasData[createdIds.indexOf(id)]!
+    const relevantCobroIds = t.moneda === 'USD' ? cobrosUSDIds : cobrosUYUIds
+    for (const cobroId of relevantCobroIds) {
+      transferenciaCobroData.push({ transferenciaId: id, cobroId })
+    }
+  }
+  if (transferenciaCobroData.length > 0) {
+    await prisma.transferenciaCobro.createMany({ data: transferenciaCobroData })
+  }
 
   await prisma.auditoria.create({
     data: {
