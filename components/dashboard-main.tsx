@@ -4,13 +4,14 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   CreditCard, Upload, Zap, Building2,
-  Calculator, BarChart2, Receipt, FileText, ArrowRight,
+  Calculator, BarChart2, Receipt, FileText, ArrowRight, AlertTriangle,
 } from 'lucide-react'
 
 import { StatCard } from '@/components/ui/primitives'
 
 type Stats = {
   pendingCobros: number
+  cobrosVencidos: number
   activeImports: number
   importsThisMonth: number
   activeEmpresas: number
@@ -50,11 +51,27 @@ export function DashboardMain() {
           Resumen operativo
         </h2>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard label="Cobros pendientes"      value={stats?.pendingCobros    ?? null} accent="amber" icon={CreditCard} />
+          <StatCard
+            label="Cobros pendientes"
+            value={stats?.pendingCobros ?? null}
+            accent={stats ? (stats.cobrosVencidos > 0 ? 'red' : stats.pendingCobros > 0 ? 'amber' : 'green') : 'amber'}
+            icon={CreditCard}
+          />
           <StatCard label="Importaciones activas"  value={stats?.activeImports    ?? null}               icon={Upload} />
           <StatCard label="Importaciones este mes" value={stats?.importsThisMonth ?? null} accent="green" icon={Zap} />
           <StatCard label="Empresas activas"       value={stats?.activeEmpresas   ?? null}               icon={Building2} />
         </div>
+        {stats && stats.cobrosVencidos > 0 ? (
+          <div className="mt-4 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-5 py-3">
+            <AlertTriangle size={16} className="shrink-0 text-amber-600" />
+            <p className="flex-1 text-sm font-medium text-amber-800">
+              Tenés {stats.cobrosVencidos} cobro{stats.cobrosVencidos !== 1 ? 's' : ''} con más de 30 días sin cobrar
+            </p>
+            <Link href="/cobros-unificado" className="text-sm font-semibold text-amber-700 hover:underline">
+              Ver cobros →
+            </Link>
+          </div>
+        ) : null}
       </section>
 
       <section>

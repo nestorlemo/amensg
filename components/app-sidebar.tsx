@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -12,6 +12,17 @@ import {
 import type { CurrentUser } from '@/lib/auth'
 import { navigationItems } from '@/lib/navigation'
 import { PerfilModal } from '@/components/perfil-modal'
+
+function usePendingCobros() {
+  const [count, setCount] = useState(0)
+  useEffect(() => {
+    fetch('/api/dashboard/stats')
+      .then(r => r.json())
+      .then((d: { pendingCobros?: number }) => setCount(d.pendingCobros ?? 0))
+      .catch(() => {})
+  }, [])
+  return count
+}
 
 const iconMap: Record<string, LucideIcon> = {
   LayoutDashboard, Upload, Zap, FileText, CreditCard, Building2,
@@ -54,6 +65,7 @@ function SectionDivider({ label }: { label: string }) {
 export function AppSidebar({ user, onClose }: { user: CurrentUser; onClose?: () => void }) {
   const pathname = usePathname()
   const [showPerfil, setShowPerfil] = useState(false)
+  const pendingCobros = usePendingCobros()
   const visibleItems = navigationItems.filter((item) => {
     if (item.adminOnly) return user.rol === 'ADMIN'
     if (item.roles) return item.roles.includes(user.rol)
@@ -113,7 +125,12 @@ export function AppSidebar({ user, onClose }: { user: CurrentUser; onClose?: () 
                 }
               >
                 {Icon ? <Icon size={16} className="shrink-0" /> : null}
-                {item.label}
+                <span className="flex-1">{item.label}</span>
+                {item.href === '/cobros-unificado' && pendingCobros > 0 ? (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white leading-none">
+                    {pendingCobros > 99 ? '99+' : pendingCobros}
+                  </span>
+                ) : null}
               </Link>
             )
             return elements

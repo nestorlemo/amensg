@@ -43,10 +43,12 @@ export async function GET(request: Request) {
     })
   }
 
-  const [pendingCobros, activeImports, importsThisMonth, activeEmpresas] = await Promise.all([
-    prisma.facturacionMensual.count({
-      where: { estadoCobro: { codigo: { in: ['PENDIENTE', 'ENVIADO'] } } },
-    }),
+  const thirtyDaysAgo = new Date()
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+  const [pendingCobros, cobrosVencidos, activeImports, importsThisMonth, activeEmpresas] = await Promise.all([
+    prisma.cobro.count({ where: { estado: 'FACTURADO' } }),
+    prisma.cobro.count({ where: { estado: 'FACTURADO', creadoEn: { lt: thirtyDaysAgo } } }),
     prisma.importacionActivacion.count({
       where: { estado: 'ACTIVA' },
     }),
@@ -58,5 +60,5 @@ export async function GET(request: Request) {
     }),
   ])
 
-  return NextResponse.json({ pendingCobros, activeImports, importsThisMonth, activeEmpresas })
+  return NextResponse.json({ pendingCobros, cobrosVencidos, activeImports, importsThisMonth, activeEmpresas })
 }
