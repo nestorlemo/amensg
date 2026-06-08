@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
   if (mes)       where.mes       = mes
   if (estado)    where.estado    = estado
 
-  const [data, total] = await Promise.all([
+  const [data, total, allRows, tipoCambioParam] = await Promise.all([
     prisma.cobro.findMany({
       where,
       include: {
@@ -43,6 +43,19 @@ export async function GET(req: NextRequest) {
       take: pageSize,
     }),
     prisma.cobro.count({ where }),
+    prisma.cobro.findMany({
+      where,
+      select: {
+        empresaId: true,
+        empresa: { select: { nombre: true } },
+        montoSinIva: true,
+        iva: true,
+        montoConIva: true,
+        moneda: true,
+        estado: true,
+      },
+    }),
+    prisma.parametro.findUnique({ where: { clave: 'tipo_cambio_usd' }, select: { valor: true } }),
   ])
 
   const now = new Date()
@@ -52,6 +65,58 @@ export async function GET(req: NextRequest) {
     prisma.cobro.count({ where: { estado: 'FACTURADO' } }),
     prisma.cobro.groupBy({ by: ['empresaId'], where: { estado: 'FACTURADO' } }),
   ])
+
+  const tipoCambio = tipoCambioParam ? Number(tipoCambioParam.valor) : 1
+
+  // Build resumen grouped by empresa (all matching rows, not just current page)
+  const resumenMap = new Map<string, {
+    empresaId: string; empresa: string
+    sinIva: number; iva: number; conIva: number
+    count: number; allCobrado: boolean
+  }>()
+  for (const r of allRows) {
+    const tc = r.moneda === 'USD' ? tipoCambio : 1
+    const key = r.empresaId
+    const existing = resumenMap.get(key)
+    const sinIva = Number(r.montoSinIva) * tc
+    const ivaAmt = Number(r.iva) * tc
+    const conIva = Number(r.montoConIva) * tc
+    if (existing) {
+      existing.sinIva += sinIva
+      existing.iva += ivaAmt
+      existing.conIva += conIva
+      existing.count += 1
+      if (r.estado !== 'COBRADO') existing.allCobrado = false
+    } else {
+      resumenMap.set(key, {
+        empresaId: r.empresaId,
+        empresa: r.empresa?.nombre ?? '',
+        sinIva, iva: ivaAmt, conIva,
+        count: 1,
+        allCobrado: r.estado === 'COBRADO',
+      })
+    }
+  }
+  const resumen = [...resumenMap.values()].sort((a, b) => a.empresa.localeCompare(b.empresa))
+
+  // Totals across all rows
+  let totSinIvaPendiente = 0, totSinIvaCobrado = 0
+  let totIva = 0
+  let totConIvaPendiente = 0, totConIvaCobrado = 0
+  for (const r of allRows) {
+    const tc = r.moneda === 'USD' ? tipoCambio : 1
+    const sinIva = Number(r.montoSinIva) * tc
+    const ivaAmt = Number(r.iva) * tc
+    const conIva = Number(r.montoConIva) * tc
+    totIva += ivaAmt
+    if (r.estado === 'COBRADO') {
+      totSinIvaCobrado += sinIva
+      totConIvaCobrado += conIva
+    } else {
+      totSinIvaPendiente += sinIva
+      totConIvaPendiente += conIva
+    }
+  }
 
   return NextResponse.json({
     data: data.map((r) => {
@@ -104,6 +169,14 @@ export async function GET(req: NextRequest) {
     page,
     pageSize,
     totalPages: Math.ceil(total / pageSize),
+    resumen,
+    totals: {
+      sinIvaPendiente: totSinIvaPendiente.toFixed(2),
+      sinIvaCobrado: totSinIvaCobrado.toFixed(2),
+      iva: totIva.toFixed(2),
+      conIvaPendiente: totConIvaPendiente.toFixed(2),
+      conIvaCobrado: totConIvaCobrado.toFixed(2),
+    },
     kpis: {
       totalPendienteUYU: totalPendiente._sum.montoConIva?.toString() ?? '0',
       cobradoEsteMesUYU: cobradoEsteMes._sum.montoConIva?.toString() ?? '0',
