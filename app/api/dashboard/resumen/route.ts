@@ -54,9 +54,15 @@ export async function GET() {
   const auth = await requireApiAuth()
   if ('error' in auth) return auth.error
 
-  const now = new Date()
-  const anio = now.getFullYear()
-  const mes = now.getMonth() + 1
+  const ahora = new Date()
+  let anio = ahora.getFullYear()
+  let mes = ahora.getMonth() + 1
+
+  const tieneCobrosMesActual = await prisma.cobro.count({ where: { anio, mes } })
+  if (tieneCobrosMesActual === 0) {
+    mes -= 1
+    if (mes === 0) { mes = 12; anio -= 1 }
+  }
 
   const mesAnterior = mes === 1 ? { anio: anio - 1, mes: 12 } : { anio, mes: mes - 1 }
 
