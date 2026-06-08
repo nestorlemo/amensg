@@ -118,7 +118,7 @@ export function serializeFactura(f: {
   ingresoAdicionalId: string | null
   empresa: { id: string; nombre: string }
   distribuciones: { id: string; porcentaje: { toString(): string }; montoUYU: { toString(): string }; socio: { id: string; nombre: string } }[]
-  facturaIssues: { issue: { id: string; descripcion: string; totalHoras: { toString(): string }; fechaProduccion?: string | null; estado: string } }[]
+  facturaIssues: { issue: { id: string; descripcion: string; totalHoras: { toString(): string }; fechaProduccion?: Date | string | null; estado: string } }[]
   cobros?: { id: string; estado: string; urlPdfFactura: string | null; fechaCobro?: Date | null }[]
 }) {
   const cobro = f.cobros?.[0] ?? null

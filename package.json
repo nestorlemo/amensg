@@ -2,6 +2,10 @@
   "name": "amensg",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20 <21",
+    "npm": ">=10"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
@@ -9,6 +13,7 @@
     "lint": "eslint .",
     "test": "tsx --test tests/*.test.ts",
     "typecheck": "tsc --noEmit",
+    "validate": "npm run typecheck && npm run lint && npm run build && npm run test",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
