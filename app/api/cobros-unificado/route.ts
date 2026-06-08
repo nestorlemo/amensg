@@ -45,15 +45,7 @@ export async function GET(req: NextRequest) {
     prisma.cobro.count({ where }),
     prisma.cobro.findMany({
       where,
-      select: {
-        empresaId: true,
-        empresa: { select: { nombre: true } },
-        montoSinIva: true,
-        iva: true,
-        montoConIva: true,
-        moneda: true,
-        estado: true,
-      },
+      select: { montoSinIva: true, iva: true, montoConIva: true, moneda: true, estado: true },
     }),
     prisma.parametro.findUnique({ where: { clave: 'tipo_cambio_usd' }, select: { valor: true } }),
   ])
@@ -68,38 +60,7 @@ export async function GET(req: NextRequest) {
 
   const tipoCambio = tipoCambioParam ? Number(tipoCambioParam.valor) : 1
 
-  // Build resumen grouped by empresa (all matching rows, not just current page)
-  const resumenMap = new Map<string, {
-    empresaId: string; empresa: string
-    sinIva: number; iva: number; conIva: number
-    count: number; allCobrado: boolean
-  }>()
-  for (const r of allRows) {
-    const tc = r.moneda === 'USD' ? tipoCambio : 1
-    const key = r.empresaId
-    const existing = resumenMap.get(key)
-    const sinIva = Number(r.montoSinIva) * tc
-    const ivaAmt = Number(r.iva) * tc
-    const conIva = Number(r.montoConIva) * tc
-    if (existing) {
-      existing.sinIva += sinIva
-      existing.iva += ivaAmt
-      existing.conIva += conIva
-      existing.count += 1
-      if (r.estado !== 'COBRADO') existing.allCobrado = false
-    } else {
-      resumenMap.set(key, {
-        empresaId: r.empresaId,
-        empresa: r.empresa?.nombre ?? '',
-        sinIva, iva: ivaAmt, conIva,
-        count: 1,
-        allCobrado: r.estado === 'COBRADO',
-      })
-    }
-  }
-  const resumen = [...resumenMap.values()].sort((a, b) => a.empresa.localeCompare(b.empresa))
-
-  // Totals across all rows
+  // Totals across all rows matching current filters (for table footer)
   let totSinIvaPendiente = 0, totSinIvaCobrado = 0
   let totIva = 0
   let totConIvaPendiente = 0, totConIvaCobrado = 0
@@ -169,7 +130,6 @@ export async function GET(req: NextRequest) {
     page,
     pageSize,
     totalPages: Math.ceil(total / pageSize),
-    resumen,
     totals: {
       sinIvaPendiente: totSinIvaPendiente.toFixed(2),
       sinIvaCobrado: totSinIvaCobrado.toFixed(2),

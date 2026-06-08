@@ -29,13 +29,11 @@ type Kpis = {
 }
 
 type ResumenEmpresa = {
-  empresaId: string
   empresa: string
-  sinIva: number
-  iva: number
-  conIva: number
   count: number
-  allCobrado: boolean
+  sinIva: string
+  iva: string
+  conIva: string
 }
 
 type Totals = {
@@ -53,7 +51,6 @@ type ApiResponse = {
   pageSize: number
   totalPages: number
   kpis: Kpis
-  resumen: ResumenEmpresa[]
   totals: Totals
 }
 
@@ -107,6 +104,14 @@ export default function CobrosUnificadoPage() {
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [showResumen, setShowResumen] = useState(true)
+
+  // Fetch resumen independently on mount (always FACTURADO, not affected by filters)
+  useEffect(() => {
+    fetch('/api/cobros-unificado/resumen')
+      .then((r) => r.json())
+      .then((d: { resumen: ResumenEmpresa[] }) => setResumen(d.resumen ?? []))
+      .catch(() => {})
+  }, [])
   const pageSize = 50
 
   const [filters, setFilters] = useState<Filters>({
@@ -149,7 +154,6 @@ export default function CobrosUnificadoPage() {
       .then((d: ApiResponse) => {
         setRows(d.data)
         setKpis(d.kpis)
-        setResumen(d.resumen ?? [])
         setTotals(d.totals ?? null)
         setTotal(d.total)
         setTotalPages(d.totalPages)
@@ -179,7 +183,12 @@ export default function CobrosUnificadoPage() {
     })
     setCobrandoId(null)
     setFechaCobro('')
-    setFilters((f) => ({ ...f })) // re-fetch
+    setFilters((f) => ({ ...f })) // re-fetch table
+    // refresh resumen (independent of table filters)
+    fetch('/api/cobros-unificado/resumen')
+      .then((r) => r.json())
+      .then((d: { resumen: ResumenEmpresa[] }) => setResumen(d.resumen ?? []))
+      .catch(() => {})
   }
 
   async function handleUploadPdf(id: string, file: File) {
@@ -228,7 +237,7 @@ export default function CobrosUnificadoPage() {
       {resumen.length > 0 && (
         <section className="rounded-md border border-slate-200 bg-white">
           <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-            <h2 className="text-sm font-semibold text-slate-800">Resumen por empresa</h2>
+            <h2 className="text-sm font-semibold text-slate-800">Cobros pendientes por empresa</h2>
             <button
               className="text-xs font-medium text-slate-500 hover:text-slate-800"
               type="button"
@@ -247,22 +256,16 @@ export default function CobrosUnificadoPage() {
                     <th className="px-4 py-2 text-right">S/IVA (UYU)</th>
                     <th className="px-4 py-2 text-right">IVA (UYU)</th>
                     <th className="px-4 py-2 text-right">C/IVA (UYU)</th>
-                    <th className="px-4 py-2 text-left">Estado</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {resumen.map((r) => (
-                    <tr key={r.empresaId} className="hover:bg-slate-50">
+                    <tr key={r.empresa} className="hover:bg-slate-50">
                       <td className="px-4 py-2 font-medium text-slate-800">{r.empresa}</td>
                       <td className="px-4 py-2 text-right text-slate-600">{r.count}</td>
-                      <td className="px-4 py-2 text-right text-slate-700">{fmt(r.sinIva.toFixed(2))}</td>
-                      <td className="px-4 py-2 text-right text-slate-700">{fmt(r.iva.toFixed(2))}</td>
-                      <td className="px-4 py-2 text-right font-semibold text-slate-900">{fmt(r.conIva.toFixed(2))}</td>
-                      <td className="px-4 py-2">
-                        <span className={`inline-block rounded px-2 py-0.5 text-xs font-semibold ${r.allCobrado ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
-                          {r.allCobrado ? 'COBRADO' : 'PENDIENTE'}
-                        </span>
-                      </td>
+                      <td className="px-4 py-2 text-right text-slate-700">{fmt(r.sinIva)}</td>
+                      <td className="px-4 py-2 text-right text-slate-700">{fmt(r.iva)}</td>
+                      <td className="px-4 py-2 text-right font-semibold text-slate-900">{fmt(r.conIva)}</td>
                     </tr>
                   ))}
                 </tbody>
