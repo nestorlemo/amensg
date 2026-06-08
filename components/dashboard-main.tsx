@@ -19,12 +19,14 @@ type Stats = {
 
 type Resumen = {
   periodo: { anio: number; mes: number }
-  ingresosCobrados: string
-  ingresosPendientes: string
-  ingresosEsperados: string
+  activacionesCobradas: string
+  activacionesPendientes: string
+  desarrolloCobrado: string
+  desarrolloPendiente: string
+  desarrolloPendienteUSD: string
   gastosFijos: string
   resultadoEstimado: string
-  mesAnterior: { ingresosCobrados: string; resultadoDistribuible: string }
+  mesAnterior: { activacionesCobradas: string; resultadoDistribuible: string }
 }
 
 const MESES_LARGO = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
@@ -49,6 +51,7 @@ function ResumenCard({
   badgeColor,
   vs,
   vsLabel,
+  sub,
 }: {
   label: string
   value: string
@@ -56,6 +59,7 @@ function ResumenCard({
   badgeColor: 'green' | 'amber' | 'blue' | 'red'
   vs: string | null
   vsLabel: string
+  sub?: string
 }) {
   const badgeClasses = {
     green: 'bg-emerald-100 text-emerald-700',
@@ -71,6 +75,7 @@ function ResumenCard({
         <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${badgeClasses}`}>{badge}</span>
       </div>
       <p className="text-2xl font-bold tabular-nums text-slate-950">{fmt(value)}</p>
+      {sub ? <p className="text-xs font-medium text-slate-400">{sub}</p> : null}
       {vs !== null ? (
         <p className="text-xs text-slate-400">
           vs {vsLabel}:{' '}
@@ -148,7 +153,7 @@ export function DashboardMain() {
       </section>
 
       {resumen ? (() => {
-        const { periodo, ingresosCobrados, ingresosPendientes, resultadoEstimado, mesAnterior } = resumen
+        const { periodo, activacionesCobradas, activacionesPendientes, desarrolloPendiente, desarrolloPendienteUSD, resultadoEstimado, mesAnterior } = resumen
         const mesNombre = MESES_LARGO[periodo.mes - 1]
         const mesAnteriorNombre = periodo.mes === 1
           ? `${MESES_LARGO[11]} ${periodo.anio - 1}`
@@ -165,22 +170,31 @@ export function DashboardMain() {
                 Ver liquidación completa →
               </Link>
             </div>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <ResumenCard
-                label="Ingresos cobrados"
-                value={ingresosCobrados}
+                label="Activaciones cobradas"
+                value={activacionesCobradas}
                 badge="COBRADO"
                 badgeColor="green"
-                vs={pct(ingresosCobrados, mesAnterior.ingresosCobrados)}
+                vs={pct(activacionesCobradas, mesAnterior.activacionesCobradas)}
                 vsLabel={mesAnteriorNombre}
               />
               <ResumenCard
-                label="Ingresos pendientes"
-                value={ingresosPendientes}
+                label="Activaciones pendientes"
+                value={activacionesPendientes}
                 badge="FACTURADO"
                 badgeColor="amber"
                 vs={null}
                 vsLabel={mesAnteriorNombre}
+              />
+              <ResumenCard
+                label="Desarrollo pendiente"
+                value={desarrolloPendiente}
+                badge="FACTURADO"
+                badgeColor="amber"
+                vs={null}
+                vsLabel={mesAnteriorNombre}
+                sub={Number(desarrolloPendienteUSD) > 0 ? `USD ${fmt(desarrolloPendienteUSD)}` : undefined}
               />
               <ResumenCard
                 label="Resultado estimado"
