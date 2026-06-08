@@ -376,7 +376,7 @@ export default function GraficosPage() {
                         <Cell key={entry.estado} fill={ESTADO_COLORS[entry.estado] ?? '#94a3b8'} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(v: number) => fmt(v)} />
+                    <Tooltip formatter={(v: number, name: string) => [fmt(v), name.replace(/_/g, ' ')]} />
                   </PieChart>
                 </ResponsiveContainer>
               </ChartCard>
