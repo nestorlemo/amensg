@@ -373,6 +373,7 @@ export default function IssuesPage() {
 
       {/* Tabla */}
       {error ? <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
+      {total > 0 ? <PaginationBar page={page} total={total} totalPages={totalPages} pageSize={PAGE_SIZE} onPage={setPage} /> : null}
       <section className="rounded-xl border border-slate-200 bg-white">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
@@ -467,33 +468,8 @@ export default function IssuesPage() {
         </div>
       </section>
 
-      {/* Paginación */}
-      {totalPages > 1 || total > 0 ? (
-        <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-5 py-3">
-          <p className="text-sm text-slate-500">
-            Mostrando {total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} de {total} issues
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              className="h-8 rounded-md border border-slate-300 px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => p - 1)}
-              type="button"
-            >
-              ← Anterior
-            </button>
-            <span className="text-sm text-slate-500">{page} / {totalPages}</span>
-            <button
-              className="h-8 rounded-md border border-slate-300 px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-              disabled={page >= totalPages}
-              onClick={() => setPage((p) => p + 1)}
-              type="button"
-            >
-              Siguiente →
-            </button>
-          </div>
-        </div>
-      ) : null}
+      {/* Paginación inferior */}
+      {total > 0 ? <PaginationBar page={page} total={total} totalPages={totalPages} pageSize={PAGE_SIZE} onPage={setPage} /> : null}
 
       {/* Produccion Modal */}
       {produccionPending ? (
@@ -530,6 +506,37 @@ export default function IssuesPage() {
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
+
+function PaginationBar({ page, total, totalPages, pageSize, onPage }: {
+  page: number; total: number; totalPages: number; pageSize: number; onPage: (p: number) => void
+}) {
+  return (
+    <div className="flex items-center justify-end gap-4 rounded-xl border border-slate-200 bg-white px-5 py-3">
+      <p className="text-sm text-slate-500">
+        Mostrando {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} de {total} issues
+      </p>
+      <div className="flex items-center gap-2">
+        <button
+          className="h-8 rounded-md border border-slate-300 px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={page <= 1}
+          onClick={() => onPage(page - 1)}
+          type="button"
+        >
+          ← Anterior
+        </button>
+        <span className="text-sm text-slate-500">{page} / {totalPages}</span>
+        <button
+          className="h-8 rounded-md border border-slate-300 px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={page >= totalPages}
+          onClick={() => onPage(page + 1)}
+          type="button"
+        >
+          Siguiente →
+        </button>
+      </div>
+    </div>
+  )
+}
 
 function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
