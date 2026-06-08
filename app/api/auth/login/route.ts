@@ -26,6 +26,16 @@ export async function POST(request: Request) {
     return apiError('USER_INACTIVE', 'El usuario está inactivo.', 403)
   }
 
+  await prisma.auditoria.create({
+    data: {
+      usuarioId: user.id,
+      entidad: 'Usuario',
+      entidadId: user.id,
+      accion: 'LOGIN',
+      detalle: { email: user.email },
+    },
+  })
+
   const response = NextResponse.json({ ok: true })
   response.cookies.set('amensg_session', await createSessionCookie(user.id), sessionCookieOptions())
   response.cookies.set('amensg_rol', user.rol, { ...sessionCookieOptions(), httpOnly: false })

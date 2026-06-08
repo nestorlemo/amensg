@@ -82,5 +82,19 @@ export async function POST(request: Request) {
     include: { empresa: { select: { id: true, nombre: true } } },
   })
 
+  await prisma.auditoria.create({
+    data: {
+      usuarioId: auth.user.id,
+      entidad: 'Issue',
+      entidadId: issue.id,
+      accion: 'CREAR_ISSUE',
+      detalle: {
+        descripcion: issue.descripcion,
+        empresa: issue.empresa.nombre,
+        estado: issue.estado,
+      },
+    },
+  })
+
   return NextResponse.json(serializeIssue(issue), { status: 201 })
 }

@@ -54,5 +54,20 @@ export async function PUT(request: Request, { params }: Params) {
     include: { empresa: { select: { id: true, nombre: true } } },
   })
 
+  await prisma.auditoria.create({
+    data: {
+      usuarioId: auth.user.id,
+      entidad: 'Issue',
+      entidadId: id,
+      accion: 'CAMBIAR_ESTADO_ISSUE',
+      detalle: {
+        estadoAnterior: existing.estado,
+        estadoNuevo: estado,
+        descripcion: updated.descripcion,
+        empresa: updated.empresa.nombre,
+      },
+    },
+  })
+
   return NextResponse.json(serializeIssue(updated))
 }

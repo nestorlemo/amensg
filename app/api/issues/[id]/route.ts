@@ -40,6 +40,20 @@ export async function PUT(request: Request, { params }: Params) {
     include: { empresa: { select: { id: true, nombre: true } } },
   })
 
+  await prisma.auditoria.create({
+    data: {
+      usuarioId: auth.user.id,
+      entidad: 'Issue',
+      entidadId: id,
+      accion: 'EDITAR_ISSUE',
+      detalle: {
+        descripcion: updated.descripcion,
+        empresa: updated.empresa.nombre,
+        estado: updated.estado,
+      },
+    },
+  })
+
   return NextResponse.json(serializeIssue(updated))
 }
 
@@ -49,6 +63,22 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const { id } = await params
   const hasFactura = await prisma.facturaIssue.findFirst({ where: { issueId: id } })
   if (hasFactura) return NextResponse.json({ message: 'No se puede eliminar un issue facturado.' }, { status: 409 })
+
+  const issue = await prisma.issue.findUnique({ where: { id }, select: { descripcion: true, empresa: { select: { nombre: true } } } })
   await prisma.issue.update({ where: { id }, data: { eliminado: true } })
+
+  await prisma.auditoria.create({
+    data: {
+      usuarioId: auth.user.id,
+      entidad: 'Issue',
+      entidadId: id,
+      accion: 'ELIMINAR_ISSUE',
+      detalle: {
+        descripcion: issue?.descripcion,
+        empresa: issue?.empresa?.nombre,
+      },
+    },
+  })
+
   return NextResponse.json({ ok: true })
 }
