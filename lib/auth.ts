@@ -94,7 +94,7 @@ export function forbiddenResponse(message = 'No tiene permisos para realizar est
 export function clearSessionResponse(redirectTo = '/login') {
   const response = NextResponse.redirect(new URL(redirectTo, process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'))
   response.cookies.set(SESSION_COOKIE, '', { httpOnly: true, maxAge: 0, path: '/' })
-  response.cookies.set('amensg_rol', '', { httpOnly: false, maxAge: 0, path: '/' })
+  response.cookies.set('amensg_rol', '', { httpOnly: true, maxAge: 0, path: '/' })
   return response
 }
 
