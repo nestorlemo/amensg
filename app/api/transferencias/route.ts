@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
     for (const socio of socios) {
       const pct = Number(socio.porcentajeParticipacion)
       if (pct <= 0) continue
-      const monto = Math.round(totalUYU * (pct / 100) * 100) / 100
+      const monto = Math.round(totalUYU * pct * 100) / 100
       const cuentas = socio.cuentas as Record<string, string> | null
       transferenciasData.push({
         socioId: socio.id,
