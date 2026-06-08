@@ -119,9 +119,16 @@ export async function GET(req: NextRequest) {
   // 4. issuesPorEstado
   const issuesGrouped = await prisma.issue.groupBy({
     by: ['estado'],
-    _count: { _all: true },
+    where: {
+      eliminado: false,
+      fecha: {
+        gte: new Date(`${anio}-01-01`),
+        lt: new Date(`${anio + 1}-01-01`),
+      },
+    },
+    _count: { estado: true },
   })
-  const issuesPorEstado = issuesGrouped.map((g) => ({ estado: g.estado, count: g._count._all }))
+  const issuesPorEstado = issuesGrouped.map((g) => ({ estado: g.estado, count: g._count.estado }))
 
   // 5. horasDesarrolloPorMes & facturacionDesarrolloPorMes
   const facturasDesarrollo = await prisma.facturaDesarrollo.findMany({
