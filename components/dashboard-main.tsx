@@ -24,6 +24,7 @@ type Resumen = {
   desarrolloCobrado: string
   desarrolloPendiente: string
   desarrolloPendienteUSD: string
+  desarrolloPendienteUYU: string
   gastosFijos: string
   resultadoEstimado: string
   mesAnterior: { activacionesCobradas: string; resultadoDistribuible: string }
@@ -52,6 +53,7 @@ function ResumenCard({
   vs,
   vsLabel,
   sub,
+  valuePrefix,
 }: {
   label: string
   value: string
@@ -60,6 +62,7 @@ function ResumenCard({
   vs: string | null
   vsLabel: string
   sub?: string
+  valuePrefix?: string
 }) {
   const badgeClasses = {
     green: 'bg-emerald-100 text-emerald-700',
@@ -74,7 +77,10 @@ function ResumenCard({
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
         <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${badgeClasses}`}>{badge}</span>
       </div>
-      <p className="text-2xl font-bold tabular-nums text-slate-950">{fmt(value)}</p>
+      <p className="text-2xl font-bold tabular-nums text-slate-950">
+        {valuePrefix ? <span className="mr-1 text-base font-semibold text-slate-400">{valuePrefix}</span> : null}
+        {fmt(value)}
+      </p>
       {sub ? <p className="text-xs font-medium text-slate-400">{sub}</p> : null}
       {vs !== null ? (
         <p className="text-xs text-slate-400">
@@ -153,7 +159,7 @@ export function DashboardMain() {
       </section>
 
       {resumen ? (() => {
-        const { periodo, activacionesCobradas, activacionesPendientes, desarrolloPendiente, desarrolloPendienteUSD, resultadoEstimado, mesAnterior } = resumen
+        const { periodo, activacionesCobradas, activacionesPendientes, desarrolloPendienteUSD, desarrolloPendienteUYU, resultadoEstimado, mesAnterior } = resumen
         const mesNombre = MESES_LARGO[periodo.mes - 1]
         const mesAnteriorNombre = periodo.mes === 1
           ? `${MESES_LARGO[11]} ${periodo.anio - 1}`
@@ -189,12 +195,13 @@ export function DashboardMain() {
               />
               <ResumenCard
                 label="Desarrollo pendiente"
-                value={desarrolloPendiente}
+                value={desarrolloPendienteUSD}
+                valuePrefix="USD"
                 badge="FACTURADO"
                 badgeColor="amber"
                 vs={null}
                 vsLabel={mesAnteriorNombre}
-                sub={Number(desarrolloPendienteUSD) > 0 ? `USD ${fmt(desarrolloPendienteUSD)}` : undefined}
+                sub={Number(desarrolloPendienteUYU) > 0 ? `≈ UYU ${fmt(desarrolloPendienteUYU)}` : undefined}
               />
               <ResumenCard
                 label="Resultado estimado"
