@@ -19,9 +19,10 @@ export const navigationItems: NavItem[] = [
   { href: '/cobros-unificado',     label: 'Gestión de Cobros',        icon: 'Wallet' },
 
   // ── GESTIÓN MENSUAL ───────────────────────────────────────────────────────
-  { href: '/gastos',        label: 'Gastos',        icon: 'Receipt',    section: 'GESTIÓN MENSUAL' },
-  { href: '/liquidaciones', label: 'Liquidaciones', icon: 'Calculator' },
-  { href: '/cierres',       label: 'Cierres',       icon: 'Lock' },
+  { href: '/gastos',          label: 'Gastos',          icon: 'Receipt',     section: 'GESTIÓN MENSUAL' },
+  { href: '/liquidaciones',   label: 'Liquidaciones',   icon: 'Calculator' },
+  { href: '/transferencias',  label: 'Transferencias',  icon: 'ArrowRightLeft' },
+  { href: '/cierres',         label: 'Cierres',         icon: 'Lock' },
 
   { href: '/reportes', label: 'Reportes', icon: 'BarChart2' },
   { href: '/issues',   label: 'Issues',   icon: 'Bug', roles: ['ADMIN', 'OPERADOR', 'ISSUES'] },

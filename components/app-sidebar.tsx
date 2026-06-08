@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Upload, Zap, FileText, CreditCard, Building2,
   Receipt, PlusCircle, Calculator, Lock, BarChart2, Settings,
-  Users, UserCog, Shield, LogOut, Bug, FileCode2, Wallet, X, type LucideIcon
+  Users, UserCog, Shield, LogOut, Bug, FileCode2, Wallet, ArrowRightLeft, X, type LucideIcon
 } from 'lucide-react'
 
 import type { CurrentUser } from '@/lib/auth'
@@ -27,7 +27,7 @@ function usePendingCobros() {
 const iconMap: Record<string, LucideIcon> = {
   LayoutDashboard, Upload, Zap, FileText, CreditCard, Building2,
   Receipt, PlusCircle, Calculator, Lock, BarChart2, Settings,
-  Users, UserCog, Shield, Bug, FileCode2, Wallet,
+  Users, UserCog, Shield, Bug, FileCode2, Wallet, ArrowRightLeft,
 }
 
 function LogoMark() {
