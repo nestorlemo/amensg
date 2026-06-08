@@ -103,6 +103,11 @@ export async function DELETE(_req: Request, { params }: Params) {
   const factura = await prisma.facturaDesarrollo.findUnique({ where: { id }, select: { ingresoAdicionalId: true } })
   if (!factura) return NextResponse.json({ error: 'NOT_FOUND' }, { status: 404 })
 
+  const facturaDetalle = await prisma.facturaDesarrollo.findUnique({
+    where: { id },
+    select: { totalUSD: true, totalHoras: true, empresa: { select: { nombre: true } }, anio: true, mes: true },
+  })
+
   await prisma.$transaction(async (tx) => {
     await tx.facturaIssue.deleteMany({ where: { facturaId: id } })
     await tx.distribucionFactura.deleteMany({ where: { facturaId: id } })
@@ -110,6 +115,22 @@ export async function DELETE(_req: Request, { params }: Params) {
     if (factura.ingresoAdicionalId) {
       await tx.ingresoAdicional.delete({ where: { id: factura.ingresoAdicionalId } })
     }
+  })
+
+  await prisma.auditoria.create({
+    data: {
+      usuarioId: auth.user.id,
+      entidad: 'FacturaDesarrollo',
+      entidadId: id,
+      accion: 'ELIMINAR_FACTURA_DESARROLLO',
+      detalle: {
+        empresa: facturaDetalle?.empresa?.nombre,
+        totalUSD: facturaDetalle?.totalUSD?.toString(),
+        totalHoras: facturaDetalle?.totalHoras?.toString(),
+        anio: facturaDetalle?.anio,
+        mes: facturaDetalle?.mes,
+      },
+    },
   })
 
   return NextResponse.json({ ok: true })

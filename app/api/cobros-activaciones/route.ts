@@ -149,5 +149,22 @@ export async function POST(req: NextRequest) {
     return c
   })
 
+  await prisma.auditoria.create({
+    data: {
+      usuarioId: auth.user.id,
+      entidad: 'Cobro',
+      entidadId: cobro.id,
+      accion: 'MARCAR_FACTURADO_ACTIVACIONES',
+      detalle: {
+        empresa: first.empresa.nombre,
+        anio: first.anio,
+        mes: first.mes,
+        facturacionesCount: facturaciones.length,
+        totalSinIva: totalSinIva.toString(),
+        totalConIva: totalConIva.toString(),
+      },
+    },
+  })
+
   return NextResponse.json({ ok: true, id: cobro.id, created: facturaciones.length }, { status: 201 })
 }

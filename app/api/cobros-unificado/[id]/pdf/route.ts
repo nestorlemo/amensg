@@ -41,5 +41,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const url = `/storage/facturas/${filename}`
 
   await prisma.cobro.update({ where: { id }, data: { urlPdfFactura: url } })
+
+  await prisma.auditoria.create({
+    data: {
+      usuarioId: auth.user.id,
+      entidad: 'Cobro',
+      entidadId: id,
+      accion: 'SUBIR_PDF_COBRO',
+      detalle: { filename, url },
+    },
+  })
+
   return NextResponse.json({ ok: true, url })
 }

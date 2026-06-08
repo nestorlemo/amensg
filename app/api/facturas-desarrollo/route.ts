@@ -191,5 +191,24 @@ export async function POST(request: Request) {
     return fd
   })
 
+  await prisma.auditoria.create({
+    data: {
+      usuarioId: auth.user.id,
+      entidad: 'FacturaDesarrollo',
+      entidadId: factura.id,
+      accion: 'GENERAR_FACTURA_DESARROLLO',
+      detalle: {
+        empresa: factura.empresa.nombre,
+        totalHoras,
+        totalUSD,
+        totalUYU,
+        tipoCambio,
+        anio,
+        mes,
+        issueCount: issueIds.length,
+      },
+    },
+  })
+
   return NextResponse.json(serializeFactura(factura), { status: 201 })
 }
