@@ -247,77 +247,75 @@ export const HistorialFacturas = forwardRef<HistorialHandle, {
                 ✕
               </button>
             </div>
-            {/* Scrollable table */}
-            <div className="overflow-y-auto overflow-x-auto flex-1">
-              <table className="min-w-full text-sm">
-                <thead style={{ background: '#1F3864' }}>
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">Fecha prod.</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">Descripción</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-white">Horas</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">Estado</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {issuesModal.issues.map((issue, idx) => (
-                    <tr key={issue.id} className={`hover:bg-blue-50 ${idx % 2 === 1 ? 'bg-slate-50' : 'bg-white'}`}>
-                      <td className="whitespace-nowrap px-4 py-3 text-slate-600">
-                        {issue.fechaProduccion ? formatDate(issue.fechaProduccion) : '—'}
-                      </td>
-                      <td className="px-4 py-3 text-slate-700 break-words max-w-xs">
-                        {issue.descripcion}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right text-slate-700">
-                        {Number(issue.totalHoras).toFixed(2).replace(/\.?0+$/, '')}h
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3">
-                        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${ESTADO_BADGE[issue.estado] ?? 'bg-slate-100 text-slate-700'}`}>
-                          {issue.estado.replace(/_/g, ' ')}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                  <tr className="font-semibold" style={{ background: '#1F3864' }}>
-                    <td className="px-4 py-3 text-white" colSpan={2}>Total horas</td>
-                    <td className="px-4 py-3 text-right text-white">
-                      {(() => {
-                        const t = issuesModal.issues.reduce((s, i) => s + i.totalHoras, 0)
-                        return `${parseFloat(t.toFixed(2))}h`
-                      })()}
-                    </td>
-                    <td />
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            {/* Distribución */}
-            {issuesModal.distribuciones.length > 0 && (
-              <div className="shrink-0 border-t border-slate-200 px-6 py-4">
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Distribución entre socios</h3>
+            {/* Scrollable content */}
+            <div className="overflow-y-auto flex-1 max-h-[60vh]">
+              {/* Distribución entre socios */}
+              {issuesModal.distribuciones.length > 0 && (
+                <div className="px-6 py-4">
+                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Distribución entre socios</h3>
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
+                      <tr>
+                        <th className="px-3 py-2 text-left">Socio</th>
+                        <th className="px-3 py-2 text-right">Porcentaje</th>
+                        <th className="px-3 py-2 text-right">Monto (USD)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {issuesModal.distribuciones.map((d) => (
+                        <tr key={d.id} className="hover:bg-slate-50">
+                          <td className="px-3 py-2 text-slate-700">{d.socio.nombre}</td>
+                          <td className="px-3 py-2 text-right text-slate-700">{d.porcentaje}%</td>
+                          <td className="px-3 py-2 text-right font-semibold text-slate-950">
+                            ${fmt((issuesModal.totalConIva * d.porcentaje) / 100)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {issuesModal.distribuciones.length > 0 && <div className="border-t border-slate-200" />}
+              {/* Issues incluidos */}
+              <div className="px-6 py-4">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Issues incluidos</h3>
                 <table className="min-w-full text-sm">
-                  <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
+                  <thead style={{ background: '#1F3864' }}>
                     <tr>
-                      <th className="px-3 py-2 text-left">Socio</th>
-                      <th className="px-3 py-2 text-right">Porcentaje</th>
-                      <th className="px-3 py-2 text-right">Monto (USD)</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">Fecha prod.</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">Descripción</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-white">Horas</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">Estado</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {issuesModal.distribuciones.map((d) => (
-                      <tr key={d.id} className="hover:bg-slate-50">
-                        <td className="px-3 py-2 text-slate-700">{d.socio.nombre}</td>
-                        <td className="px-3 py-2 text-right text-slate-700">{d.porcentaje}%</td>
-                        <td className="px-3 py-2 text-right font-semibold text-slate-950">
-                          ${fmt((issuesModal.totalConIva * d.porcentaje) / 100)}
+                    {issuesModal.issues.map((issue, idx) => (
+                      <tr key={issue.id} className={`hover:bg-blue-50 ${idx % 2 === 1 ? 'bg-slate-50' : 'bg-white'}`}>
+                        <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                          {issue.fechaProduccion ? formatDate(issue.fechaProduccion) : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-slate-700 break-words max-w-xs">
+                          {issue.descripcion}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-right text-slate-700">
+                          {Number(issue.totalHoras).toFixed(2).replace(/\.?0+$/, '')}h
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3">
+                          <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${ESTADO_BADGE[issue.estado] ?? 'bg-slate-100 text-slate-700'}`}>
+                            {issue.estado.replace(/_/g, ' ')}
+                          </span>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            )}
+            </div>
             {/* Footer */}
-            <div className="flex justify-end border-t border-slate-200 px-6 py-4 shrink-0">
+            <div className="flex items-center justify-between border-t border-slate-200 px-6 py-4 shrink-0">
+              <span className="text-sm font-semibold text-slate-700">
+                Total horas: {parseFloat(issuesModal.issues.reduce((s, i) => s + i.totalHoras, 0).toFixed(2))}h
+              </span>
               <button
                 className="h-9 rounded-md border border-slate-300 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 onClick={() => setIssuesModal(null)}
