@@ -37,7 +37,7 @@ export type FacturaHistorial = {
     montoUYU: number
     socio: { id: string; nombre: string }
   }[]
-  issues: { id: string; descripcion: string; totalHoras: number }[]
+  issues: { id: string; descripcion: string; totalHoras: number; fechaProduccion: string | null; estado: string }[]
 }
 
 export const fmt = (n: number) =>

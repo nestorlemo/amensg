@@ -18,6 +18,7 @@ export const HistorialFacturas = forwardRef<HistorialHandle, {
   const [loadingHistorial, setLoadingHistorial] = useState(false)
   const [uploadingPdf, setUploadingPdf] = useState<string | null>(null)
   const [modalFactura, setModalFactura] = useState<FacturaHistorial | null>(null)
+  const [issuesModal, setIssuesModal] = useState<FacturaHistorial | null>(null)
 
   useEffect(() => {
     void fetchHistorial()
@@ -190,6 +191,14 @@ export const HistorialFacturas = forwardRef<HistorialHandle, {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-2">
+                        {f.issues.length > 0 && (
+                          <button
+                            onClick={() => setIssuesModal(f)}
+                            className="rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                          >
+                            Ver issues ({f.issues.length})
+                          </button>
+                        )}
                         {f.estado !== 'COBRADO' && (
                           <button
                             onClick={() => setModalFactura(f)}
@@ -221,6 +230,62 @@ export const HistorialFacturas = forwardRef<HistorialHandle, {
           onConfirm={(fecha) => confirmarCobrado(modalFactura.id, fecha)}
           onCancel={() => setModalFactura(null)}
         />
+      )}
+
+      {issuesModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
+            <h2 className="mb-4 text-base font-semibold text-slate-950">
+              Issues facturados — {issuesModal.empresa.nombre} {String(issuesModal.mes).padStart(2, '0')}/{issuesModal.anio}
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3 text-left">Fecha prod.</th>
+                    <th className="px-4 py-3 text-left">Descripción</th>
+                    <th className="px-4 py-3 text-right">Horas</th>
+                    <th className="px-4 py-3 text-left">Estado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {issuesModal.issues.map((issue) => (
+                    <tr key={issue.id} className="hover:bg-slate-50">
+                      <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                        {issue.fechaProduccion ? formatDate(issue.fechaProduccion) : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-slate-700">
+                        <span className="block max-w-sm truncate" title={issue.descripcion}>{issue.descripcion}</span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-right text-slate-700">{issue.totalHoras}h</td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                          {issue.estado.replace(/_/g, ' ')}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className="bg-slate-50 font-semibold">
+                    <td className="px-4 py-3 text-slate-700" colSpan={2}>Total horas</td>
+                    <td className="px-4 py-3 text-right text-slate-950">
+                      {issuesModal.issues.reduce((s, i) => s + i.totalHoras, 0)}h
+                    </td>
+                    <td />
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                className="h-9 rounded-md border border-slate-300 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                onClick={() => setIssuesModal(null)}
+                type="button"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   )
