@@ -28,6 +28,24 @@ type Kpis = {
   empresasConDeuda: number
 }
 
+type ResumenEmpresa = {
+  empresaId: string
+  empresa: string
+  sinIva: number
+  iva: number
+  conIva: number
+  count: number
+  allCobrado: boolean
+}
+
+type Totals = {
+  sinIvaPendiente: string
+  sinIvaCobrado: string
+  iva: string
+  conIvaPendiente: string
+  conIvaCobrado: string
+}
+
 type ApiResponse = {
   data: CobroRow[]
   total: number
@@ -35,6 +53,8 @@ type ApiResponse = {
   pageSize: number
   totalPages: number
   kpis: Kpis
+  resumen: ResumenEmpresa[]
+  totals: Totals
 }
 
 type Filters = {
@@ -80,10 +100,13 @@ function EstadoBadge({ estado }: { estado: string }) {
 export default function CobrosUnificadoPage() {
   const [rows, setRows] = useState<CobroRow[]>([])
   const [kpis, setKpis] = useState<Kpis | null>(null)
+  const [resumen, setResumen] = useState<ResumenEmpresa[]>([])
+  const [totals, setTotals] = useState<Totals | null>(null)
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
+  const [showResumen, setShowResumen] = useState(true)
   const pageSize = 50
 
   const [filters, setFilters] = useState<Filters>({
@@ -126,6 +149,8 @@ export default function CobrosUnificadoPage() {
       .then((d: ApiResponse) => {
         setRows(d.data)
         setKpis(d.kpis)
+        setResumen(d.resumen ?? [])
+        setTotals(d.totals ?? null)
         setTotal(d.total)
         setTotalPages(d.totalPages)
       })
@@ -198,6 +223,54 @@ export default function CobrosUnificadoPage() {
           accent="red"
         />
       </section>
+
+      {/* Resumen por empresa */}
+      {resumen.length > 0 && (
+        <section className="rounded-md border border-slate-200 bg-white">
+          <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+            <h2 className="text-sm font-semibold text-slate-800">Resumen por empresa</h2>
+            <button
+              className="text-xs font-medium text-slate-500 hover:text-slate-800"
+              type="button"
+              onClick={() => setShowResumen((v) => !v)}
+            >
+              {showResumen ? 'Ocultar resumen' : 'Mostrar resumen'}
+            </button>
+          </div>
+          {showResumen && (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                  <tr>
+                    <th className="px-4 py-2 text-left">Empresa</th>
+                    <th className="px-4 py-2 text-right">Facturas</th>
+                    <th className="px-4 py-2 text-right">S/IVA (UYU)</th>
+                    <th className="px-4 py-2 text-right">IVA (UYU)</th>
+                    <th className="px-4 py-2 text-right">C/IVA (UYU)</th>
+                    <th className="px-4 py-2 text-left">Estado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {resumen.map((r) => (
+                    <tr key={r.empresaId} className="hover:bg-slate-50">
+                      <td className="px-4 py-2 font-medium text-slate-800">{r.empresa}</td>
+                      <td className="px-4 py-2 text-right text-slate-600">{r.count}</td>
+                      <td className="px-4 py-2 text-right text-slate-700">{fmt(r.sinIva.toFixed(2))}</td>
+                      <td className="px-4 py-2 text-right text-slate-700">{fmt(r.iva.toFixed(2))}</td>
+                      <td className="px-4 py-2 text-right font-semibold text-slate-900">{fmt(r.conIva.toFixed(2))}</td>
+                      <td className="px-4 py-2">
+                        <span className={`inline-block rounded px-2 py-0.5 text-xs font-semibold ${r.allCobrado ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                          {r.allCobrado ? 'COBRADO' : 'PENDIENTE'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Filters */}
       <form
@@ -307,70 +380,54 @@ export default function CobrosUnificadoPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td className="px-4 py-6 text-center text-slate-400" colSpan={11}>
-                  Cargando...
-                </td>
+                <td className="px-4 py-6 text-center text-slate-400" colSpan={11}>Cargando...</td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td className="px-4 py-6 text-center text-slate-400" colSpan={11}>
-                  No hay cobros para los filtros seleccionados.
-                </td>
+                <td className="px-4 py-6 text-center text-slate-400" colSpan={11}>No hay cobros para los filtros seleccionados.</td>
               </tr>
             ) : (
-              rows.map((row) => (
-                <tr className="border-t border-slate-200 hover:bg-slate-50 transition-colors" key={row.id}>
-                  <td className="px-4 py-3">
-                    <TipoBadge tipo={row.tipo} />
-                  </td>
-                  <td className="px-4 py-3 font-medium">{row.empresa}</td>
-                  <td className="px-4 py-3">{formatPeriod(row.anio, row.mes)}</td>
-                  <td className="px-4 py-3">{row.moneda}</td>
-                  <td className="px-4 py-3 text-right">{fmt(row.montoSinIva)}</td>
-                  <td className="px-4 py-3 text-right">{fmt(row.iva)}</td>
-                  <td className="px-4 py-3 text-right font-semibold">{fmt(row.montoConIva)}</td>
-                  <td className="px-4 py-3">
-                    <EstadoBadge estado={row.estado} />
-                  </td>
-                  <td className="px-4 py-3">
-                    {row.fechaCobro
-                      ? new Intl.DateTimeFormat('es-UY').format(new Date(row.fechaCobro))
-                      : '-'}
-                  </td>
-                  <td className="px-4 py-3">
-                    {row.urlPdfFactura ? (
-                      <div className="flex gap-1">
-                        <a
-                          className="rounded border border-blue-300 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
-                          href={`/api/cobros-unificado/${row.id}/pdf`}
-                          rel="noopener noreferrer"
-                          target="_blank"
-                        >
-                          Ver PDF
-                        </a>
+              <>
+                {rows.map((row) => (
+                  <tr className="border-t border-slate-200 hover:bg-slate-50 transition-colors" key={row.id}>
+                    <td className="px-4 py-3"><TipoBadge tipo={row.tipo} /></td>
+                    <td className="px-4 py-3 font-medium">{row.empresa}</td>
+                    <td className="px-4 py-3">{formatPeriod(row.anio, row.mes)}</td>
+                    <td className="px-4 py-3">{row.moneda}</td>
+                    <td className="px-4 py-3 text-right">{fmt(row.montoSinIva)}</td>
+                    <td className="px-4 py-3 text-right">{fmt(row.iva)}</td>
+                    <td className="px-4 py-3 text-right font-semibold">{fmt(row.montoConIva)}</td>
+                    <td className="px-4 py-3"><EstadoBadge estado={row.estado} /></td>
+                    <td className="px-4 py-3">
+                      {row.fechaCobro ? new Intl.DateTimeFormat('es-UY').format(new Date(row.fechaCobro)) : '-'}
+                    </td>
+                    <td className="px-4 py-3">
+                      {row.urlPdfFactura ? (
+                        <div className="flex gap-1">
+                          <a
+                            className="rounded border border-blue-300 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
+                            href={`/api/cobros-unificado/${row.id}/pdf`}
+                            rel="noopener noreferrer"
+                            target="_blank"
+                          >
+                            Ver PDF
+                          </a>
+                          <label className="cursor-pointer rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                            Reemplazar
+                            <input accept="application/pdf" className="hidden" type="file"
+                              onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleUploadPdf(row.id, f) }} />
+                          </label>
+                        </div>
+                      ) : (
                         <label className="cursor-pointer rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
-                          Reemplazar
-                          <input
-                            accept="application/pdf" className="hidden" type="file"
-                            onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleUploadPdf(row.id, f) }}
-                          />
+                          Subir PDF
+                          <input accept="application/pdf" className="hidden"
+                            ref={(el) => { fileInputRefs.current[row.id] = el }} type="file"
+                            onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleUploadPdf(row.id, f) }} />
                         </label>
-                      </div>
-                    ) : (
-                      <label className="cursor-pointer rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
-                        Subir PDF
-                        <input
-                          accept="application/pdf"
-                          className="hidden"
-                          ref={(el) => { fileInputRefs.current[row.id] = el }}
-                          type="file"
-                          onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleUploadPdf(row.id, f) }}
-                        />
-                      </label>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-col gap-1">
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
                       {row.estado === 'FACTURADO' && (
                         <button
                           className="rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors"
@@ -380,10 +437,28 @@ export default function CobrosUnificadoPage() {
                           Marcar cobrado
                         </button>
                       )}
-                    </div>
-                  </td>
-                </tr>
-              ))
+                    </td>
+                  </tr>
+                ))}
+                {totals && (
+                  <tr className="border-t-2 border-slate-300 bg-slate-100 text-xs font-semibold text-slate-700">
+                    <td className="px-4 py-3" colSpan={4}>TOTALES (UYU)</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="text-emerald-700">{fmt(totals.sinIvaCobrado)}</div>
+                      <div className="text-amber-700">{fmt(totals.sinIvaPendiente)}</div>
+                    </td>
+                    <td className="px-4 py-3 text-right">{fmt(totals.iva)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="text-emerald-700">{fmt(totals.conIvaCobrado)}</div>
+                      <div className="text-amber-700">{fmt(totals.conIvaPendiente)}</div>
+                    </td>
+                    <td className="px-4 py-3" colSpan={4}>
+                      <span className="mr-2 text-emerald-700">■ cobrado</span>
+                      <span className="text-amber-700">■ pendiente</span>
+                    </td>
+                  </tr>
+                )}
+              </>
             )}
           </tbody>
         </table>
