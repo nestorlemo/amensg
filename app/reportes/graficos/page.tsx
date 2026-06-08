@@ -203,7 +203,7 @@ export default function GraficosPage() {
             value={anio}
             onChange={e => setAnio(Number(e.target.value))}
           >
-            {[2023, 2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
+            {Array.from({ length: new Date().getFullYear() - 2022 }, (_, i) => 2023 + i).map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </label>
         <label className="text-sm font-medium text-slate-700">
