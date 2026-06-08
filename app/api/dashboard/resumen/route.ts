@@ -46,8 +46,9 @@ async function calcMes(anio: number, mes: number, tipoCambio: number) {
   const devPendSinIva = devPendiente.reduce((s, c)  => s + toUYU(Number(c.montoSinIva), c.moneda), 0)
   const ingresosEsperadosSinIva = actCobSinIva + actPendSinIva + devCobSinIva + devPendSinIva
 
-  // Desarrollo USD raw (for display)
+  // Desarrollo: primary display is USD, secondary is UYU
   const desarrolloPendienteUSD = devPendiente.reduce((s, c) => s + Number(c.montoConIva), 0)
+  const desarrolloPendienteUYU = devPendiente.reduce((s, c) => s + toUYU(Number(c.montoConIva), c.moneda), 0)
 
   const gastosVariables = gastosVar.reduce((s, g) => s + Number(g.importe), 0)
   const gastosFijosMonto = gastosFijosConceptos.reduce((s, g) => s + Number(g.monto ?? 0), 0)
@@ -59,6 +60,7 @@ async function calcMes(anio: number, mes: number, tipoCambio: number) {
     desarrolloCobrado:      dec2(desarrolloCobrado),
     desarrolloPendiente:    dec2(desarrolloPendiente),
     desarrolloPendienteUSD: dec2(desarrolloPendienteUSD),
+    desarrolloPendienteUYU: dec2(desarrolloPendienteUYU),
     gastosFijos:            dec2(gastosTotales),
     resultadoEstimado:      dec2(ingresosEsperadosSinIva - gastosTotales),
   }
@@ -78,7 +80,13 @@ export async function GET() {
     if (mes === 0) { mes = 12; anio -= 1 }
   }
 
-  const mesAnterior = mes === 1 ? { anio: anio - 1, mes: 12 } : { anio, mes: mes - 1 }
+  // Find the last month with cobros before the current period
+  const ultimoCobroAnterior = await prisma.cobro.findFirst({
+    where: { OR: [{ anio: { lt: anio } }, { anio, mes: { lt: mes } }] },
+    orderBy: [{ anio: 'desc' }, { mes: 'desc' }],
+    select: { anio: true, mes: true },
+  })
+  const mesAnterior = ultimoCobroAnterior ?? (mes === 1 ? { anio: anio - 1, mes: 12 } : { anio, mes: mes - 1 })
 
   const tipoCambioParam = await prisma.parametro.findUnique({
     where: { clave: 'tipo_cambio_usd' },
