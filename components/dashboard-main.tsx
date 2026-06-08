@@ -17,6 +17,74 @@ type Stats = {
   activeEmpresas: number
 }
 
+type Resumen = {
+  periodo: { anio: number; mes: number }
+  ingresosCobrados: string
+  ingresosPendientes: string
+  ingresosEsperados: string
+  gastosFijos: string
+  resultadoEstimado: string
+  mesAnterior: { ingresosCobrados: string; resultadoDistribuible: string }
+}
+
+const MESES_LARGO = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+
+function fmt(v: string | number) {
+  return new Intl.NumberFormat('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(v))
+}
+
+function pct(current: string, prev: string) {
+  const c = Number(current)
+  const p = Number(prev)
+  if (!p) return null
+  const diff = ((c - p) / Math.abs(p)) * 100
+  const sign = diff >= 0 ? '+' : ''
+  return `${sign}${diff.toFixed(1)}%`
+}
+
+function ResumenCard({
+  label,
+  value,
+  badge,
+  badgeColor,
+  vs,
+  vsLabel,
+}: {
+  label: string
+  value: string
+  badge: string
+  badgeColor: 'green' | 'amber' | 'blue' | 'red'
+  vs: string | null
+  vsLabel: string
+}) {
+  const badgeClasses = {
+    green: 'bg-emerald-100 text-emerald-700',
+    amber: 'bg-amber-100 text-amber-700',
+    blue: 'bg-blue-100 text-blue-700',
+    red: 'bg-red-100 text-red-700',
+  }[badgeColor]
+
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border border-[#e6eefc] bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${badgeClasses}`}>{badge}</span>
+      </div>
+      <p className="text-2xl font-bold tabular-nums text-slate-950">{fmt(value)}</p>
+      {vs !== null ? (
+        <p className="text-xs text-slate-400">
+          vs {vsLabel}:{' '}
+          <span className={Number(vs.replace('%','').replace('+','')) >= 0 ? 'text-emerald-600' : 'text-red-500'}>
+            {vs}
+          </span>
+        </p>
+      ) : (
+        <p className="text-xs text-slate-400">vs {vsLabel}: sin datos</p>
+      )}
+    </div>
+  )
+}
+
 const MUTED  = '#8ba3c7'
 const TEXT   = '#0B1F3A'
 const BORDER = '#e6eefc'
@@ -32,11 +100,16 @@ const quickLinks = [
 
 export function DashboardMain() {
   const [stats, setStats] = useState<Stats | null>(null)
+  const [resumen, setResumen] = useState<Resumen | null>(null)
 
   useEffect(() => {
     fetch('/api/dashboard/stats')
       .then((r) => r.json())
       .then((data: Stats) => setStats(data))
+      .catch(() => { /* leave skeleton */ })
+    fetch('/api/dashboard/resumen')
+      .then((r) => r.json())
+      .then((data: Resumen) => setResumen(data))
       .catch(() => { /* leave skeleton */ })
   }, [])
 
@@ -73,6 +146,54 @@ export function DashboardMain() {
           </div>
         ) : null}
       </section>
+
+      {resumen ? (() => {
+        const { periodo, ingresosCobrados, ingresosPendientes, resultadoEstimado, mesAnterior } = resumen
+        const mesNombre = MESES_LARGO[periodo.mes - 1]
+        const mesAnteriorNombre = periodo.mes === 1
+          ? `${MESES_LARGO[11]} ${periodo.anio - 1}`
+          : `${MESES_LARGO[periodo.mes - 2]} ${periodo.anio}`
+        const resultadoNeg = Number(resultadoEstimado) < 0
+
+        return (
+          <section>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: MUTED }}>
+                Resumen {mesNombre} {periodo.anio}
+              </h2>
+              <Link href={`/liquidaciones?anio=${periodo.anio}&mes=${periodo.mes}`} className="text-xs font-semibold text-[#1769E0] hover:underline">
+                Ver liquidación completa →
+              </Link>
+            </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              <ResumenCard
+                label="Ingresos cobrados"
+                value={ingresosCobrados}
+                badge="COBRADO"
+                badgeColor="green"
+                vs={pct(ingresosCobrados, mesAnterior.ingresosCobrados)}
+                vsLabel={mesAnteriorNombre}
+              />
+              <ResumenCard
+                label="Ingresos pendientes"
+                value={ingresosPendientes}
+                badge="FACTURADO"
+                badgeColor="amber"
+                vs={null}
+                vsLabel={mesAnteriorNombre}
+              />
+              <ResumenCard
+                label="Resultado estimado"
+                value={resultadoEstimado}
+                badge={resultadoNeg ? 'NEGATIVO' : 'ESTIMADO'}
+                badgeColor={resultadoNeg ? 'red' : 'blue'}
+                vs={pct(resultadoEstimado, mesAnterior.resultadoDistribuible)}
+                vsLabel={mesAnteriorNombre}
+              />
+            </div>
+          </section>
+        )
+      })() : null}
 
       <section>
         <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest" style={{ color: MUTED }}>
