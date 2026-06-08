@@ -102,16 +102,16 @@ export async function POST(req: NextRequest) {
   const transferenciasData: TransferenciaInput[] = []
 
   if (cobro.tipo === 'DESARROLLO' && cobro.facturaDesarrollo?.distribuciones?.length) {
+    const facturaUSD = Number(cobro.facturaDesarrollo.totalUSD)
     for (const dist of cobro.facturaDesarrollo.distribuciones) {
+      const montoUSD = Math.round(facturaUSD * (Number(dist.porcentaje) / 100) * 100) / 100
       const cuentas = dist.socio.cuentas as Record<string, string> | null
-      const cuentaDestino = cobro.moneda === 'USD'
-        ? (cuentas?.usd ?? cuentas?.USD ?? null)
-        : (cuentas?.pesos ?? cuentas?.UYU ?? null)
+      const cuentaDestino = cuentas?.usd ?? cuentas?.USD ?? null
       transferenciasData.push({
         socioId: dist.socioId,
         cobroId,
-        moneda: cobro.moneda,
-        monto: Number(dist.montoUYU),
+        moneda: 'USD',
+        monto: montoUSD,
         cuentaDestino: cuentaDestino ?? null,
         concepto: conceptoStr,
         estado: 'PENDIENTE',
