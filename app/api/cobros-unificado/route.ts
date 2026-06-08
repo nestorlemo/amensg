@@ -50,14 +50,6 @@ export async function GET(req: NextRequest) {
     prisma.parametro.findUnique({ where: { clave: 'tipo_cambio_usd' }, select: { valor: true } }),
   ])
 
-  const now = new Date()
-  const [totalPendiente, cobradoEsteMes, pendienteCount, empresasDeuda] = await Promise.all([
-    prisma.cobro.aggregate({ where: { estado: 'FACTURADO', moneda: 'UYU' }, _sum: { montoConIva: true } }),
-    prisma.cobro.aggregate({ where: { estado: 'COBRADO', anio: now.getFullYear(), mes: now.getMonth() + 1, moneda: 'UYU' }, _sum: { montoConIva: true } }),
-    prisma.cobro.count({ where: { estado: 'FACTURADO' } }),
-    prisma.cobro.groupBy({ by: ['empresaId'], where: { estado: 'FACTURADO' } }),
-  ])
-
   const tipoCambio = tipoCambioParam ? Number(tipoCambioParam.valor) : 1
 
   // Totals across all rows matching current filters (for table footer)
@@ -136,12 +128,6 @@ export async function GET(req: NextRequest) {
       iva: totIva.toFixed(2),
       conIvaPendiente: totConIvaPendiente.toFixed(2),
       conIvaCobrado: totConIvaCobrado.toFixed(2),
-    },
-    kpis: {
-      totalPendienteUYU: totalPendiente._sum.montoConIva?.toString() ?? '0',
-      cobradoEsteMesUYU: cobradoEsteMes._sum.montoConIva?.toString() ?? '0',
-      pendienteCount,
-      empresasConDeuda: empresasDeuda.length,
     },
   })
 }

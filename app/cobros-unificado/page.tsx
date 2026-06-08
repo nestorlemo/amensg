@@ -21,19 +21,14 @@ type CobroRow = {
   urlPdfFactura: string | null
 }
 
-type Kpis = {
-  totalPendienteUYU: string
-  cobradoEsteMesUYU: string
-  pendienteCount: number
-  empresasConDeuda: number
-}
+type EmpresaResumen = { empresa: string; facturas: number; sinIva: string; iva: string; conIva: string }
 
-type ResumenEmpresa = {
-  empresa: string
-  count: number
-  sinIva: string
-  iva: string
-  conIva: string
+type ResumenData = {
+  pendienteUYU: { total: string; porEmpresa: EmpresaResumen[] }
+  pendienteUSD: { total: string; porEmpresa: EmpresaResumen[] }
+  cobradoEsteMesUYU: string
+  facturasPendientes: number
+  empresasConDeuda: number
 }
 
 type Totals = {
@@ -50,7 +45,6 @@ type ApiResponse = {
   page: number
   pageSize: number
   totalPages: number
-  kpis: Kpis
   totals: Totals
 }
 
@@ -96,8 +90,7 @@ function EstadoBadge({ estado }: { estado: string }) {
 
 export default function CobrosUnificadoPage() {
   const [rows, setRows] = useState<CobroRow[]>([])
-  const [kpis, setKpis] = useState<Kpis | null>(null)
-  const [resumen, setResumen] = useState<ResumenEmpresa[]>([])
+  const [resumen, setResumen] = useState<ResumenData | null>(null)
   const [totals, setTotals] = useState<Totals | null>(null)
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
@@ -105,13 +98,15 @@ export default function CobrosUnificadoPage() {
   const [page, setPage] = useState(1)
   const [showResumen, setShowResumen] = useState(true)
 
-  // Fetch resumen independently on mount (always FACTURADO, not affected by filters)
-  useEffect(() => {
+  function fetchResumen() {
     fetch('/api/cobros-unificado/resumen')
       .then((r) => r.json())
-      .then((d: { resumen: ResumenEmpresa[] }) => setResumen(d.resumen ?? []))
+      .then((d: ResumenData) => setResumen(d))
       .catch(() => {})
-  }, [])
+  }
+
+  // Fetch resumen independently on mount (always FACTURADO, not affected by filters)
+  useEffect(() => { fetchResumen() }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const pageSize = 50
 
   const [filters, setFilters] = useState<Filters>({
@@ -153,7 +148,6 @@ export default function CobrosUnificadoPage() {
       .then((r) => r.json())
       .then((d: ApiResponse) => {
         setRows(d.data)
-        setKpis(d.kpis)
         setTotals(d.totals ?? null)
         setTotal(d.total)
         setTotalPages(d.totalPages)
@@ -184,11 +178,7 @@ export default function CobrosUnificadoPage() {
     setCobrandoId(null)
     setFechaCobro('')
     setFilters((f) => ({ ...f })) // re-fetch table
-    // refresh resumen (independent of table filters)
-    fetch('/api/cobros-unificado/resumen')
-      .then((r) => r.json())
-      .then((d: { resumen: ResumenEmpresa[] }) => setResumen(d.resumen ?? []))
-      .catch(() => {})
+    fetchResumen()
   }
 
   async function handleUploadPdf(id: string, file: File) {
@@ -210,31 +200,36 @@ export default function CobrosUnificadoPage() {
       />
 
       {/* KPI Cards */}
-      <section className="grid gap-3 md:grid-cols-4">
+      <section className="grid gap-3 md:grid-cols-5">
         <StatCard
-          label="Total pendiente (UYU)"
-          value={kpis ? fmt(kpis.totalPendienteUYU) : null}
+          label="Pendiente (UYU)"
+          value={resumen ? fmt(resumen.pendienteUYU.total) : null}
+          accent="amber"
+        />
+        <StatCard
+          label="Pendiente (USD)"
+          value={resumen ? fmt(resumen.pendienteUSD.total) : null}
           accent="amber"
         />
         <StatCard
           label="Cobrado este mes (UYU)"
-          value={kpis ? fmt(kpis.cobradoEsteMesUYU) : null}
+          value={resumen ? fmt(resumen.cobradoEsteMesUYU) : null}
           accent="green"
         />
         <StatCard
           label="Facturas pendientes"
-          value={kpis ? kpis.pendienteCount : null}
+          value={resumen ? resumen.facturasPendientes : null}
           accent="default"
         />
         <StatCard
           label="Empresas con deuda"
-          value={kpis ? kpis.empresasConDeuda : null}
+          value={resumen ? resumen.empresasConDeuda : null}
           accent="red"
         />
       </section>
 
-      {/* Resumen por empresa */}
-      {resumen.length > 0 && (
+      {/* Cobros pendientes por empresa */}
+      {resumen && (resumen.pendienteUYU.porEmpresa.length > 0 || resumen.pendienteUSD.porEmpresa.length > 0) && (
         <section className="rounded-md border border-slate-200 bg-white">
           <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
             <h2 className="text-sm font-semibold text-slate-800">Cobros pendientes por empresa</h2>
@@ -247,29 +242,61 @@ export default function CobrosUnificadoPage() {
             </button>
           </div>
           {showResumen && (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-                  <tr>
-                    <th className="px-4 py-2 text-left">Empresa</th>
-                    <th className="px-4 py-2 text-right">Facturas</th>
-                    <th className="px-4 py-2 text-right">S/IVA (UYU)</th>
-                    <th className="px-4 py-2 text-right">IVA (UYU)</th>
-                    <th className="px-4 py-2 text-right">C/IVA (UYU)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {resumen.map((r) => (
-                    <tr key={r.empresa} className="hover:bg-slate-50">
-                      <td className="px-4 py-2 font-medium text-slate-800">{r.empresa}</td>
-                      <td className="px-4 py-2 text-right text-slate-600">{r.count}</td>
-                      <td className="px-4 py-2 text-right text-slate-700">{fmt(r.sinIva)}</td>
-                      <td className="px-4 py-2 text-right text-slate-700">{fmt(r.iva)}</td>
-                      <td className="px-4 py-2 text-right font-semibold text-slate-900">{fmt(r.conIva)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="divide-y divide-slate-100">
+              {resumen.pendienteUYU.porEmpresa.length > 0 && (
+                <div className="overflow-x-auto">
+                  <div className="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Activaciones pendientes (UYU)</div>
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                      <tr>
+                        <th className="px-4 py-2 text-left">Empresa</th>
+                        <th className="px-4 py-2 text-right">Facturas</th>
+                        <th className="px-4 py-2 text-right">S/IVA (UYU)</th>
+                        <th className="px-4 py-2 text-right">IVA (UYU)</th>
+                        <th className="px-4 py-2 text-right">C/IVA (UYU)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {resumen.pendienteUYU.porEmpresa.map((r) => (
+                        <tr key={r.empresa} className="hover:bg-slate-50">
+                          <td className="px-4 py-2 font-medium text-slate-800">{r.empresa}</td>
+                          <td className="px-4 py-2 text-right text-slate-600">{r.facturas}</td>
+                          <td className="px-4 py-2 text-right text-slate-700">{fmt(r.sinIva)}</td>
+                          <td className="px-4 py-2 text-right text-slate-700">{fmt(r.iva)}</td>
+                          <td className="px-4 py-2 text-right font-semibold text-slate-900">{fmt(r.conIva)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {resumen.pendienteUSD.porEmpresa.length > 0 && (
+                <div className="overflow-x-auto">
+                  <div className="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Desarrollo pendiente (USD)</div>
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                      <tr>
+                        <th className="px-4 py-2 text-left">Empresa</th>
+                        <th className="px-4 py-2 text-right">Facturas</th>
+                        <th className="px-4 py-2 text-right">S/IVA (USD)</th>
+                        <th className="px-4 py-2 text-right">IVA (USD)</th>
+                        <th className="px-4 py-2 text-right">C/IVA (USD)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {resumen.pendienteUSD.porEmpresa.map((r) => (
+                        <tr key={r.empresa} className="hover:bg-slate-50">
+                          <td className="px-4 py-2 font-medium text-slate-800">{r.empresa}</td>
+                          <td className="px-4 py-2 text-right text-slate-600">{r.facturas}</td>
+                          <td className="px-4 py-2 text-right text-slate-700">{fmt(r.sinIva)}</td>
+                          <td className="px-4 py-2 text-right text-slate-700">{fmt(r.iva)}</td>
+                          <td className="px-4 py-2 text-right font-semibold text-slate-900">{fmt(r.conIva)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
         </section>
