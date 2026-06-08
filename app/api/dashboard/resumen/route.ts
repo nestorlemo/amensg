@@ -104,7 +104,10 @@ export async function GET() {
     ...actual,
     mesAnterior: {
       activacionesCobradas: anterior.activacionesCobradas,
+      activacionesPendientes: anterior.activacionesPendientes,
+      desarrolloPendienteUSD: anterior.desarrolloPendienteUSD,
       resultadoDistribuible: anterior.resultadoEstimado,
+      tieneDatos: Number(anterior.activacionesCobradas) + Number(anterior.activacionesPendientes) + Number(anterior.desarrolloPendienteUSD) > 0,
     },
   })
 }

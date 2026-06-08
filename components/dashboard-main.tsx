@@ -27,7 +27,7 @@ type Resumen = {
   desarrolloPendienteUYU: string
   gastosFijos: string
   resultadoEstimado: string
-  mesAnterior: { activacionesCobradas: string; resultadoDistribuible: string }
+  mesAnterior: { activacionesCobradas: string; activacionesPendientes: string; desarrolloPendienteUSD: string; resultadoDistribuible: string; tieneDatos: boolean }
 }
 
 const MESES_LARGO = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
@@ -36,10 +36,11 @@ function fmt(v: string | number) {
   return new Intl.NumberFormat('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(v))
 }
 
-function pct(current: string, prev: string) {
+function pct(current: string, prev: string, tieneDatos: boolean) {
+  if (!tieneDatos) return null
   const c = Number(current)
   const p = Number(prev)
-  if (!p) return null
+  if (!p) return c === 0 ? '+0.0%' : null
   const diff = ((c - p) / Math.abs(p)) * 100
   const sign = diff >= 0 ? '+' : ''
   return `${sign}${diff.toFixed(1)}%`
@@ -182,7 +183,7 @@ export function DashboardMain() {
                 value={activacionesCobradas}
                 badge="COBRADO"
                 badgeColor="green"
-                vs={pct(activacionesCobradas, mesAnterior.activacionesCobradas)}
+                vs={pct(activacionesCobradas, mesAnterior.activacionesCobradas, mesAnterior.tieneDatos)}
                 vsLabel={mesAnteriorNombre}
               />
               <ResumenCard
@@ -190,7 +191,7 @@ export function DashboardMain() {
                 value={activacionesPendientes}
                 badge="FACTURADO"
                 badgeColor="amber"
-                vs={null}
+                vs={pct(activacionesPendientes, mesAnterior.activacionesPendientes, mesAnterior.tieneDatos)}
                 vsLabel={mesAnteriorNombre}
               />
               <ResumenCard
@@ -199,7 +200,7 @@ export function DashboardMain() {
                 valuePrefix="USD"
                 badge="FACTURADO"
                 badgeColor="amber"
-                vs={null}
+                vs={pct(desarrolloPendienteUSD, mesAnterior.desarrolloPendienteUSD, mesAnterior.tieneDatos)}
                 vsLabel={mesAnteriorNombre}
                 sub={Number(desarrolloPendienteUYU) > 0 ? `≈ UYU ${fmt(desarrolloPendienteUYU)}` : undefined}
               />
@@ -208,7 +209,7 @@ export function DashboardMain() {
                 value={resultadoEstimado}
                 badge={resultadoNeg ? 'NEGATIVO' : 'ESTIMADO'}
                 badgeColor={resultadoNeg ? 'red' : 'blue'}
-                vs={pct(resultadoEstimado, mesAnterior.resultadoDistribuible)}
+                vs={pct(resultadoEstimado, mesAnterior.resultadoDistribuible, mesAnterior.tieneDatos)}
                 vsLabel={mesAnteriorNombre}
               />
             </div>
