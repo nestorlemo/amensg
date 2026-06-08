@@ -1,17 +1,15 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import type { FormEvent } from 'react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { AlertTriangle } from 'lucide-react'
 
 import { AlertError } from '@/components/alerts'
 import { DateInput } from '@/components/date-input'
 import { requestJson } from '@/lib/client-api'
 
-type Empresa = {
-  id: string
-  nombre: string
-}
+// ── Types ────────────────────────────────────────────────────────────────────
+
+type Empresa = { id: string; nombre: string }
 
 export type Ingreso = {
   id: string
@@ -34,281 +32,98 @@ export type Ingreso = {
   creadoEn?: string
 }
 
-type FacturaDesarrollo = {
-  id: string
-  totalHoras: string | number
-  valorHoraUSD: string | number
-  totalUSD: string | number
-  totalConIva: string | number
-  issues?: { id: string; descripcion: string; totalHoras: number }[]
+type ApiResponse = {
+  rows: Ingreso[]
+  empresas: Empresa[]
+  periodoCerrado: boolean
 }
 
-// ---------- IngresoAdicionalForm ----------
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
-export function IngresoAdicionalForm({ disabled = false, empresas }: { disabled?: boolean; empresas: Empresa[] }) {
-  const router = useRouter()
-  const [open, setOpen] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const today = new Date().toISOString().slice(0, 10)
+function fmt(v: number) {
+  return new Intl.NumberFormat('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v)
+}
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const form = event.currentTarget
-    const result = await request('/api/ingresos-adicionales', 'POST', payload(new FormData(form)))
-    if (result.ok === false) {
-      setError(result.error)
-      return
-    }
-    form.reset()
-    setOpen(false)
-    router.refresh()
-  }
+function formatPeriod(anio: number, mes: number) {
+  return `${String(mes).padStart(2, '0')}/${anio}`
+}
 
-  if (!open) {
-    return (
-      <div>
-        <button
-          className="h-9 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white disabled:opacity-50"
-          disabled={disabled}
-          onClick={() => setOpen(true)}
-          type="button"
-        >
-          + Nuevo ingreso
-        </button>
-      </div>
-    )
-  }
+function calcMontoSinIva(moneda: string, montoOrigen: string, tipoCambio: string) {
+  const monto = Number(montoOrigen) || 0
+  const cambio = Number(tipoCambio) || 0
+  return moneda === 'USD' ? monto * cambio : monto
+}
 
+async function apiCall(url: string, method: string, body: Record<string, unknown> | null) {
+  const res = await requestJson(url, {
+    method,
+    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  }, 'No se pudo completar la operación.')
+  return res.ok === true ? { ok: true, error: null } : { ok: false, error: res.error }
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return <label className="block space-y-1 text-sm font-medium text-slate-700">{children}</label>
+}
+
+function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
-    <section className="min-w-0 space-y-4 rounded-md border border-slate-200 bg-white p-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-slate-950">Nuevo ingreso adicional</h2>
-        <button className="text-sm text-slate-500 hover:text-slate-700" onClick={() => setOpen(false)} type="button">Cerrar</button>
-      </div>
-      <form className="space-y-4" onSubmit={submit}>
-        <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <Input label="Concepto" name="concepto" required />
-          <EmpresaSelect empresas={empresas} />
-          <Input label="Anio" name="anio" required />
-          <Input label="Mes" name="mes" required />
-        </div>
-        <IngresoCurrencyFields defaultFechaFacturacion={today} defaultMoneda="UYU" defaultPorcentajeIva="0.22" disabled={disabled} />
-        <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <div className="min-w-0 md:col-span-1 xl:col-span-3">
-            <Input label="Observaciones" name="observaciones" />
-          </div>
-          <div className="flex min-w-0 items-end">
-            <button className="h-10 w-full rounded-md bg-slate-950 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={disabled} type="submit">
-              Crear ingreso
-            </button>
-          </div>
-        </div>
-      </form>
-      {error ? <AlertError>{error}</AlertError> : null}
-    </section>
+    <input
+      className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
+      {...props}
+    />
   )
 }
 
-// ---------- IngresoDetailModal ----------
-
-export function IngresoDetailModal({ ingreso, onClose }: { ingreso: Ingreso; onClose: () => void }) {
-  const [factura, setFactura] = useState<FacturaDesarrollo | null>(null)
-  const [loadingFactura, setLoadingFactura] = useState(false)
-  const [facturaLoaded, setFacturaLoaded] = useState(false)
-
-  async function loadFactura() {
-    if (facturaLoaded) return
-    setLoadingFactura(true)
-    try {
-      const res = await fetch(`/api/facturas-desarrollo?ingresoAdicionalId=${ingreso.id}`)
-      const data = await res.json() as { facturas?: FacturaDesarrollo[] }
-      const f = data.facturas?.[0] ?? null
-      setFactura(f)
-    } catch {
-      // ignore
-    } finally {
-      setLoadingFactura(false)
-      setFacturaLoaded(true)
-    }
-  }
-
-  // Load factura on mount
-  if (!facturaLoaded && !loadingFactura) {
-    void loadFactura()
-  }
-
+function SelectInput(props: React.SelectHTMLAttributes<HTMLSelectElement> & { children: React.ReactNode }) {
+  const { children, ...rest } = props
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div
-        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mb-4 flex items-start justify-between">
-          <h2 className="text-lg font-semibold text-slate-950">{ingreso.concepto}</h2>
-          <button className="ml-4 text-slate-400 hover:text-slate-700" onClick={onClose} type="button">✕</button>
-        </div>
+    <select
+      className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
+      {...rest}
+    >
+      {children}
+    </select>
+  )
+}
 
-        <dl className="mb-4 grid gap-2 text-sm sm:grid-cols-2">
-          <DetailRow label="Empresa" value={ingreso.empresa ?? 'Sin empresa'} />
-          <DetailRow label="Período" value={`${String(ingreso.mes).padStart(2, '0')}/${ingreso.anio}`} />
-          <DetailRow label="Fecha facturación" value={ingreso.fechaFacturacion ? ingreso.fechaFacturacion.slice(0, 10) : '—'} />
-          <DetailRow label="Moneda" value={ingreso.moneda} />
-          <DetailRow label="Monto origen" value={ingreso.montoOrigen} />
-          <DetailRow label="Tipo de cambio" value={ingreso.tipoCambioAplicado ?? 'No aplica'} />
-          {ingreso.fuenteTipoCambio ? <DetailRow label="Fuente TC" value={ingreso.fuenteTipoCambio} /> : null}
-          {ingreso.fechaTipoCambio ? <DetailRow label="Fecha TC" value={ingreso.fechaTipoCambio.slice(0, 10)} /> : null}
-          <DetailRow label="Monto s/IVA" value={ingreso.montoSinIva} />
-          <DetailRow label="IVA %" value={ingreso.porcentajeIva} />
-          <DetailRow label="IVA" value={ingreso.iva} />
-          <DetailRow label="Monto c/IVA" value={ingreso.montoConIva} />
-          {ingreso.observaciones ? <DetailRow label="Observaciones" value={ingreso.observaciones} /> : null}
-        </dl>
-
-        {loadingFactura && <p className="text-sm text-slate-500">Cargando factura de desarrollo…</p>}
-
-        {facturaLoaded && factura && (
-          <div className="border-t border-slate-200 pt-4">
-            <h3 className="mb-3 text-sm font-semibold text-slate-700">Factura de desarrollo asociada</h3>
-            <dl className="mb-3 grid gap-2 text-sm sm:grid-cols-2">
-              <DetailRow label="Total horas" value={String(factura.totalHoras)} />
-              <DetailRow label="Valor hora USD" value={String(factura.valorHoraUSD)} />
-              <DetailRow label="Total USD s/IVA" value={String(factura.totalUSD)} />
-              <DetailRow label="Total c/IVA" value={String(factura.totalConIva)} />
-            </dl>
-            {factura.issues && factura.issues.length > 0 && (
-              <>
-                <p className="mb-2 text-xs font-semibold uppercase text-slate-500">Issues incluidos</p>
-                <div className="overflow-x-auto rounded-md border border-slate-200">
-                  <table className="min-w-full text-sm">
-                    <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
-                      <tr>
-                        <th className="px-3 py-2 text-left">Descripción</th>
-                        <th className="px-3 py-2 text-right">Horas</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {factura.issues.map((issue) => (
-                        <tr key={issue.id}>
-                          <td className="px-3 py-2 text-slate-700">{issue.descripcion}</td>
-                          <td className="whitespace-nowrap px-3 py-2 text-right font-medium">{issue.totalHoras}h</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {facturaLoaded && !factura && (
-          <p className="border-t border-slate-200 pt-4 text-sm text-slate-400">No tiene factura de desarrollo asociada.</p>
-        )}
-
-        <div className="mt-4 flex justify-end">
-          <button className="h-9 rounded-md bg-slate-950 px-5 text-sm font-semibold text-white" onClick={onClose} type="button">Cerrar</button>
-        </div>
-      </div>
+function SummaryItem({ label, value }: { label: string; value: number }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold uppercase text-slate-500">{label}</p>
+      <p className="mt-1 font-semibold tabular-nums text-slate-950">{fmt(value)}</p>
     </div>
   )
 }
 
-// ---------- IngresoRowActions ----------
+// ── CurrencyFields ────────────────────────────────────────────────────────────
 
-export function IngresoRowActions({ disabled = false, ingreso }: { disabled?: boolean; ingreso: Ingreso }) {
-  const router = useRouter()
-  const [error, setError] = useState<string | null>(null)
-  const [showModal, setShowModal] = useState(false)
-
-  async function remove() {
-    if (!confirm('¿Eliminar este ingreso adicional?')) return
-    const result = await request(`/api/ingresos-adicionales/${ingreso.id}`, 'DELETE', null)
-    if (result.ok === false) {
-      setError(result.error)
-      return
-    }
-    router.refresh()
-  }
-
-  return (
-    <>
-      {showModal && <IngresoDetailModal ingreso={ingreso} onClose={() => setShowModal(false)} />}
-      <div className="flex gap-2">
-        <button
-          className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-          onClick={() => setShowModal(true)}
-          type="button"
-        >
-          Ver detalle
-        </button>
-        <button
-          className="rounded-md border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700 disabled:cursor-not-allowed disabled:opacity-60 hover:bg-red-50"
-          disabled={disabled}
-          onClick={() => void remove()}
-          type="button"
-        >
-          Eliminar
-        </button>
-      </div>
-      {error ? <AlertError>{error}</AlertError> : null}
-    </>
-  )
-}
-
-// ---------- Internal helpers ----------
-
-function payload(form: FormData) {
-  return {
-    concepto: form.get('concepto'),
-    empresaId: form.get('empresaId'),
-    anio: form.get('anio'),
-    mes: form.get('mes'),
-    moneda: form.get('moneda'),
-    montoOrigen: form.get('montoOrigen'),
-    fechaFacturacion: form.get('fechaFacturacion'),
-    tipoCambioAplicado: form.get('tipoCambioAplicado'),
-    fuenteTipoCambio: form.get('fuenteTipoCambio'),
-    fechaTipoCambio: form.get('fechaTipoCambio'),
-    porcentajeIva: form.get('porcentajeIva'),
-    observaciones: form.get('observaciones'),
-  }
-}
-
-function IngresoCurrencyFields({
-  compact,
-  defaultFechaFacturacion,
-  defaultFechaTipoCambio,
-  defaultFuenteTipoCambio,
-  defaultMoneda,
-  defaultMontoOrigen,
-  defaultPorcentajeIva,
-  defaultTipoCambioAplicado,
-  disabled = false,
+function CurrencyFields({
+  disabled,
+  moneda, setMoneda,
+  montoOrigen, setMontoOrigen,
+  fechaFacturacion, setFechaFacturacion,
+  tipoCambio, setTipoCambio,
+  fuente, setFuente,
+  fechaTipoCambio, setFechaTipoCambio,
+  porcentajeIva, setPorcentajeIva,
 }: {
-  compact?: boolean
-  defaultFechaFacturacion: string
-  defaultFechaTipoCambio?: string
-  defaultFuenteTipoCambio?: string
-  defaultMoneda: string
-  defaultMontoOrigen?: string
-  defaultPorcentajeIva?: string
-  defaultTipoCambioAplicado?: string
-  disabled?: boolean
+  disabled: boolean
+  moneda: string; setMoneda: (v: string) => void
+  montoOrigen: string; setMontoOrigen: (v: string) => void
+  fechaFacturacion: string; setFechaFacturacion: (v: string) => void
+  tipoCambio: string; setTipoCambio: (v: string) => void
+  fuente: string; setFuente: (v: string) => void
+  fechaTipoCambio: string; setFechaTipoCambio: (v: string) => void
+  porcentajeIva: string; setPorcentajeIva: (v: string) => void
 }) {
-  const [moneda, setMoneda] = useState(defaultMoneda)
-  const [montoOrigen, setMontoOrigen] = useState(defaultMontoOrigen ?? '')
-  const [fechaFacturacion, setFechaFacturacion] = useState(defaultFechaFacturacion)
-  const [tipoCambio, setTipoCambio] = useState(defaultTipoCambioAplicado ?? '')
-  const [fuente, setFuente] = useState(defaultFuenteTipoCambio ?? '')
-  const [fechaTipoCambio, setFechaTipoCambio] = useState(defaultFechaTipoCambio ?? '')
-  const [porcentajeIvaPreview, setPorcentajeIvaPreview] = useState(defaultPorcentajeIva ?? '0.22')
   const [rateError, setRateError] = useState<string | null>(null)
-  const montoSinIva = calculateMontoSinIva(moneda, montoOrigen, tipoCambio)
-  const iva = montoSinIva * (Number(porcentajeIvaPreview) || 0)
+  const montoSinIva = calcMontoSinIva(moneda, montoOrigen, tipoCambio)
+  const iva = montoSinIva * (Number(porcentajeIva) || 0)
   const montoConIva = montoSinIva + iva
-  const inputClass = compact
-    ? 'h-9 min-w-0 rounded-md border border-slate-300 px-2 text-sm'
-    : 'h-10 w-full min-w-0 rounded-md border border-slate-300 px-3 text-sm'
 
   async function fetchTipoCambio() {
     setRateError(null)
@@ -317,243 +132,319 @@ function IngresoCurrencyFields({
       undefined,
       'No se pudo obtener el tipo de cambio.',
     )
-
-    if (result.ok === false) {
-      setRateError(result.error)
-      return
-    }
-
+    if (result.ok === false) { setRateError(result.error); return }
     setTipoCambio(result.data.valor)
     setFuente(result.data.fuente)
     setFechaTipoCambio(result.data.fechaTipoCambio)
   }
 
-  if (compact) {
-    return (
-      <>
-        <select className={inputClass} disabled={disabled} name="moneda" onChange={(event) => setMoneda(event.currentTarget.value)} value={moneda}>
-          <option value="UYU">UYU</option>
-          <option value="USD">USD</option>
-        </select>
-        <input
-          className={inputClass}
-          disabled={disabled}
-          name="montoOrigen"
-          onChange={(event) => setMontoOrigen(event.currentTarget.value)}
-          placeholder="Monto origen"
-          required
-          value={montoOrigen}
-        />
-        <DateInput
-          className={inputClass}
-          disabled={disabled}
-          value={fechaFacturacion}
-          onChange={setFechaFacturacion}
-          required
-        />
-        <input type="hidden" name="fechaFacturacion" value={fechaFacturacion} />
-        {moneda === 'USD' ? (
-          <>
-            <input
-              className={inputClass}
-              disabled={disabled}
-              name="tipoCambioAplicado"
-              onChange={(event) => setTipoCambio(event.currentTarget.value)}
-              placeholder="Tipo cambio aplicado"
-              required
-              value={tipoCambio}
-            />
-            <input name="fuenteTipoCambio" type="hidden" value={fuente} />
-            <input name="fechaTipoCambio" type="hidden" value={fechaTipoCambio} />
-            <button className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60" disabled={disabled} onClick={fetchTipoCambio} type="button">
-              Obtener tipo de cambio
-            </button>
-            {rateError ? <AlertError>{rateError}</AlertError> : null}
-          </>
-        ) : (
-          <>
-            <input name="tipoCambioAplicado" type="hidden" value={tipoCambio || '1'} />
-            <input name="fuenteTipoCambio" type="hidden" value={fuente} />
-            <input name="fechaTipoCambio" type="hidden" value={fechaTipoCambio} />
-          </>
-        )}
-        <input
-          className={inputClass}
-          disabled={disabled}
-          name="porcentajeIva"
-          onChange={(event) => setPorcentajeIvaPreview(event.currentTarget.value)}
-          placeholder="Porcentaje IVA"
-          required
-          value={porcentajeIvaPreview}
-        />
-      </>
-    )
-  }
-
   return (
     <>
-      <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <label className="min-w-0 space-y-1 text-sm font-medium text-slate-700">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <FieldLabel>
           Moneda
-          <select className={inputClass} disabled={disabled} name="moneda" onChange={(event) => setMoneda(event.currentTarget.value)} value={moneda}>
+          <SelectInput disabled={disabled} name="moneda" value={moneda} onChange={e => setMoneda(e.target.value)}>
             <option value="UYU">UYU</option>
             <option value="USD">USD</option>
-          </select>
-        </label>
-        <label className="min-w-0 space-y-1 text-sm font-medium text-slate-700">
+          </SelectInput>
+        </FieldLabel>
+        <FieldLabel>
           Monto origen
-          <input
-            className={inputClass}
-            disabled={disabled}
-            name="montoOrigen"
-            onChange={(event) => setMontoOrigen(event.currentTarget.value)}
-            required
-            value={montoOrigen}
-          />
-        </label>
-        <label className="min-w-0 space-y-1 text-sm font-medium text-slate-700">
-          Fecha facturacion
+          <TextInput disabled={disabled} name="montoOrigen" required value={montoOrigen} onChange={e => setMontoOrigen(e.target.value)} />
+        </FieldLabel>
+        <FieldLabel>
+          Fecha facturación
           <DateInput
-            className={inputClass}
-            disabled={disabled}
-            value={fechaFacturacion}
-            onChange={setFechaFacturacion}
-            required
+            className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
+            disabled={disabled} value={fechaFacturacion} onChange={setFechaFacturacion} required
           />
           <input type="hidden" name="fechaFacturacion" value={fechaFacturacion} />
-        </label>
-        <label className="min-w-0 space-y-1 text-sm font-medium text-slate-700">
+        </FieldLabel>
+        <FieldLabel>
           Porcentaje IVA
-          <input
-            className={inputClass}
-            disabled={disabled}
-            name="porcentajeIva"
-            onChange={(event) => setPorcentajeIvaPreview(event.currentTarget.value)}
-            required
-            value={porcentajeIvaPreview}
-          />
-        </label>
+          <TextInput disabled={disabled} name="porcentajeIva" required value={porcentajeIva} onChange={e => setPorcentajeIva(e.target.value)} />
+        </FieldLabel>
       </div>
+
       {moneda === 'USD' ? (
-        <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <label className="min-w-0 space-y-1 text-sm font-medium text-slate-700">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <FieldLabel>
             Tipo cambio aplicado
-            <input
-              className={inputClass}
-              disabled={disabled}
-              name="tipoCambioAplicado"
-              onChange={(event) => setTipoCambio(event.currentTarget.value)}
-              required
-              value={tipoCambio}
-            />
-          </label>
-          <input name="fuenteTipoCambio" type="hidden" value={fuente} />
-          <input name="fechaTipoCambio" type="hidden" value={fechaTipoCambio} />
-          <div className="flex min-w-0 items-end">
-            <button className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60" disabled={disabled} onClick={fetchTipoCambio} type="button">
+            <TextInput disabled={disabled} name="tipoCambioAplicado" required value={tipoCambio} onChange={e => setTipoCambio(e.target.value)} />
+          </FieldLabel>
+          <input type="hidden" name="fuenteTipoCambio" value={fuente} />
+          <input type="hidden" name="fechaTipoCambio" value={fechaTipoCambio} />
+          <div className="flex items-end">
+            <button
+              className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              disabled={disabled} onClick={() => void fetchTipoCambio()} type="button"
+            >
               Obtener tipo de cambio
             </button>
           </div>
-          {rateError ? <AlertError className="self-end md:col-span-2">{rateError}</AlertError> : null}
+          {rateError ? <AlertError className="md:col-span-2">{rateError}</AlertError> : null}
         </div>
       ) : (
         <>
-          <input name="tipoCambioAplicado" type="hidden" value={tipoCambio || '1'} />
-          <input name="fuenteTipoCambio" type="hidden" value={fuente} />
-          <input name="fechaTipoCambio" type="hidden" value={fechaTipoCambio} />
+          <input type="hidden" name="tipoCambioAplicado" value={tipoCambio || '1'} />
+          <input type="hidden" name="fuenteTipoCambio" value={fuente} />
+          <input type="hidden" name="fechaTipoCambio" value={fechaTipoCambio} />
         </>
       )}
-      <div className="grid min-w-0 gap-3 rounded-md bg-slate-50 p-3 text-sm md:grid-cols-3">
-        <SummaryItem label="Monto sin IVA UYU" value={montoSinIva} />
-        <SummaryItem label="IVA UYU" value={iva} />
-        <SummaryItem label="Monto con IVA UYU" value={montoConIva} />
+
+      <div className="grid gap-3 rounded-md bg-slate-50 p-3 text-sm md:grid-cols-3">
+        <SummaryItem label="Monto s/IVA (UYU)" value={montoSinIva} />
+        <SummaryItem label="IVA (UYU)" value={iva} />
+        <SummaryItem label="Monto c/IVA (UYU)" value={montoConIva} />
       </div>
     </>
   )
 }
 
-function DetailRow({ label, value }: { label: string; value: string }) {
+// ── Main component ────────────────────────────────────────────────────────────
+
+export function IngresosAdicionalesManager() {
+  const now = new Date()
+  const [rows, setRows] = useState<Ingreso[]>([])
+  const [empresas, setEmpresas] = useState<Empresa[]>([])
+  const [periodoCerrado, setPeriodoCerrado] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  // Filters
+  const [fAnio, setFAnio] = useState(now.getFullYear())
+  const [fMes, setFMes] = useState(now.getMonth() + 1)
+  const [fEmpresaId, setFEmpresaId] = useState('')
+
+  // Form fields
+  const [concepto, setConcepto] = useState('')
+  const [formEmpresaId, setFormEmpresaId] = useState('')
+  const [formAnio, setFormAnio] = useState(String(now.getFullYear()))
+  const [formMes, setFormMes] = useState(String(now.getMonth() + 1))
+  const [moneda, setMoneda] = useState('UYU')
+  const [montoOrigen, setMontoOrigen] = useState('')
+  const [fechaFacturacion, setFechaFacturacion] = useState(now.toISOString().slice(0, 10))
+  const [tipoCambio, setTipoCambio] = useState('')
+  const [fuente, setFuente] = useState('')
+  const [fechaTipoCambio, setFechaTipoCambio] = useState('')
+  const [porcentajeIva, setPorcentajeIva] = useState('0.22')
+  const [observaciones, setObservaciones] = useState('')
+
+  const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+
+  async function fetchData(anio = fAnio, mes = fMes, empresaId = fEmpresaId) {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams({ anio: String(anio), mes: String(mes) })
+      if (empresaId) params.set('empresaId', empresaId)
+      const res = await fetch(`/api/ingresos-adicionales?${params}`)
+      const data = await res.json() as ApiResponse
+      setRows(data.rows ?? [])
+      setEmpresas(data.empresas ?? [])
+      setPeriodoCerrado(data.periodoCerrado ?? false)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { void fetchData() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault()
+    void fetchData(fAnio, fMes, fEmpresaId)
+  }
+
+  async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setFormError(null)
+    setSaving(true)
+    try {
+      const result = await apiCall('/api/ingresos-adicionales', 'POST', {
+        concepto, empresaId: formEmpresaId || null,
+        anio: formAnio, mes: formMes,
+        moneda, montoOrigen, fechaFacturacion,
+        tipoCambioAplicado: moneda === 'USD' ? tipoCambio : '1',
+        fuenteTipoCambio: fuente || null,
+        fechaTipoCambio: fechaTipoCambio || null,
+        porcentajeIva, observaciones: observaciones || null,
+      })
+      if (!result.ok) { setFormError(result.error ?? 'Error al crear.'); return }
+      // Reset form
+      setConcepto(''); setMontoOrigen(''); setObservaciones(''); setTipoCambio(''); setFuente(''); setFechaTipoCambio('')
+      void fetchData()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm('¿Eliminar este ingreso adicional?')) return
+    await apiCall(`/api/ingresos-adicionales/${id}`, 'DELETE', null)
+    void fetchData()
+  }
+
   return (
-    <div>
-      <dt className="text-xs font-semibold uppercase text-slate-500">{label}</dt>
-      <dd className="mt-0.5 text-slate-800">{value}</dd>
+    <div className="space-y-6">
+      {/* ── Section 1: Creation form ── */}
+      <section className="rounded-xl border border-slate-200 bg-white">
+        <div className="border-b border-slate-200 px-6 py-4">
+          <h2 className="text-base font-semibold text-slate-950">Nuevo ingreso adicional</h2>
+          <p className="mt-0.5 text-sm text-slate-500">Ingreso no proveniente de activaciones, con IVA calculado automáticamente.</p>
+        </div>
+
+        {periodoCerrado ? (
+          <div className="flex items-center gap-3 border-b border-amber-200 bg-amber-50 px-6 py-3">
+            <AlertTriangle size={15} className="shrink-0 text-amber-600" />
+            <p className="text-sm font-medium text-amber-800">
+              Este período está cerrado. Para modificar ingresos adicionales debe reabrirse el cierre.
+            </p>
+          </div>
+        ) : null}
+
+        <form className="space-y-4 px-6 py-5" onSubmit={handleCreate}>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <FieldLabel>
+              Concepto
+              <TextInput required disabled={periodoCerrado} value={concepto} onChange={e => setConcepto(e.target.value)} />
+            </FieldLabel>
+            <FieldLabel>
+              Empresa
+              <SelectInput disabled={periodoCerrado} value={formEmpresaId} onChange={e => setFormEmpresaId(e.target.value)}>
+                <option value="">Sin empresa</option>
+                {empresas.map(emp => <option key={emp.id} value={emp.id}>{emp.nombre}</option>)}
+              </SelectInput>
+            </FieldLabel>
+            <FieldLabel>
+              Año
+              <TextInput required disabled={periodoCerrado} value={formAnio} onChange={e => setFormAnio(e.target.value)} />
+            </FieldLabel>
+            <FieldLabel>
+              Mes
+              <TextInput required disabled={periodoCerrado} value={formMes} onChange={e => setFormMes(e.target.value)} />
+            </FieldLabel>
+          </div>
+
+          <CurrencyFields
+            disabled={periodoCerrado}
+            moneda={moneda} setMoneda={setMoneda}
+            montoOrigen={montoOrigen} setMontoOrigen={setMontoOrigen}
+            fechaFacturacion={fechaFacturacion} setFechaFacturacion={setFechaFacturacion}
+            tipoCambio={tipoCambio} setTipoCambio={setTipoCambio}
+            fuente={fuente} setFuente={setFuente}
+            fechaTipoCambio={fechaTipoCambio} setFechaTipoCambio={setFechaTipoCambio}
+            porcentajeIva={porcentajeIva} setPorcentajeIva={setPorcentajeIva}
+          />
+
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <FieldLabel>
+              Observaciones
+              <TextInput disabled={periodoCerrado} value={observaciones} onChange={e => setObservaciones(e.target.value)} />
+            </FieldLabel>
+            <div className="flex items-end xl:col-start-4">
+              <button
+                className="h-10 w-full rounded-md bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+                disabled={saving || periodoCerrado} type="submit"
+              >
+                {saving ? 'Agregando…' : 'Agregar ingreso'}
+              </button>
+            </div>
+          </div>
+
+          {formError ? <AlertError>{formError}</AlertError> : null}
+        </form>
+      </section>
+
+      {/* ── Section 2: Historial ── */}
+      <section className="rounded-xl border border-slate-200 bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 px-6 py-4">
+          <h2 className="text-base font-semibold text-slate-950">Historial de ingresos adicionales</h2>
+          <form className="flex flex-wrap items-end gap-3" onSubmit={handleSearch}>
+            <label className="block text-xs font-medium text-slate-600">
+              Año
+              <input
+                className="mt-1 block h-8 w-20 rounded-md border border-slate-300 px-2 text-xs"
+                value={fAnio} onChange={e => setFAnio(Number(e.target.value))}
+              />
+            </label>
+            <label className="block text-xs font-medium text-slate-600">
+              Mes
+              <input
+                className="mt-1 block h-8 w-16 rounded-md border border-slate-300 px-2 text-xs"
+                value={fMes} onChange={e => setFMes(Number(e.target.value))}
+              />
+            </label>
+            <label className="block text-xs font-medium text-slate-600">
+              Empresa
+              <select
+                className="mt-1 block h-8 w-44 rounded-md border border-slate-300 px-2 text-xs"
+                value={fEmpresaId} onChange={e => setFEmpresaId(e.target.value)}
+              >
+                <option value="">Todas</option>
+                {empresas.map(emp => <option key={emp.id} value={emp.id}>{emp.nombre}</option>)}
+              </select>
+            </label>
+            <button
+              className="h-8 rounded-md bg-slate-950 px-4 text-xs font-semibold text-white hover:bg-slate-800"
+              type="submit"
+            >
+              Buscar
+            </button>
+          </form>
+        </div>
+
+        {loading ? (
+          <p className="p-6 text-sm text-slate-400">Cargando…</p>
+        ) : rows.length === 0 ? (
+          <p className="p-6 text-sm text-slate-400">No hay ingresos adicionales para los filtros seleccionados.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
+                <tr>
+                  <th className="px-4 py-3 text-left">Período</th>
+                  <th className="px-4 py-3 text-left">Empresa</th>
+                  <th className="px-4 py-3 text-left">Concepto</th>
+                  <th className="px-4 py-3 text-left">Moneda</th>
+                  <th className="px-4 py-3 text-right">Monto S/IVA</th>
+                  <th className="px-4 py-3 text-right">IVA</th>
+                  <th className="px-4 py-3 text-right">Monto C/IVA</th>
+                  <th className="px-4 py-3 text-left">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {rows.map(row => (
+                  <tr key={row.id} className="hover:bg-slate-50">
+                    <td className="whitespace-nowrap px-4 py-3 text-slate-700">{formatPeriod(row.anio, row.mes)}</td>
+                    <td className="px-4 py-3 text-slate-700">{row.empresa ?? <span className="text-slate-400">Sin empresa</span>}</td>
+                    <td className="px-4 py-3 text-slate-700">{row.concepto}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${row.moneda === 'USD' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'}`}>
+                        {row.moneda}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums text-slate-700">{row.montoSinIva}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums text-slate-700">{row.iva}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums font-semibold text-slate-900">{row.montoConIva}</td>
+                    <td className="px-4 py-3">
+                      <button
+                        className="rounded border border-red-300 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                        disabled={periodoCerrado}
+                        onClick={() => void handleDelete(row.id)}
+                        type="button"
+                      >
+                        Eliminar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   )
 }
 
-function SummaryItem({ label, value }: { label: string; value: number }) {
-  return (
-    <div>
-      <p className="text-xs font-semibold uppercase text-slate-500">{label}</p>
-      <p className="mt-1 font-semibold tabular-nums text-slate-950">{formatMoney(value)}</p>
-    </div>
-  )
-}
-
-function EmpresaSelect({
-  compact,
-  defaultValue,
-  disabled,
-  empresas,
-}: {
-  compact?: boolean
-  defaultValue?: string
-  disabled?: boolean
-  empresas: Empresa[]
-}) {
-  return (
-    <label className={compact ? 'min-w-0' : 'min-w-0 space-y-1 text-sm font-medium text-slate-700'}>
-      {compact ? null : 'Empresa'}
-      <select className="h-10 w-full min-w-0 rounded-md border border-slate-300 px-3 text-sm disabled:bg-slate-100" defaultValue={defaultValue} disabled={disabled} name="empresaId">
-        <option value="">Sin empresa</option>
-        {empresas.map((empresa) => (
-          <option key={empresa.id} value={empresa.id}>
-            {empresa.nombre}
-          </option>
-        ))}
-      </select>
-    </label>
-  )
-}
-
-function Input({
-  defaultValue,
-  label,
-  name,
-  required,
-}: {
-  defaultValue?: string
-  label: string
-  name: string
-  required?: boolean
-}) {
-  return (
-    <label className="min-w-0 space-y-1 text-sm font-medium text-slate-700">
-      {label}
-      <input className="h-10 w-full min-w-0 rounded-md border border-slate-300 px-3 text-sm" defaultValue={defaultValue} name={name} required={required} />
-    </label>
-  )
-}
-
-async function request(url: string, method: string, body: Record<string, unknown> | null) {
-  const result = await requestJson(url, {
-    method,
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-  }, 'No se pudo completar la operación.')
-
-  return result.ok === true ? { ok: true, error: null } : { ok: false, error: result.error }
-}
-
-function calculateMontoSinIva(moneda: string, montoOrigen: string, tipoCambio: string) {
-  const monto = Number(montoOrigen) || 0
-  const cambio = Number(tipoCambio) || 0
-  return moneda === 'USD' ? monto * cambio : monto
-}
-
-function formatMoney(value: number) {
-  return new Intl.NumberFormat('es-UY', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)
-}
+// Keep legacy exports for any remaining references
+export { IngresosAdicionalesManager as IngresoAdicionalForm }
