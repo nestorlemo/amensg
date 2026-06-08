@@ -1,44 +1,80 @@
-# AMENSG Agent Instructions
+# AGENTS.md — AMENSG Sistema de Gestión Comercial
 
-## Scope
-Repository-wide.
+## Estado del proyecto
 
-## Mission for this phase
-Set up project foundation only:
-- Documentation
-- Local execution setup
-- Data model scaffold
-- UI skeleton
+**La aplicación está en producción.** Cambios incorrectos pueden afectar datos reales y operaciones del negocio.
 
-Do **not** implement business logic, authentication flow, or CSV import processing yet.
+## Stack
 
-## Validation
-Use Windows-friendly commands when PowerShell blocks npm or npx scripts:
-- `npm.cmd install`
-- `npx.cmd prisma generate`
-- `npm.cmd run typecheck`
-- `npm.cmd run lint`
-- `npm.cmd run build`
+- **Framework**: Next.js 15 (App Router, `'use client'` / Server Components)
+- **Lenguaje**: TypeScript estricto
+- **Estilos**: Tailwind CSS
+- **ORM**: Prisma 5
+- **Base de datos**: PostgreSQL en AWS RDS
+- **Deploy**: Railway
+- **Librerías clave**: Recharts (gráficos), ExcelJS (exports), bcrypt (auth)
 
-Codex must always run validation before finishing a task:
-- `npm run typecheck`
-- `npm run lint`
-- `npm run build`
-- `npm run test` when tests exist
+## Módulos productivos
 
-If PowerShell blocks script execution, use the `.cmd` equivalents.
+importaciones · activaciones · facturación · cobros · gastos · liquidaciones · cierres · transferencias · issues · reportes · usuarios · empresas · socios · parámetros · auditoría
 
-## Data rules that must not change
-- PostgreSQL only.
-- UUID ids.
-- Decimal for money; never Float for money.
-- MID and chip are unique by `empresaId + anio + mes`, not globally unique.
-- Imported rows preserve `rawRowJson` and `empresaNombreArchivo`.
-- Billing and closure records preserve snapshots.
-- Importations are not physically deleted.
-- Do not change business rules unless explicitly instructed.
-- Do not change import, billing, or liquidation formulas unless explicitly instructed.
+## Reglas de trabajo
 
-## Prisma and migrations
-- Any change to `prisma/schema.prisma` must include a Prisma migration in `prisma/migrations/`.
-- Report migrations clearly in the task summary, including migration folder names and purpose.
+### Branches
+- **Nunca trabajar directo sobre `main`.**
+- Crear rama por tarea. El equipo hace merge a main.
+
+### Archivos protegidos — no modificar sin autorización explícita
+- `.env` y cualquier archivo de variables de entorno
+- `prisma/schema.prisma` y `prisma/migrations/`
+- Lógica de negocio de: importaciones, facturación, cobros, cierres, liquidaciones
+- Endpoints de autenticación (`/api/auth/`)
+- Middleware de permisos y roles (`lib/auth.ts`)
+
+### Cambios permitidos sin autorización
+- UI/UX: estilos, componentes visuales, textos
+- Nuevas páginas que no toquen módulos protegidos
+- Correcciones de bugs evidentes con impacto mínimo
+
+### Principios
+- Cambios pequeños y reversibles.
+- No modificar lógica de negocio sin autorización explícita.
+- No renombrar campos de base de datos sin migración y autorización.
+
+## Reglas de datos
+
+- PostgreSQL únicamente. UUID como IDs.
+- `Decimal` para dinero — nunca `Float`.
+- MID y chip son únicos por `empresaId + anio + mes`, no globalmente.
+- Las filas importadas preservan `rawRowJson` y `empresaNombreArchivo`.
+- Los registros de facturación y cierre preservan snapshots.
+- Las importaciones no se eliminan físicamente.
+
+## Prisma y migraciones
+
+- Todo cambio en `prisma/schema.prisma` requiere migración en `prisma/migrations/`.
+- Sin `DATABASE_URL` disponible en el entorno CI, crear la migración SQL manualmente y regenerar el cliente con:
+  ```
+  DATABASE_URL="postgresql://x:x@localhost/x" npx prisma generate
+  ```
+- Reportar claramente el nombre de la carpeta de migración y su propósito.
+
+## Validaciones obligatorias antes de terminar toda tarea
+
+```
+npm run typecheck
+npm run lint
+npm run build
+npm run test
+```
+
+Si el entorno no tiene `DATABASE_URL`, `build` puede fallar en el paso de generación de Prisma — documentarlo en el reporte.
+
+## Reporte de tarea
+
+Al finalizar cada tarea incluir:
+
+1. **Archivos modificados** (lista con ruta completa)
+2. **Validaciones ejecutadas** y resultado
+3. **Riesgos** o efectos secundarios identificados
+4. **Migraciones** creadas (si aplica)
