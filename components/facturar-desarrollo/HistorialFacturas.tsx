@@ -267,7 +267,7 @@ export const HistorialFacturas = forwardRef<HistorialHandle, {
                           <td className="px-3 py-2 text-slate-700">{d.socio.nombre}</td>
                           <td className="px-3 py-2 text-right text-slate-700">{d.porcentaje}%</td>
                           <td className="px-3 py-2 text-right font-semibold text-slate-950">
-                            ${fmt(issuesModal.tipoCambio > 0 ? d.montoUYU / issuesModal.tipoCambio : 0)}
+                            ${fmt((issuesModal.totalUSD * d.porcentaje) / 100)}
                           </td>
                         </tr>
                       ))}
