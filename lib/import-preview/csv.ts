@@ -26,6 +26,21 @@ export function parseSemicolonCsv(input: string): ParsedCsv {
   return { headers, rows }
 }
 
+export function serializeSemicolonCsv(headers: string[], rows: Record<string, string>[]): string {
+  function escapeField(value: string): string {
+    if (/[;"'\n\r]/.test(value)) {
+      return '"' + value.replace(/"/g, '""') + '"'
+    }
+    return value
+  }
+
+  const lines: string[] = [headers.map(escapeField).join(';')]
+  for (const row of rows) {
+    lines.push(headers.map((h) => escapeField(row[h] ?? '')).join(';'))
+  }
+  return lines.join('\n')
+}
+
 function parseRecords(input: string) {
   const records: string[][] = []
   let record: string[] = []
