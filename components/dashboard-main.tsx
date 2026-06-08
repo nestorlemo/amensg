@@ -15,6 +15,8 @@ type Stats = {
   activeImports: number
   importsThisMonth: number
   activeEmpresas: number
+  periodoActivo: { anio: number; mes: number }
+  ultimoCierre: { anio: number; mes: number } | null
 }
 
 type Resumen = {
@@ -130,6 +132,32 @@ export function DashboardMain() {
       <DashboardHeader
         subtitle="Sistema de facturación mensual de activaciones"
       />
+
+      {stats?.periodoActivo && (
+        <div
+          className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md px-4 py-2.5 text-xs font-medium"
+          style={{ background: '#EEF4FF', borderLeft: '3px solid #1769E0', color: '#1769E0' }}
+        >
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: '#1769E0' }} />
+            Período activo: <strong>{MESES_LARGO[stats.periodoActivo.mes - 1]} {stats.periodoActivo.anio}</strong>
+          </span>
+          {stats.ultimoCierre && (
+            <>
+              <span style={{ color: '#93b4e8' }}>|</span>
+              <span>Último cierre: {MESES_LARGO[stats.ultimoCierre.mes - 1]} {stats.ultimoCierre.anio}</span>
+            </>
+          )}
+          <span style={{ color: '#93b4e8' }}>|</span>
+          <Link
+            href={`/liquidaciones?anio=${stats.periodoActivo.anio}&mes=${stats.periodoActivo.mes}`}
+            className="font-semibold hover:underline"
+            style={{ color: '#1769E0' }}
+          >
+            Ver liquidación →
+          </Link>
+        </div>
+      )}
 
       <section>
         <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest" style={{ color: MUTED }}>

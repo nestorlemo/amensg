@@ -46,19 +46,26 @@ export async function GET(request: Request) {
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-  const [pendingCobros, cobrosVencidos, activeImports, importsThisMonth, activeEmpresas] = await Promise.all([
+  const [pendingCobros, cobrosVencidos, activeImports, importsThisMonth, activeEmpresas, ultimoCierre] = await Promise.all([
     prisma.cobro.count({ where: { estado: 'FACTURADO' } }),
     prisma.cobro.count({ where: { estado: 'FACTURADO', creadoEn: { lt: thirtyDaysAgo } } }),
-    prisma.importacionActivacion.count({
-      where: { estado: 'ACTIVA' },
-    }),
-    prisma.importacionActivacion.count({
-      where: { estado: 'ACTIVA', creadaEn: { gte: startOfMonth } },
-    }),
-    prisma.empresa.count({
-      where: { activa: true },
+    prisma.importacionActivacion.count({ where: { estado: 'ACTIVA' } }),
+    prisma.importacionActivacion.count({ where: { estado: 'ACTIVA', creadaEn: { gte: startOfMonth } } }),
+    prisma.empresa.count({ where: { activa: true } }),
+    prisma.cierreMensual.findFirst({
+      where: { estado: 'CERRADO' },
+      orderBy: [{ anio: 'desc' }, { mes: 'desc' }],
+      select: { anio: true, mes: true },
     }),
   ])
 
-  return NextResponse.json({ pendingCobros, cobrosVencidos, activeImports, importsThisMonth, activeEmpresas })
+  const periodoActivo = ultimoCierre
+    ? { anio: ultimoCierre.mes === 12 ? ultimoCierre.anio + 1 : ultimoCierre.anio, mes: ultimoCierre.mes === 12 ? 1 : ultimoCierre.mes + 1 }
+    : { anio: new Date().getFullYear(), mes: new Date().getMonth() + 1 }
+
+  return NextResponse.json({
+    pendingCobros, cobrosVencidos, activeImports, importsThisMonth, activeEmpresas,
+    periodoActivo,
+    ultimoCierre: ultimoCierre ?? null,
+  })
 }
