@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 
   const where: Record<string, unknown> = {
     estado: 'COBRADO',
-    transferencias: { none: {} },
+    transferenciaCobros: { none: {} },
   }
   if (empresaId) where.empresaId = empresaId
   if (fechaDesde || fechaHasta) {
