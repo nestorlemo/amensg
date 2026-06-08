@@ -6,6 +6,14 @@ import { ConfirmarCobroModal } from '@/components/confirmar-cobro-modal'
 
 import { EmpresaOption, FacturaHistorial, fmt, formatDate } from './types'
 
+const ESTADO_BADGE: Record<string, string> = {
+  PENDIENTE:     'bg-slate-100 text-slate-700',
+  EN_DESARROLLO: 'bg-blue-100 text-blue-800',
+  EN_TEST:       'bg-yellow-100 text-yellow-800',
+  EN_PRODUCCION: 'bg-emerald-100 text-emerald-800',
+  CANCELADO:     'bg-red-100 text-red-700',
+}
+
 export type HistorialHandle = { refresh: () => void }
 
 export const HistorialFacturas = forwardRef<HistorialHandle, {
@@ -234,48 +242,57 @@ export const HistorialFacturas = forwardRef<HistorialHandle, {
 
       {issuesModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="mb-4 text-base font-semibold text-slate-950">
-              Issues facturados — {issuesModal.empresa.nombre} {String(issuesModal.mes).padStart(2, '0')}/{issuesModal.anio}
-            </h2>
+          <div className="w-full max-w-3xl rounded-2xl overflow-hidden bg-white shadow-xl">
+            {/* Header */}
+            <div className="px-6 py-5" style={{ background: 'var(--gradient-header)' }}>
+              <h2 className="text-base font-semibold text-white">
+                Issues facturados — {issuesModal.empresa.nombre} {String(issuesModal.mes).padStart(2, '0')}/{issuesModal.anio}
+              </h2>
+            </div>
+            {/* Table */}
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
-                <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
+                <thead style={{ background: '#1F3864' }}>
                   <tr>
-                    <th className="px-4 py-3 text-left">Fecha prod.</th>
-                    <th className="px-4 py-3 text-left">Descripción</th>
-                    <th className="px-4 py-3 text-right">Horas</th>
-                    <th className="px-4 py-3 text-left">Estado</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">Fecha prod.</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">Descripción</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-white">Horas</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">Estado</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {issuesModal.issues.map((issue) => (
-                    <tr key={issue.id} className="hover:bg-slate-50">
+                  {issuesModal.issues.map((issue, idx) => (
+                    <tr key={issue.id} className={`hover:bg-blue-50 ${idx % 2 === 1 ? 'bg-slate-50' : 'bg-white'}`}>
                       <td className="whitespace-nowrap px-4 py-3 text-slate-600">
                         {issue.fechaProduccion ? formatDate(issue.fechaProduccion) : '—'}
                       </td>
-                      <td className="px-4 py-3 text-slate-700">
-                        <span className="block max-w-sm truncate" title={issue.descripcion}>{issue.descripcion}</span>
+                      <td className="px-4 py-3 text-slate-700 break-words max-w-xs">
+                        {issue.descripcion}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right text-slate-700">{issue.totalHoras}h</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-right text-slate-700">
+                        {Number(issue.totalHoras).toFixed(2).replace(/\.?0+$/, '')}h
+                      </td>
                       <td className="whitespace-nowrap px-4 py-3">
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${ESTADO_BADGE[issue.estado] ?? 'bg-slate-100 text-slate-700'}`}>
                           {issue.estado.replace(/_/g, ' ')}
                         </span>
                       </td>
                     </tr>
                   ))}
-                  <tr className="bg-slate-50 font-semibold">
-                    <td className="px-4 py-3 text-slate-700" colSpan={2}>Total horas</td>
-                    <td className="px-4 py-3 text-right text-slate-950">
-                      {issuesModal.issues.reduce((s, i) => s + i.totalHoras, 0)}h
+                  <tr className="font-semibold" style={{ background: '#1F3864' }}>
+                    <td className="px-4 py-3 text-white" colSpan={2}>Total horas</td>
+                    <td className="px-4 py-3 text-right text-white">
+                      {(() => {
+                        const t = issuesModal.issues.reduce((s, i) => s + i.totalHoras, 0)
+                        return `${parseFloat(t.toFixed(2))}h`
+                      })()}
                     </td>
                     <td />
                   </tr>
                 </tbody>
               </table>
             </div>
-            <div className="mt-4 flex justify-end">
+            <div className="flex justify-end px-6 py-4">
               <button
                 className="h-9 rounded-md border border-slate-300 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 onClick={() => setIssuesModal(null)}
