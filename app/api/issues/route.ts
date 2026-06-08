@@ -39,20 +39,32 @@ export async function GET(request: Request) {
   if (facturacion === 'sin_facturar') where.facturaIssues = { none: {} }
   if (facturacion === 'facturado')    where.facturaIssues = { some: {} }
 
-  const issues = await prisma.issue.findMany({
-    where,
-    include: {
-      empresa: { select: { id: true, nombre: true } },
-      facturaIssues: { select: { facturaId: true } },
-    },
-    orderBy: [{ fecha: 'desc' }, { creadoEn: 'desc' }],
-  })
+  const page     = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
+  const pageSize = 50
+
+  const [issues, total] = await Promise.all([
+    prisma.issue.findMany({
+      where,
+      include: {
+        empresa: { select: { id: true, nombre: true } },
+        facturaIssues: { select: { facturaId: true } },
+      },
+      orderBy: [{ fecha: 'desc' }, { creadoEn: 'desc' }],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.issue.count({ where }),
+  ])
 
   return NextResponse.json({
     issues: issues.map((issue) => ({
       ...serializeIssue(issue),
       facturado: issue.facturaIssues.length > 0,
     })),
+    total,
+    page,
+    pageSize,
+    totalPages: Math.ceil(total / pageSize),
   })
 }
 

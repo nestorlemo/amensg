@@ -32,6 +32,15 @@ export default function IssuesPage() {
   const [config, setConfig]     = useState<IssueConfig>({ porcentajeTest: 30, porcentajeRework: 15, valorHoraUSD: 0 })
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState<string | null>(null)
+
+  // Pagination
+  const [page, setPage]           = useState(1)
+  const [total, setTotal]         = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const PAGE_SIZE = 50
+
+  // Stats (all issues, not just current page)
+  const [stats, setStats] = useState<{ total: number; enProduccion: number; totalHoras: number } | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingIssue, setEditingIssue] = useState<Issue | null>(null)
   const [cancelPending, setCancelPending]       = useState<Issue | null>(null)
@@ -64,11 +73,21 @@ export default function IssuesPage() {
       .then((r) => r.json())
       .then((d: IssueConfig) => setConfig(d))
       .catch(() => null)
-  }, [])
+    void fetchStats()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { void fetchAll() }, [fEstado, fEmpresa, fSistema, fDesde, fHasta, fFacturacion]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setPage(1) }, [fEstado, fEmpresa, fSistema, fDesde, fHasta, fFacturacion]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function fetchAll() {
+  useEffect(() => { void fetchAll(page) }, [page, fEstado, fEmpresa, fSistema, fDesde, fHasta, fFacturacion]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function fetchStats() {
+    try {
+      const data = await fetch('/api/issues/stats').then((r) => r.json())
+      setStats(data)
+    } catch { /* leave null */ }
+  }
+
+  async function fetchAll(p = page) {
     setLoading(true)
     try {
       const qs = new URLSearchParams()
@@ -78,9 +97,12 @@ export default function IssuesPage() {
       if (fDesde)       qs.set('fechaDesde',  fDesde)
       if (fHasta)       qs.set('fechaHasta',  fHasta)
       if (fFacturacion) qs.set('facturacion', fFacturacion)
+      qs.set('page', String(p))
       const res  = await fetch(`/api/issues?${qs}`)
       const data = await res.json()
       setIssues(data.issues ?? [])
+      setTotal(data.total ?? 0)
+      setTotalPages(data.totalPages ?? 1)
     } catch {
       setError('Error al cargar issues.')
     } finally {
@@ -112,6 +134,7 @@ export default function IssuesPage() {
       setShowForm(false)
       setForm({ ...EMPTY_FORM, fecha: todayISO })
       void fetchAll()
+      void fetchStats()
     } finally {
       setSaving(false)
     }
@@ -132,6 +155,7 @@ export default function IssuesPage() {
       body: JSON.stringify({ estado: nuevoEstado, fechaProduccion: null }),
     })
     void fetchAll()
+    void fetchStats()
   }
 
   async function handleConfirmProduccion(id: string, fechaProduccion: string) {
@@ -142,6 +166,7 @@ export default function IssuesPage() {
     })
     setProduccionPending(null)
     void fetchAll()
+    void fetchStats()
   }
 
   async function handleConfirmCancel(id: string, motivoCancelacion: string) {
@@ -152,6 +177,7 @@ export default function IssuesPage() {
     })
     setCancelPending(null)
     void fetchAll()
+    void fetchStats()
   }
 
   function handleEditSaved(updated: Issue) {
@@ -167,11 +193,10 @@ export default function IssuesPage() {
       return
     }
     void fetchAll()
+    void fetchStats()
   }
 
-  const enProduccion     = issues.filter((i) => i.estado === 'EN_PRODUCCION')
-  const totalHorasMes    = enProduccion.reduce((s, i) => s + i.totalHoras, 0)
-  const montoEstimadoMes = Math.round(totalHorasMes * config.valorHoraUSD * 100) / 100
+  const montoEstimadoMes = Math.round((stats?.totalHoras ?? 0) * config.valorHoraUSD * 100) / 100
 
   return (
     <div className="space-y-6">
@@ -179,9 +204,9 @@ export default function IssuesPage() {
 
       {/* Resumen */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <SummaryCard label="Issues totales"       value={String(issues.length)} />
-        <SummaryCard label="En producción"        value={String(enProduccion.length)} />
-        <SummaryCard label="Horas en producción"  value={`${totalHorasMes.toFixed(1)}h`} />
+        <SummaryCard label="Issues totales"       value={stats ? String(stats.total) : '—'} />
+        <SummaryCard label="En producción"        value={stats ? String(stats.enProduccion) : '—'} />
+        <SummaryCard label="Horas en producción"  value={stats ? `${stats.totalHoras.toFixed(1)}h` : '—'} />
         <SummaryCard
           label={`Monto est. (USD ${config.valorHoraUSD > 0 ? `$${config.valorHoraUSD}` : 'sin configurar'})`}
           value={montoEstimadoMes > 0 ? `$${montoEstimadoMes.toFixed(2)}` : '—'}
@@ -436,6 +461,34 @@ export default function IssuesPage() {
           </table>
         </div>
       </section>
+
+      {/* Paginación */}
+      {totalPages > 1 || total > 0 ? (
+        <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-5 py-3">
+          <p className="text-sm text-slate-500">
+            Mostrando {total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} de {total} issues
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              className="h-8 rounded-md border border-slate-300 px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+              type="button"
+            >
+              ← Anterior
+            </button>
+            <span className="text-sm text-slate-500">{page} / {totalPages}</span>
+            <button
+              className="h-8 rounded-md border border-slate-300 px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => p + 1)}
+              type="button"
+            >
+              Siguiente →
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {/* Produccion Modal */}
       {produccionPending ? (
