@@ -5,13 +5,24 @@ import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
 
-const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+const MESES     = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+const MESES_ABR = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 
-function concepto(tipo: string, anio: number, mes: number, empresaNombre: string) {
-  const mesNombre = MESES[mes - 1] ?? ''
-  if (tipo === 'ACTIVACIONES') return `Activaciones ${mesNombre} ${anio}`
-  if (tipo === 'DESARROLLO') return `Desarrollo ${mesNombre} ${anio} - ${empresaNombre}`
-  return `${tipo} ${mesNombre} ${anio}`
+function mesLabel(mes: number, abrev = false) {
+  return abrev ? (MESES_ABR[mes - 1] ?? '') : (MESES[mes - 1] ?? '')
+}
+
+function buildConcepto(tipo: string, meses: { anio: number; mes: number }[], empresaNombre?: string) {
+  const sorted = [...meses].sort((a, b) => a.anio !== b.anio ? a.anio - b.anio : a.mes - b.mes)
+  const first = sorted[0]!
+  const last  = sorted[sorted.length - 1]!
+  const label = tipo === 'ACTIVACIONES' ? 'Activaciones'
+    : tipo === 'DESARROLLO' ? `Desarrollo${empresaNombre ? ` - ${empresaNombre}` : ''}`
+    : tipo
+
+  if (sorted.length === 1) return `${label} ${mesLabel(first.mes)} ${first.anio}`
+  if (first.anio === last.anio) return `${label} ${mesLabel(first.mes, true)}-${mesLabel(last.mes, true)} ${first.anio}`
+  return `${label} ${mesLabel(first.mes, true)} ${first.anio}-${mesLabel(last.mes, true)} ${last.anio}`
 }
 
 export async function GET(req: NextRequest) {
@@ -71,23 +82,26 @@ export async function POST(req: NextRequest) {
   if ('error' in auth) return auth.error
 
   const body = await req.json().catch(() => ({})) as Record<string, unknown>
-  const cobroId = typeof body.cobroId === 'string' ? body.cobroId : ''
-  if (!cobroId) return NextResponse.json({ error: 'cobroId es requerido.' }, { status: 422 })
+  const cobroIds = Array.isArray(body.cobroIds) ? (body.cobroIds as string[]) : []
+  if (cobroIds.length === 0) return NextResponse.json({ error: 'cobroIds es requerido.' }, { status: 422 })
 
-  // Check if transferencias already exist for this cobro
-  const existing = await prisma.transferencia.count({ where: { cobroId } })
-  if (existing > 0) return NextResponse.json({ error: 'Ya existen transferencias para este cobro.' }, { status: 409 })
+  // Verify none already have transferencias
+  const existingCount = await prisma.transferencia.count({ where: { cobroId: { in: cobroIds } } })
+  if (existingCount > 0) return NextResponse.json({ error: 'Algunos cobros ya tienen transferencias generadas.' }, { status: 409 })
 
-  const cobro = await prisma.cobro.findUnique({
-    where: { id: cobroId },
+  // Load all cobros with their distribuciones
+  const cobros = await prisma.cobro.findMany({
+    where: { id: { in: cobroIds } },
     include: {
       empresa: { select: { nombre: true } },
       facturaDesarrollo: { include: { distribuciones: { include: { socio: true } } } },
     },
   })
-  if (!cobro) return NextResponse.json({ error: 'Cobro no encontrado.' }, { status: 404 })
+  if (cobros.length === 0) return NextResponse.json({ error: 'Cobros no encontrados.' }, { status: 404 })
 
-  const conceptoStr = concepto(cobro.tipo, cobro.anio, cobro.mes, cobro.empresa.nombre)
+  // Split by moneda/tipo
+  const cobrosUYU = cobros.filter(c => c.moneda === 'UYU')
+  const cobrosUSD = cobros.filter(c => c.moneda === 'USD')
 
   type TransferenciaInput = {
     socioId: string
@@ -101,51 +115,77 @@ export async function POST(req: NextRequest) {
 
   const transferenciasData: TransferenciaInput[] = []
 
-  if (cobro.tipo === 'DESARROLLO' && cobro.facturaDesarrollo?.distribuciones?.length) {
-    const facturaUSD = Number(cobro.facturaDesarrollo.totalUSD)
-    for (const dist of cobro.facturaDesarrollo.distribuciones) {
-      const montoUSD = Math.round(facturaUSD * (Number(dist.porcentaje) / 100) * 100) / 100
-      const cuentas = dist.socio.cuentas as Record<string, string> | null
-      const cuentaDestino = cuentas?.usd ?? cuentas?.USD ?? null
-      transferenciasData.push({
-        socioId: dist.socioId,
-        cobroId,
-        moneda: 'USD',
-        monto: montoUSD,
-        cuentaDestino: cuentaDestino ?? null,
-        concepto: conceptoStr,
-        estado: 'PENDIENTE',
-      })
-    }
-  } else {
-    // ACTIVACIONES or ADICIONAL: distribute by socios activos porcentaje
+  // UYU group (ACTIVACIONES / ADICIONAL): distribute by socios activos porcentaje
+  if (cobrosUYU.length > 0) {
     const socios = await prisma.socio.findMany({
       where: { activo: true },
       select: { id: true, porcentajeParticipacion: true, cuentas: true },
     })
-    const montoBase = Number(cobro.montoSinIva)
+    const totalUYU = cobrosUYU.reduce((s, c) => s + Number(c.montoSinIva), 0)
+    const mesesUYU = cobrosUYU.map(c => ({ anio: c.anio, mes: c.mes }))
+    const tipoUYU  = cobrosUYU[0]!.tipo
+    const conceptoUYU = buildConcepto(tipoUYU, mesesUYU)
+    const refCobroId  = cobrosUYU[0]!.id
+
     for (const socio of socios) {
       const pct = Number(socio.porcentajeParticipacion)
       if (pct <= 0) continue
-      const monto = Math.round(montoBase * (pct / 100) * 100) / 100
+      const monto = Math.round(totalUYU * (pct / 100) * 100) / 100
       const cuentas = socio.cuentas as Record<string, string> | null
-      const cuentaDestino = cobro.moneda === 'USD'
-        ? (cuentas?.usd ?? cuentas?.USD ?? null)
-        : (cuentas?.pesos ?? cuentas?.UYU ?? null)
       transferenciasData.push({
         socioId: socio.id,
-        cobroId,
-        moneda: cobro.moneda,
+        cobroId: refCobroId,
+        moneda: 'UYU',
         monto,
-        cuentaDestino: cuentaDestino ?? null,
-        concepto: conceptoStr,
+        cuentaDestino: cuentas?.pesos ?? cuentas?.UYU ?? null,
+        concepto: conceptoUYU,
         estado: 'PENDIENTE',
       })
     }
   }
 
+  // USD group (DESARROLLO): use distribuciones from facturaDesarrollo
+  if (cobrosUSD.length > 0) {
+    // Aggregate monto per socio across all USD cobros
+    const montosBySocio = new Map<string, { monto: number; socio: { cuentas: unknown } }>()
+
+    for (const cobro of cobrosUSD) {
+      if (cobro.facturaDesarrollo?.distribuciones?.length) {
+        const facturaUSD = Number(cobro.facturaDesarrollo.totalUSD)
+        for (const dist of cobro.facturaDesarrollo.distribuciones) {
+          const montoUSD = Math.round(facturaUSD * (Number(dist.porcentaje) / 100) * 100) / 100
+          const existing = montosBySocio.get(dist.socioId)
+          montosBySocio.set(dist.socioId, {
+            monto: (existing?.monto ?? 0) + montoUSD,
+            socio: dist.socio,
+          })
+        }
+      }
+    }
+
+    if (montosBySocio.size > 0) {
+      const mesesUSD   = cobrosUSD.map(c => ({ anio: c.anio, mes: c.mes }))
+      const empresaUSD = cobrosUSD[0]!.empresa.nombre
+      const conceptoUSD = buildConcepto('DESARROLLO', mesesUSD, empresaUSD)
+      const refCobroId  = cobrosUSD[0]!.id
+
+      for (const [socioId, { monto, socio }] of montosBySocio.entries()) {
+        const cuentas = (socio as { cuentas: unknown }).cuentas as Record<string, string> | null
+        transferenciasData.push({
+          socioId,
+          cobroId: refCobroId,
+          moneda: 'USD',
+          monto: Math.round(monto * 100) / 100,
+          cuentaDestino: cuentas?.usd ?? cuentas?.USD ?? null,
+          concepto: conceptoUSD,
+          estado: 'PENDIENTE',
+        })
+      }
+    }
+  }
+
   if (transferenciasData.length === 0) {
-    return NextResponse.json({ error: 'No se encontraron socios o distribuciones para este cobro.' }, { status: 422 })
+    return NextResponse.json({ error: 'No se encontraron socios o distribuciones para los cobros seleccionados.' }, { status: 422 })
   }
 
   await prisma.transferencia.createMany({ data: transferenciasData })
@@ -154,9 +194,9 @@ export async function POST(req: NextRequest) {
     data: {
       usuarioId: auth.user.id,
       entidad: 'Transferencia',
-      entidadId: cobroId,
+      entidadId: cobroIds[0]!,
       accion: 'GENERAR_TRANSFERENCIAS',
-      detalle: { cobroId, tipo: cobro.tipo, cantidad: transferenciasData.length },
+      detalle: { cobroIds, cantidad: transferenciasData.length },
     },
   })
 

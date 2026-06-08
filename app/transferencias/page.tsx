@@ -159,19 +159,15 @@ export default function TransferenciasPage() {
     setError(null)
     setGenerando(true)
     try {
-      let lastError: string | null = null
-      for (const cobroId of selectedCobros) {
-        const res = await fetch('/api/transferencias', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cobroId }),
-        })
-        if (!res.ok) {
-          const d = await res.json() as { error?: string }
-          lastError = d.error ?? 'Error al generar transferencias.'
-        }
+      const res = await fetch('/api/transferencias', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cobroIds: Array.from(selectedCobros) }),
+      })
+      if (!res.ok) {
+        const d = await res.json() as { error?: string }
+        setError(d.error ?? 'Error al generar transferencias.')
       }
-      if (lastError) setError(lastError)
       await fetchCobros()
       await fetchTransferencias()
     } finally {
