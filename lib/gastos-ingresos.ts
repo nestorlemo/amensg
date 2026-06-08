@@ -375,10 +375,12 @@ export async function getIngresosAdicionales(params: SearchParamsInput) {
   const anio = numberParam(params, 'anio')
   const mes = numberParam(params, 'mes')
   const empresaId = stringParam(params, 'empresaId')
+  const moneda = stringParam(params, 'moneda')
   const where: Prisma.IngresoAdicionalWhereInput = {
     ...(anio ? { anio } : {}),
     ...(mes ? { mes } : {}),
     ...(empresaId ? { empresaId } : {}),
+    ...(moneda ? { moneda } : {}),
   }
 
   const [rows, empresas] = await Promise.all([
