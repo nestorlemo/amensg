@@ -38,6 +38,6 @@ export async function POST(request: Request) {
 
   const response = NextResponse.json({ ok: true })
   response.cookies.set('amensg_session', await createSessionCookie(user.id), sessionCookieOptions())
-  response.cookies.set('amensg_rol', user.rol, { ...sessionCookieOptions(), httpOnly: false })
+  response.cookies.set('amensg_rol', user.rol, sessionCookieOptions())
   return response
 }
