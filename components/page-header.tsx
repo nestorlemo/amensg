@@ -3,9 +3,10 @@ type PageHeaderProps = {
   title: string
   description?: string
   action?: React.ReactNode
+  statusDot?: boolean
 }
 
-export function PageHeader({ section, title, description, action }: PageHeaderProps) {
+export function PageHeader({ section, title, description, action, statusDot = false }: PageHeaderProps) {
   return (
     <header
       className="relative mb-6 overflow-hidden rounded-2xl px-8 py-7"
@@ -35,7 +36,7 @@ export function PageHeader({ section, title, description, action }: PageHeaderPr
         <div>
           <div className="mb-1 flex items-center gap-2">
             <span
-              className="inline-block h-2 w-2 rounded-full"
+              className={`inline-block h-2 w-2 rounded-full${statusDot ? ' animate-pulse' : ''}`}
               style={{ background: '#20E0B2', boxShadow: '0 0 6px #20E0B2' }}
             />
             <p
