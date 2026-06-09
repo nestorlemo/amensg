@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Bug, PlusCircle, ArrowRight } from 'lucide-react'
 
-import { DashboardHeader } from '@/components/dashboard-main'
 import { StatCard } from '@/components/ui/primitives'
+import { PageHeader } from '@/components/page-header'
 
 type IssuesStats = {
   pendientes: number
@@ -42,7 +42,12 @@ export function DashboardIssues() {
 
   return (
     <div className="space-y-8">
-      <DashboardHeader subtitle="Gestión de Issues — Sistema Logística" />
+      <PageHeader
+        section="SISTEMA ACTIVO"
+        title="Bienvenido a amensg"
+        description="Gestión de Issues — Sistema Logística"
+        statusDot
+      />
 
       <section>
         <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest" style={{ color: MUTED }}>

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 
 import { StatCard } from '@/components/ui/primitives'
+import { PageHeader } from '@/components/page-header'
 
 type Stats = {
   pendingCobros: number
@@ -129,8 +130,11 @@ export function DashboardMain() {
 
   return (
     <div className="space-y-8">
-      <DashboardHeader
-        subtitle="Sistema de facturación mensual de activaciones"
+      <PageHeader
+        section="SISTEMA ACTIVO"
+        title="Bienvenido a amensg"
+        description="Sistema de facturación mensual de activaciones"
+        statusDot
       />
 
       {stats?.periodoActivo && (
@@ -270,45 +274,3 @@ export function DashboardMain() {
   )
 }
 
-export function DashboardHeader({ subtitle }: { subtitle: string }) {
-  return (
-    <header
-      className="relative overflow-hidden rounded-2xl px-8 py-8"
-      style={{ background: 'var(--gradient-header)' }}
-    >
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'absolute', top: '-40px', right: '-40px',
-          width: '220px', height: '220px', borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(25,195,255,0.18) 0%, transparent 70%)',
-          pointerEvents: 'none',
-        }}
-      />
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'absolute', bottom: '-30px', left: '30%',
-          width: '160px', height: '160px', borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(32,224,178,0.12) 0%, transparent 70%)',
-          pointerEvents: 'none',
-        }}
-      />
-      <div className="relative mb-1 flex items-center gap-2">
-        <span
-          className="inline-block h-2 w-2 animate-pulse rounded-full"
-          style={{ background: '#20E0B2', boxShadow: '0 0 6px #20E0B2' }}
-        />
-        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.55)' }}>
-          Sistema activo
-        </p>
-      </div>
-      <h1 className="relative text-3xl font-bold text-white" style={{ letterSpacing: '-0.02em' }}>
-        Bienvenido a amensg
-      </h1>
-      <p className="relative mt-2 text-sm" style={{ color: 'rgba(255,255,255,0.65)' }}>
-        {subtitle}
-      </p>
-    </header>
-  )
-}
