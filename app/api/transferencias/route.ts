@@ -41,9 +41,13 @@ export async function GET(req: NextRequest) {
   if (estado)  where.estado  = estado
   if (moneda)  where.moneda  = moneda
   if (anio || mes) {
-    where.cobro = {
-      ...(anio ? { anio } : {}),
-      ...(mes  ? { mes  } : {}),
+    where.cobrosCobro = {
+      some: {
+        cobro: {
+          ...(anio ? { anio } : {}),
+          ...(mes  ? { mes  } : {}),
+        },
+      },
     }
   }
 
@@ -52,28 +56,60 @@ export async function GET(req: NextRequest) {
     include: {
       socio: { select: { id: true, nombre: true } },
       cobro: { select: { id: true, tipo: true, anio: true, mes: true, empresa: { select: { nombre: true } } } },
+      cobrosCobro: {
+        include: {
+          cobro: {
+            select: {
+              anio: true,
+              mes: true,
+              tipo: true,
+              empresa: { select: { nombre: true } },
+              montoSinIva: true,
+              moneda: true,
+            },
+          },
+        },
+      },
     },
     orderBy: [{ cobro: { anio: 'desc' } }, { cobro: { mes: 'desc' } }, { socio: { nombre: 'asc' } }],
   })
 
   return NextResponse.json({
-    transferencias: transferencias.map((t) => ({
-      id: t.id,
-      socioId: t.socioId,
-      socio: t.socio.nombre,
-      cobroId: t.cobroId,
-      cobroTipo: t.cobro.tipo,
-      cobroAnio: t.cobro.anio,
-      cobroMes: t.cobro.mes,
-      empresa: t.cobro.empresa.nombre,
-      moneda: t.moneda,
-      monto: t.monto.toString(),
-      cuentaDestino: t.cuentaDestino,
-      fecha: t.fecha?.toISOString() ?? null,
-      estado: t.estado,
-      concepto: t.concepto,
-      creadoEn: t.creadoEn.toISOString(),
-    })),
+    transferencias: transferencias.map((t) => {
+      const cobrosVinculados = t.cobrosCobro.map(tc => tc.cobro)
+      const sorted = [...cobrosVinculados].sort((a, b) =>
+        a.anio !== b.anio ? a.anio - b.anio : a.mes - b.mes,
+      )
+      const desde = sorted[0] ?? { anio: t.cobro.anio, mes: t.cobro.mes }
+      const hasta = sorted[sorted.length - 1] ?? desde
+
+      return {
+        id: t.id,
+        socioId: t.socioId,
+        socio: t.socio.nombre,
+        cobroId: t.cobroId,
+        cobroTipo: t.cobro.tipo,
+        cobroAnio: t.cobro.anio,
+        cobroMes: t.cobro.mes,
+        empresa: t.cobro.empresa.nombre,
+        moneda: t.moneda,
+        monto: t.monto.toString(),
+        cuentaDestino: t.cuentaDestino,
+        fecha: t.fecha?.toISOString() ?? null,
+        estado: t.estado,
+        concepto: t.concepto,
+        creadoEn: t.creadoEn.toISOString(),
+        periodoDesde: { anio: desde.anio, mes: desde.mes },
+        periodoHasta: { anio: hasta.anio, mes: hasta.mes },
+        cobrosDetalle: cobrosVinculados.map(c => ({
+          empresa: c.empresa.nombre,
+          tipo: c.tipo,
+          periodo: `${mesLabel(c.mes, true)} ${c.anio}`,
+          montoSinIva: c.montoSinIva.toString(),
+          moneda: c.moneda,
+        })),
+      }
+    }),
   })
 }
 

@@ -12,6 +12,14 @@ export type Cobro = {
   fechaCobro: string | null
 }
 
+export type CobroDetalle = {
+  empresa: string
+  tipo: string
+  periodo: string
+  montoSinIva: string
+  moneda: string
+}
+
 export type Transferencia = {
   id: string
   socioId: string
@@ -28,6 +36,9 @@ export type Transferencia = {
   estado: string
   concepto: string
   creadoEn: string
+  periodoDesde: { anio: number; mes: number }
+  periodoHasta: { anio: number; mes: number }
+  cobrosDetalle: CobroDetalle[]
 }
 
 export type Socio = { id: string; nombre: string }
