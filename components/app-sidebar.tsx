@@ -14,12 +14,12 @@ import { navigationItems } from '@/lib/navigation'
 import { PerfilModal } from '@/components/perfil-modal'
 
 function usePendingCobros() {
-  const [count, setCount] = useState(0)
+  const [count, setCount] = useState<number | null>(null)
   useEffect(() => {
     fetch('/api/dashboard/stats')
       .then(r => r.json())
       .then((d: { pendingCobros?: number }) => setCount(d.pendingCobros ?? 0))
-      .catch(() => {})
+      .catch(() => setCount(0))
   }, [])
   return count
 }
@@ -110,25 +110,29 @@ export function AppSidebar({ user, onClose }: { user: CurrentUser; onClose?: () 
               elements.push(<SectionDivider key="sec-admin" label="Administración" />)
             }
 
-            const isActive = item.href === '/'
-              ? pathname === '/'
+            // Use exact match for routes that are prefixes of sibling routes
+            const EXACT_MATCH_HREFS = new Set(['/cobros', '/cobros-unificado'])
+            const isActive = item.href === '/' || EXACT_MATCH_HREFS.has(item.href)
+              ? pathname === item.href
               : pathname === item.href || pathname.startsWith(item.href + '/')
 
             elements.push(
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-amensg-hover hover:text-amensg-blue"
-                style={isActive
-                  ? { background: 'var(--hover-bg)', color: 'var(--tech-blue)', fontWeight: 600, borderLeft: '3px solid var(--tech-blue)', paddingLeft: '9px' }
-                  : { color: 'var(--muted-text)' }
-                }
+                aria-current={isActive ? 'page' : undefined}
+                className={[
+                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-amensg-hover hover:text-amensg-blue',
+                  isActive
+                    ? 'bg-amensg-hover text-amensg-blue font-semibold border-l-[3px] border-amensg-blue !pl-[9px]'
+                    : 'font-medium text-amensg-muted',
+                ].join(' ')}
               >
                 {Icon ? <Icon size={16} className="shrink-0" /> : null}
                 <span className="flex-1">{item.label}</span>
-                {item.href === '/cobros-unificado' && pendingCobros > 0 ? (
+                {item.href === '/cobros-unificado' && pendingCobros !== null ? (
                   <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white leading-none">
-                    {pendingCobros > 99 ? '99+' : pendingCobros}
+                    {pendingCobros === 0 ? '' : pendingCobros > 99 ? '99+' : pendingCobros}
                   </span>
                 ) : null}
               </Link>
