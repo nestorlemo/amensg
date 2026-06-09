@@ -25,9 +25,8 @@ export function StatCard({
   const cfg = accentConfig[accent]
   return (
     <div
-      className="relative rounded-xl p-5"
+      className="relative rounded-xl bg-white p-5"
       style={{
-        background: '#ffffff',
         border: `1px solid ${cfg.border}`,
         boxShadow: '0 1px 4px rgba(23,105,224,0.06)',
       }}
@@ -40,16 +39,13 @@ export function StatCard({
           <Icon size={18} style={{ color: cfg.iconColor }} />
         </div>
       ) : null}
-      <p
-        className="text-xs font-semibold uppercase tracking-widest"
-        style={{ color: '#8ba3c7' }}
-      >
+      <p className="text-xs font-semibold uppercase tracking-widest text-amensg-subtle">
         {label}
       </p>
       {value === null ? (
-        <div className="mt-2 h-8 w-16 animate-pulse rounded-lg" style={{ background: '#F5F7FA' }} />
+        <div className="mt-2 h-8 w-16 animate-pulse rounded-lg bg-amensg-surface" />
       ) : (
-        <p className="mt-2 text-2xl font-bold" style={{ color: '#0B1F3A' }}>
+        <p className="mt-2 text-2xl font-bold text-amensg-navy">
           {value}
         </p>
       )}
@@ -60,8 +56,7 @@ export function StatCard({
 export function TableTh({ children, align }: { children: ReactNode; align?: 'right' | 'left' }) {
   return (
     <th
-      className={`whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wide ${align === 'right' ? 'text-right' : ''}`}
-      style={{ color: '#8ba3c7', background: '#F5F7FA' }}
+      className={`whitespace-nowrap bg-amensg-surface px-4 py-3 text-xs font-semibold uppercase tracking-wide text-amensg-subtle ${align === 'right' ? 'text-right' : ''}`}
     >
       {children}
     </th>
@@ -71,8 +66,7 @@ export function TableTh({ children, align }: { children: ReactNode; align?: 'rig
 export function TableTd({ children, colSpan, align }: { children: ReactNode; colSpan?: number; align?: 'right' }) {
   return (
     <td
-      className={`whitespace-nowrap px-4 py-3 text-sm ${align === 'right' ? 'text-right' : ''}`}
-      style={{ color: '#5a6a82' }}
+      className={`whitespace-nowrap px-4 py-3 text-sm text-amensg-muted ${align === 'right' ? 'text-right' : ''}`}
       colSpan={colSpan}
     >
       {children}
@@ -92,21 +86,17 @@ export function FilterTextInput({
   placeholder?: string
 }) {
   return (
-    <label className="block space-y-1 text-sm font-medium" style={{ color: '#0B1F3A' }}>
+    <label className="block space-y-1 text-sm font-medium text-amensg-navy">
       {label}
       <input
-        className="mt-1 h-10 w-full rounded-lg px-3 text-sm outline-none transition-all"
-        style={{
-          background: '#F5F7FA',
-          border: '1.5px solid #e6eefc',
-          color: '#0B1F3A',
-        }}
+        className="mt-1 h-10 w-full rounded-lg bg-amensg-surface px-3 text-sm text-amensg-navy outline-none transition-all"
+        style={{ border: '1.5px solid var(--border-col)' }}
         onFocus={(e) => {
           e.currentTarget.style.border = '1.5px solid #1769E0'
           e.currentTarget.style.boxShadow = '0 0 0 3px rgba(23,105,224,0.12)'
         }}
         onBlur={(e) => {
-          e.currentTarget.style.border = '1.5px solid #e6eefc'
+          e.currentTarget.style.border = '1.5px solid var(--border-col)'
           e.currentTarget.style.boxShadow = 'none'
         }}
         defaultValue={value}
