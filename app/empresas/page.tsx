@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { Building2, Plus, Pencil, ToggleLeft, ToggleRight, X, AlertTriangle } from 'lucide-react'
+import { Building2, Pencil, ToggleLeft, ToggleRight, X, AlertTriangle } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { Badge, Button, FilterInput } from '@/components/ui/index'
 
@@ -310,11 +310,6 @@ export default function EmpresasPage() {
         section="Configuración"
         title="Empresas"
         description={`${totalActivas} empresa${totalActivas !== 1 ? 's' : ''} activa${totalActivas !== 1 ? 's' : ''}`}
-        action={
-          <Button variant="primary" icon={<Plus size={16} />} onClick={() => { setShowNew(true); setNewError(null) }}>
-            Nueva empresa
-          </Button>
-        }
       />
 
       {/* Create form */}
@@ -340,6 +335,12 @@ export default function EmpresasPage() {
         className="overflow-x-auto rounded-2xl"
         style={{ background: '#ffffff', border: `1px solid ${BORDER}`, boxShadow: '0 1px 4px rgba(23,105,224,0.06)' }}
       >
+        {/* Card header with action */}
+        <div className="flex items-center justify-between border-b px-5 py-4" style={{ borderColor: BORDER }}>
+          <h2 className="text-sm font-semibold" style={{ color: TEXT }}>Empresas</h2>
+          <Button variant="primary" size="sm" onClick={() => { setShowNew(true); setNewError(null) }}>+ Nueva empresa</Button>
+        </div>
+
         {/* Search bar */}
         <div className="flex items-center gap-2 border-b px-4 py-3" style={{ borderColor: BORDER }}>
           <FilterInput

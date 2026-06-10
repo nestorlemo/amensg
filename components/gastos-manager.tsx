@@ -6,7 +6,7 @@ import { useState } from 'react'
 
 import { AlertError } from '@/components/alerts'
 import { DateInput } from '@/components/date-input'
-import { Badge, Button } from '@/components/ui/index'
+import { Badge, Button, ModalShell } from '@/components/ui/index'
 import { requestJson } from '@/lib/client-api'
 
 type Concepto = {
@@ -110,7 +110,7 @@ export function GastosFijosManager({ conceptos }: { conceptos: Concepto[] }) {
         <Field label="Nombre del concepto" name="nombre" placeholder="Alquiler, servicio, etc." required />
         <Field label="Monto mensual" name="monto" placeholder="0.00" required type="number" min="0" step="0.01" />
         <div className="flex items-end">
-          <Button variant="primary" type="submit">+ Nuevo concepto fijo</Button>
+          <Button variant="primary" type="submit">+ Nuevo gasto fijo</Button>
         </div>
         {formError ? <AlertError className="w-full">{formError}</AlertError> : null}
       </form>
@@ -221,31 +221,17 @@ export function GastosVariablesManager({
   conceptos: Concepto[]
   disabled?: boolean
 }) {
-  const router = useRouter()
-  const [error, setError] = useState<string | null>(null)
+  const [showNew, setShowNew] = useState(false)
   const variables = conceptos.filter((c) => c.tipo === 'VARIABLE' && c.activo)
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const form = event.currentTarget
-    const fd = new FormData(form)
-    const result = await apiFetch('/api/gastos', 'POST', {
-      conceptoId: fd.get('conceptoId'),
-      anio: fd.get('anio'),
-      mes: fd.get('mes'),
-      fecha: fd.get('fecha'),
-      importe: fd.get('importe'),
-      observaciones: fd.get('observaciones'),
-    })
-    if (result.ok === false) { setError(result.error); return }
-    setError(null)
-    form.reset()
-    router.refresh()
-  }
-
   return (
-    <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-6">
-      <h2 className="text-base font-semibold text-slate-950">Gastos variables</h2>
+    <>
+      <div className="flex items-center justify-between">
+        <span />
+        <Button variant="primary" size="sm" disabled={disabled} onClick={() => setShowNew(true)}>
+          + Nuevo gasto variable
+        </Button>
+      </div>
 
       {disabled ? (
         <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm font-medium text-amber-950">
@@ -253,22 +239,81 @@ export function GastosVariablesManager({
         </div>
       ) : null}
 
-      <form className="flex flex-wrap items-end gap-3 rounded-md border border-slate-100 bg-slate-50 p-3" onSubmit={handleSubmit}>
-        <ConceptSelect conceptos={variables} />
-        <Field label="Año" name="anio" placeholder="2026" required />
-        <Field label="Mes" name="mes" placeholder="6" required />
-        <label className="space-y-1 text-sm font-medium text-slate-700">
-          Fecha
-          <DateInput className="block h-9 w-full min-w-[120px] rounded-md border border-slate-300 px-2 text-sm" name="fecha" required />
+      {showNew ? (
+        <GastoVariableModal
+          conceptos={variables}
+          title="Nuevo gasto variable"
+          onClose={() => setShowNew(false)}
+        />
+      ) : null}
+    </>
+  )
+}
+
+function GastoVariableModal({
+  conceptos,
+  title,
+  initial,
+  gastoId,
+  onClose,
+}: {
+  conceptos: Concepto[]
+  title: string
+  initial?: { conceptoId: string; anio: string; mes: string; fecha: string; importe: string; observaciones: string }
+  gastoId?: string
+  onClose: () => void
+}) {
+  const router = useRouter()
+  const [saving, setSaving] = useState(false)
+  const [error, setError]   = useState<string | null>(null)
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const fd = new FormData(event.currentTarget)
+    setSaving(true)
+    setError(null)
+    const url    = gastoId ? `/api/gastos/${gastoId}` : '/api/gastos'
+    const method = gastoId ? 'PUT' : 'POST'
+    const result = await apiFetch(url, method, {
+      conceptoId:    fd.get('conceptoId'),
+      anio:          fd.get('anio'),
+      mes:           fd.get('mes'),
+      fecha:         fd.get('fecha'),
+      importe:       fd.get('importe'),
+      observaciones: fd.get('observaciones'),
+    })
+    setSaving(false)
+    if (result.ok === false) { setError(result.error); return }
+    router.refresh()
+    onClose()
+  }
+
+  return (
+    <ModalShell isOpen={true} onClose={onClose} title={title}>
+      <form className="space-y-4" onSubmit={handleSubmit}>
+        <label className="block space-y-1 text-sm font-medium text-slate-700">
+          Concepto
+          <select className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm" name="conceptoId" defaultValue={initial?.conceptoId}>
+            {conceptos.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+          </select>
         </label>
-        <Field label="Importe" min="0" name="importe" required step="0.01" type="number" />
-        <Field label="Observaciones" name="observaciones" />
-        <div className="flex items-end">
-          <Button variant="secondary" disabled={disabled} type="submit">Agregar gasto</Button>
+        <div className="grid grid-cols-2 gap-3">
+          <GField label="Año" name="anio" placeholder="2026" defaultValue={initial?.anio} required />
+          <GField label="Mes" name="mes" placeholder="6" defaultValue={initial?.mes} required />
         </div>
-        {error ? <AlertError className="w-full">{error}</AlertError> : null}
+        <label className="block space-y-1 text-sm font-medium text-slate-700">
+          Fecha
+          <DateInput className="mt-1 block h-10 w-full rounded-md border border-slate-300 px-3 text-sm" name="fecha" defaultValue={initial?.fecha} required />
+        </label>
+        <GField label="Importe S/IVA" name="importe" type="number" min="0" step="0.01" defaultValue={initial?.importe} required />
+        <GField label="Observaciones" name="observaciones" defaultValue={initial?.observaciones} />
+        {error ? <AlertError>{error}</AlertError> : null}
+        <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
+          <Button variant="ghost" onClick={onClose} type="button">Cancelar</Button>
+          <Button variant="primary" disabled={saving} type="submit">{saving ? 'Guardando…' : (gastoId ? 'Guardar' : 'Agregar')}</Button>
+        </div>
       </form>
-    </section>
+    </ModalShell>
   )
 }
 
@@ -282,23 +327,9 @@ export function GastoRowActions({
   gasto: Gasto
 }) {
   const router = useRouter()
-  const [error, setError] = useState<string | null>(null)
+  const [showEdit, setShowEdit] = useState(false)
+  const [error, setError]       = useState<string | null>(null)
   const variables = conceptos.filter((c) => c.tipo === 'VARIABLE')
-
-  async function update(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const fd = new FormData(event.currentTarget)
-    const result = await apiFetch(`/api/gastos/${gasto.id}`, 'PUT', {
-      conceptoId: fd.get('conceptoId'),
-      anio: fd.get('anio'),
-      mes: fd.get('mes'),
-      fecha: fd.get('fecha'),
-      importe: fd.get('importe'),
-      observaciones: fd.get('observaciones'),
-    })
-    if (result.ok === false) { setError(result.error); return }
-    router.refresh()
-  }
 
   async function remove() {
     const result = await apiFetch(`/api/gastos/${gasto.id}`, 'DELETE', null)
@@ -307,17 +338,27 @@ export function GastoRowActions({
   }
 
   return (
-    <form className="grid min-w-96 gap-2 md:grid-cols-3" onSubmit={update}>
-      <ConceptSelect conceptos={variables} defaultValue={gasto.conceptoId} disabled={disabled} compact />
-      <input className="h-9 rounded-md border border-slate-300 px-2 text-sm disabled:bg-slate-100" defaultValue={gasto.anio} disabled={disabled} name="anio" />
-      <input className="h-9 rounded-md border border-slate-300 px-2 text-sm disabled:bg-slate-100" defaultValue={gasto.mes} disabled={disabled} name="mes" />
-      <DateInput className="h-9 rounded-md border border-slate-300 px-2 text-sm disabled:bg-slate-100" defaultValue={gasto.fecha?.slice(0, 10)} disabled={disabled} name="fecha" />
-      <input className="h-9 rounded-md border border-slate-300 px-2 text-sm disabled:bg-slate-100" defaultValue={gasto.importe} disabled={disabled} name="importe" />
-      <input className="h-9 rounded-md border border-slate-300 px-2 text-sm disabled:bg-slate-100" defaultValue={gasto.observaciones ?? ''} disabled={disabled} name="observaciones" placeholder="Observaciones" />
-      <Button variant="secondary" disabled={disabled} type="submit">Guardar</Button>
-      <Button variant="danger" disabled={disabled} onClick={remove} type="button">Eliminar</Button>
-      {error ? <AlertError className="md:col-span-3">{error}</AlertError> : null}
-    </form>
+    <div className="flex items-center gap-2">
+      <Button variant="outline" size="sm" disabled={disabled} onClick={() => setShowEdit(true)}>Editar</Button>
+      <Button variant="danger" size="sm" disabled={disabled} onClick={() => void remove()}>Eliminar</Button>
+      {error ? <span className="text-xs text-red-600">{error}</span> : null}
+      {showEdit ? (
+        <GastoVariableModal
+          conceptos={variables}
+          title="Editar gasto variable"
+          gastoId={gasto.id}
+          initial={{
+            conceptoId:    gasto.conceptoId,
+            anio:          String(gasto.anio),
+            mes:           String(gasto.mes),
+            fecha:         gasto.fecha?.slice(0, 10) ?? '',
+            importe:       gasto.importe,
+            observaciones: gasto.observaciones ?? '',
+          }}
+          onClose={() => setShowEdit(false)}
+        />
+      ) : null}
+    </div>
   )
 }
 
@@ -332,6 +373,15 @@ export function GastoForm({ conceptos, disabled = false }: { conceptos: Concepto
 }
 
 // ─── Helpers UI ───────────────────────────────────────────────────────────────
+
+function GField({ label, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) {
+  return (
+    <label className="block space-y-1 text-sm font-medium text-slate-700">
+      {label}
+      <input className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm" {...props} />
+    </label>
+  )
+}
 
 function Field({
   defaultValue,
