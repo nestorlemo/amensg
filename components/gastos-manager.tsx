@@ -6,6 +6,7 @@ import { useState } from 'react'
 
 import { AlertError } from '@/components/alerts'
 import { DateInput } from '@/components/date-input'
+import { Button } from '@/components/ui/index'
 import { requestJson } from '@/lib/client-api'
 
 type Concepto = {
@@ -109,13 +110,7 @@ export function GastosFijosManager({ conceptos }: { conceptos: Concepto[] }) {
         <Field label="Nombre del concepto" name="nombre" placeholder="Alquiler, servicio, etc." required />
         <Field label="Monto mensual" name="monto" placeholder="0.00" required type="number" min="0" step="0.01" />
         <div className="flex items-end">
-          <button
-            className="h-9 rounded-md px-4 text-sm font-semibold text-white"
-            style={{ background: 'linear-gradient(135deg,#1769E0,#19C3FF)' }}
-            type="submit"
-          >
-            + Nuevo concepto fijo
-          </button>
+          <Button variant="primary" type="submit">+ Nuevo concepto fijo</Button>
         </div>
         {formError ? <AlertError className="w-full">{formError}</AlertError> : null}
       </form>
@@ -187,8 +182,8 @@ function ConceptoFijoRow({ concepto }: { concepto: Concepto }) {
             <Field defaultValue={concepto.nombre} label="Nombre" name="nombre" required />
             <Field defaultValue={concepto.monto ?? ''} label="Monto" min="0" name="monto" required step="0.01" type="number" />
             <div className="flex gap-2">
-              <button className="h-9 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white" type="submit">Guardar</button>
-              <button className="h-9 rounded-md border border-slate-300 px-3 text-sm text-slate-700" onClick={() => { setEditing(false); setError(null) }} type="button">Cancelar</button>
+              <Button variant="secondary" type="submit">Guardar</Button>
+              <Button variant="ghost" onClick={() => { setEditing(false); setError(null) }} type="button">Cancelar</Button>
             </div>
             {error ? <AlertError className="w-full">{error}</AlertError> : null}
           </form>
@@ -208,10 +203,10 @@ function ConceptoFijoRow({ concepto }: { concepto: Concepto }) {
       </td>
       <td className="px-4 py-3">
         <div className="flex gap-2">
-          <button className="rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50" onClick={() => setEditing(true)} type="button">Editar</button>
-          <button className="rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50" onClick={handleToggle} type="button">
+          <Button variant="outline" size="sm" onClick={() => setEditing(true)} type="button">Editar</Button>
+          <Button variant="outline" size="sm" onClick={handleToggle} type="button">
             {concepto.activo ? 'Desactivar' : 'Activar'}
-          </button>
+          </Button>
         </div>
         {error ? <AlertError className="mt-1">{error}</AlertError> : null}
       </td>
@@ -271,13 +266,7 @@ export function GastosVariablesManager({
         <Field label="Importe" min="0" name="importe" required step="0.01" type="number" />
         <Field label="Observaciones" name="observaciones" />
         <div className="flex items-end">
-          <button
-            className="h-9 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={disabled}
-            type="submit"
-          >
-            Agregar gasto
-          </button>
+          <Button variant="secondary" disabled={disabled} type="submit">Agregar gasto</Button>
         </div>
         {error ? <AlertError className="w-full">{error}</AlertError> : null}
       </form>
@@ -327,8 +316,8 @@ export function GastoRowActions({
       <DateInput className="h-9 rounded-md border border-slate-300 px-2 text-sm disabled:bg-slate-100" defaultValue={gasto.fecha?.slice(0, 10)} disabled={disabled} name="fecha" />
       <input className="h-9 rounded-md border border-slate-300 px-2 text-sm disabled:bg-slate-100" defaultValue={gasto.importe} disabled={disabled} name="importe" />
       <input className="h-9 rounded-md border border-slate-300 px-2 text-sm disabled:bg-slate-100" defaultValue={gasto.observaciones ?? ''} disabled={disabled} name="observaciones" placeholder="Observaciones" />
-      <button className="rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={disabled} type="submit">Guardar</button>
-      <button className="rounded-md border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 disabled:cursor-not-allowed disabled:opacity-60" disabled={disabled} onClick={remove} type="button">Eliminar</button>
+      <Button variant="secondary" disabled={disabled} type="submit">Guardar</Button>
+      <Button variant="danger" disabled={disabled} onClick={remove} type="button">Eliminar</Button>
       {error ? <AlertError className="md:col-span-3">{error}</AlertError> : null}
     </form>
   )

@@ -4,15 +4,32 @@ import { useEffect, useState } from 'react'
 
 import { DateInput } from '@/components/date-input'
 import { PageHeader } from '@/components/page-header'
-import { CancelModal } from '@/components/issues/CancelModal'
-import { EditModal } from '@/components/issues/EditModal'
-import { PencilIcon, TrashIcon } from '@/components/issues/IssueIcons'
-import { ProduccionModal } from '@/components/issues/ProduccionModal'
-import {
-  ESTADOS, PRIORIDADES, SISTEMAS,
-  Issue, Empresa, IssueConfig, FormState,
-  EMPTY_FORM, calcHoras, ReadonlyField,
-} from '@/components/issues/types'
+import { Button } from '@/components/ui/index'
+
+const ESTADOS = ['PENDIENTE', 'EN_DESARROLLO', 'EN_TEST', 'EN_PRODUCCION', 'CANCELADO'] as const
+const PRIORIDADES = ['ALTA', 'MEDIA', 'BAJA'] as const
+const SISTEMAS = ['creditoamigo.com.py', 'agentesdeventas.com.uy', 'cargamas.com.uy', 'phonehouse.uy', 'todas']
+
+type Issue = {
+  id: string
+  fecha: string
+  descripcion: string
+  horasDesarrollo: number
+  horasTest: number
+  horasRework: number
+  totalHoras: number
+  estado: string
+  fechaProduccion: string | null
+  motivoCancelacion: string | null
+  reportadoPor: string
+  prioridad: string
+  empresa: { id: string; nombre: string } | null
+  sistema: string | null
+  facturado: boolean
+}
+
+type Empresa = { id: string; nombre: string }
+type IssueConfig = { porcentajeTest: number; porcentajeRework: number; valorHoraUSD: number }
 
 const ESTADO_BADGE: Record<string, string> = {
   PENDIENTE:     'bg-slate-100 text-slate-700',
@@ -22,6 +39,365 @@ const ESTADO_BADGE: Record<string, string> = {
   CANCELADO:     'bg-red-100 text-red-700',
 }
 
+const PRIORIDAD_BADGE: Record<string, string> = {
+  ALTA:  'bg-red-100 text-red-700',
+  MEDIA: 'bg-yellow-100 text-yellow-800',
+  BAJA:  'bg-slate-100 text-slate-600',
+}
+
+const EMPTY_FORM = {
+  fecha: '',
+  descripcion: '',
+  empresaId: '',
+  sistema: '',
+  horasDesarrollo: '',
+  prioridad: 'MEDIA',
+  estado: 'PENDIENTE',
+  reportadoPor: '',
+  fechaProduccion: '',
+}
+
+type FormState = typeof EMPTY_FORM
+
+function calcHoras(devStr: string, pctTest: number, pctRework: number) {
+  const dev    = parseFloat(devStr) || 0
+  const test   = Math.round(dev * pctTest   / 100 * 100) / 100
+  const rework = Math.round(dev * pctRework / 100 * 100) / 100
+  const total  = Math.round((dev + test + rework) * 100) / 100
+  return { dev, test, rework, total }
+}
+
+// ─── Produccion Modal ─────────────────────────────────────────────────────────
+
+function ProduccionModal({
+  issueId,
+  descripcion,
+  onConfirm,
+  onClose,
+}: {
+  issueId: string
+  descripcion: string
+  onConfirm: (id: string, fecha: string) => Promise<void>
+  onClose: () => void
+}) {
+  const [fecha, setFecha] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError]   = useState<string | null>(null)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!fecha) { setError('La fecha es requerida.'); return }
+    setSaving(true)
+    try {
+      await onConfirm(issueId, fecha)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-center md:p-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="max-h-[90vh] w-full overflow-y-auto rounded-t-2xl bg-white shadow-2xl md:max-h-[85vh] md:max-w-md md:rounded-2xl">
+        <div className="flex items-center justify-between rounded-t-2xl border-b border-slate-200 bg-slate-50 px-6 py-4">
+          <h2 className="text-base font-semibold text-slate-950">Fecha en producción</h2>
+          <Button variant="ghost" onClick={onClose} type="button">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </Button>
+        </div>
+        <form className="space-y-4 px-6 py-5" onSubmit={(e) => void handleSubmit(e)}>
+          <p className="text-sm text-slate-600">
+            Issue: <span className="font-medium text-slate-900">{descripcion.length > 80 ? `${descripcion.slice(0, 80)}…` : descripcion}</span>
+          </p>
+          <label className="block text-sm font-medium text-slate-700">
+            Fecha en producción <span className="text-red-500">*</span>
+            <DateInput
+              className="mt-1 block h-9 w-full rounded-md border border-slate-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              value={fecha}
+              onChange={(v) => { setFecha(v); setError(null) }}
+              required
+            />
+          </label>
+          {error ? <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
+          <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
+            <Button variant="outline" onClick={onClose} type="button">Volver</Button>
+            <Button variant="primary" disabled={saving} type="submit">
+              {saving ? 'Guardando…' : 'Confirmar'}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// ─── Cancel Modal ─────────────────────────────────────────────────────────────
+
+function CancelModal({
+  issueId,
+  descripcion,
+  onConfirm,
+  onClose,
+}: {
+  issueId: string
+  descripcion: string
+  onConfirm: (id: string, motivo: string) => Promise<void>
+  onClose: () => void
+}) {
+  const [motivo, setMotivo] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError]   = useState<string | null>(null)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!motivo.trim()) { setError('El motivo es requerido.'); return }
+    setSaving(true)
+    try {
+      await onConfirm(issueId, motivo.trim())
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-center md:p-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="max-h-[90vh] w-full overflow-y-auto rounded-t-2xl bg-white shadow-2xl md:max-h-[85vh] md:max-w-md md:rounded-2xl">
+        <div className="flex items-center justify-between rounded-t-2xl border-b border-slate-200 bg-slate-50 px-6 py-4">
+          <h2 className="text-base font-semibold text-slate-950">Cancelar issue</h2>
+          <Button variant="ghost" onClick={onClose} type="button">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </Button>
+        </div>
+        <form className="space-y-4 px-6 py-5" onSubmit={(e) => void handleSubmit(e)}>
+          <p className="text-sm text-slate-600">
+            Issue: <span className="font-medium text-slate-900">{descripcion.length > 80 ? `${descripcion.slice(0, 80)}…` : descripcion}</span>
+          </p>
+          <label className="block text-sm font-medium text-slate-700">
+            Motivo de cancelación <span className="text-red-500">*</span>
+            <textarea
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              rows={3}
+              value={motivo}
+              onChange={(e) => { setMotivo(e.target.value); setError(null) }}
+              autoFocus
+              required
+            />
+          </label>
+          {error ? <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
+          <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
+            <Button variant="outline" onClick={onClose} type="button">Volver</Button>
+            <Button variant="danger" disabled={saving} type="submit">
+              {saving ? 'Cancelando…' : 'Confirmar cancelación'}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// ─── Edit Modal ───────────────────────────────────────────────────────────────
+
+function EditModal({
+  issue,
+  empresas,
+  config,
+  onSave,
+  onClose,
+}: {
+  issue: Issue
+  empresas: Empresa[]
+  config: IssueConfig
+  onSave: (updated: Issue) => void
+  onClose: () => void
+}) {
+  const [form, setForm] = useState<FormState & { motivoCancelacion: string }>({
+    fecha:            issue.fecha,
+    descripcion:      issue.descripcion,
+    empresaId:        issue.empresa?.id ?? '',
+    sistema:          issue.sistema ?? '',
+    horasDesarrollo:  String(issue.horasDesarrollo),
+    prioridad:        issue.prioridad,
+    estado:           issue.estado,
+    reportadoPor:     issue.reportadoPor,
+    fechaProduccion:  issue.fechaProduccion ?? '',
+    motivoCancelacion: issue.motivoCancelacion ?? '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [error, setError]   = useState<string | null>(null)
+
+  const { dev, test, rework, total } = calcHoras(form.horasDesarrollo, config.porcentajeTest, config.porcentajeRework)
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    if (form.estado === 'CANCELADO' && !form.motivoCancelacion.trim()) {
+      setError('El motivo de cancelación es requerido.')
+      return
+    }
+    if (form.estado === 'EN_PRODUCCION' && !form.fechaProduccion) {
+      setError('La fecha en producción es requerida.')
+      return
+    }
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/issues/${issue.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fecha:            form.fecha,
+          descripcion:      form.descripcion,
+          empresaId:        form.empresaId || null,
+          sistema:          form.sistema || null,
+          horasDesarrollo:  dev,
+          horasTest:        test,
+          horasRework:      rework,
+          prioridad:        form.prioridad,
+          estado:           form.estado,
+          reportadoPor:     form.reportadoPor,
+          fechaProduccion:  form.estado === 'EN_PRODUCCION' ? form.fechaProduccion : null,
+          motivoCancelacion: form.estado === 'CANCELADO' ? form.motivoCancelacion.trim() : undefined,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.message ?? 'Error al guardar.'); return }
+      onSave(data as Issue)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const set = (key: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [key]: v }))
+
+  function handleEstadoEdit(nuevoEstado: string) {
+    setForm((f) => ({
+      ...f,
+      estado: nuevoEstado,
+      fechaProduccion: nuevoEstado === 'EN_PRODUCCION' ? '' : '',
+    }))
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-center md:p-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="max-h-[90vh] w-full overflow-y-auto rounded-t-2xl bg-white shadow-2xl md:max-h-[85vh] md:max-w-2xl md:rounded-2xl">
+        <div className="flex items-center justify-between rounded-t-2xl border-b border-slate-200 bg-slate-50 px-6 py-4">
+          <h2 className="text-base font-semibold text-slate-950">Editar issue</h2>
+          <Button variant="ghost" onClick={onClose} type="button">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </Button>
+        </div>
+
+        <form className="space-y-4 px-6 py-5" onSubmit={(e) => void handleSave(e)}>
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="block text-sm font-medium text-slate-700">
+              Fecha
+              <DateInput className="mt-1 block h-9 w-full rounded-md border border-slate-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" value={form.fecha} onChange={set('fecha')} required />
+            </label>
+            <MSelect label="Estado" value={form.estado} onChange={handleEstadoEdit}>
+              {ESTADOS.map((e) => <option key={e} value={e}>{e.replace(/_/g, ' ')}</option>)}
+            </MSelect>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700">
+              Descripción
+              <textarea
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                rows={3}
+                value={form.descripcion}
+                onChange={(e) => setForm((f) => ({ ...f, descripcion: e.target.value }))}
+                required
+              />
+            </label>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <MSelect label="Empresa" value={form.empresaId} onChange={set('empresaId')}>
+              <option value="">Sin empresa</option>
+              {empresas.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
+            </MSelect>
+            <MSelect label="Prioridad" value={form.prioridad} onChange={set('prioridad')}>
+              {PRIORIDADES.map((p) => <option key={p} value={p}>{p}</option>)}
+            </MSelect>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <MSelect label="Sistema" value={form.sistema} onChange={set('sistema')}>
+              <option value="">Sin sistema</option>
+              {SISTEMAS.map((s) => <option key={s} value={s}>{s}</option>)}
+            </MSelect>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <MInput
+              label="Horas desarrollo"
+              type="number"
+              step="0.25"
+              min="0"
+              value={form.horasDesarrollo}
+              onChange={set('horasDesarrollo')}
+              required
+            />
+            <MInput label="Reportado por" value={form.reportadoPor} onChange={set('reportadoPor')} required />
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <ReadonlyField label={`Test (${config.porcentajeTest}%)`}  value={dev > 0 ? `${test}h`   : '—'} />
+            <ReadonlyField label={`Rework (${config.porcentajeRework}%)`} value={dev > 0 ? `${rework}h` : '—'} />
+            <ReadonlyField label="Total horas" value={dev > 0 ? `${total}h` : '—'} highlight />
+          </div>
+
+          {form.estado === 'EN_PRODUCCION' ? (
+            <label className="block text-sm font-medium text-slate-700">
+              Fecha en producción <span className="text-red-500">*</span>
+              <DateInput className="mt-1 block h-9 w-full rounded-md border border-slate-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" value={form.fechaProduccion} onChange={set('fechaProduccion')} required />
+            </label>
+          ) : null}
+
+          {form.estado === 'CANCELADO' ? (
+            <label className="block text-sm font-medium text-slate-700">
+              Motivo de cancelación <span className="text-red-500">*</span>
+              <textarea
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                rows={2}
+                value={form.motivoCancelacion}
+                onChange={(e) => setForm((f) => ({ ...f, motivoCancelacion: e.target.value }))}
+                required
+              />
+            </label>
+          ) : null}
+
+          {error ? (
+            <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+          ) : null}
+
+          <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
+            <Button variant="outline" onClick={onClose} type="button">Cancelar</Button>
+            <Button variant="primary" disabled={saving} type="submit">
+              {saving ? 'Guardando…' : 'Guardar cambios'}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function IssuesPage() {
   const now = new Date()
@@ -32,15 +408,6 @@ export default function IssuesPage() {
   const [config, setConfig]     = useState<IssueConfig>({ porcentajeTest: 30, porcentajeRework: 15, valorHoraUSD: 0 })
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState<string | null>(null)
-
-  // Pagination
-  const [page, setPage]           = useState(1)
-  const [total, setTotal]         = useState(0)
-  const [totalPages, setTotalPages] = useState(1)
-  const PAGE_SIZE = 50
-
-  // Stats (all issues, not just current page)
-  const [stats, setStats] = useState<{ total: number; enProduccion: number; totalHoras: number } | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingIssue, setEditingIssue] = useState<Issue | null>(null)
   const [cancelPending, setCancelPending]       = useState<Issue | null>(null)
@@ -73,21 +440,11 @@ export default function IssuesPage() {
       .then((r) => r.json())
       .then((d: IssueConfig) => setConfig(d))
       .catch(() => null)
-    void fetchStats()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
-  useEffect(() => { setPage(1) }, [fEstado, fEmpresa, fSistema, fDesde, fHasta, fFacturacion]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void fetchAll() }, [fEstado, fEmpresa, fSistema, fDesde, fHasta, fFacturacion]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { void fetchAll(page) }, [page, fEstado, fEmpresa, fSistema, fDesde, fHasta, fFacturacion]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function fetchStats() {
-    try {
-      const data = await fetch('/api/issues/stats').then((r) => r.json())
-      setStats(data)
-    } catch { /* leave null */ }
-  }
-
-  async function fetchAll(p = page) {
+  async function fetchAll() {
     setLoading(true)
     try {
       const qs = new URLSearchParams()
@@ -97,12 +454,9 @@ export default function IssuesPage() {
       if (fDesde)       qs.set('fechaDesde',  fDesde)
       if (fHasta)       qs.set('fechaHasta',  fHasta)
       if (fFacturacion) qs.set('facturacion', fFacturacion)
-      qs.set('page', String(p))
       const res  = await fetch(`/api/issues?${qs}`)
       const data = await res.json()
       setIssues(data.issues ?? [])
-      setTotal(data.total ?? 0)
-      setTotalPages(data.totalPages ?? 1)
     } catch {
       setError('Error al cargar issues.')
     } finally {
@@ -134,7 +488,6 @@ export default function IssuesPage() {
       setShowForm(false)
       setForm({ ...EMPTY_FORM, fecha: todayISO })
       void fetchAll()
-      void fetchStats()
     } finally {
       setSaving(false)
     }
@@ -155,7 +508,6 @@ export default function IssuesPage() {
       body: JSON.stringify({ estado: nuevoEstado, fechaProduccion: null }),
     })
     void fetchAll()
-    void fetchStats()
   }
 
   async function handleConfirmProduccion(id: string, fechaProduccion: string) {
@@ -166,7 +518,6 @@ export default function IssuesPage() {
     })
     setProduccionPending(null)
     void fetchAll()
-    void fetchStats()
   }
 
   async function handleConfirmCancel(id: string, motivoCancelacion: string) {
@@ -177,7 +528,6 @@ export default function IssuesPage() {
     })
     setCancelPending(null)
     void fetchAll()
-    void fetchStats()
   }
 
   function handleEditSaved(updated: Issue) {
@@ -193,10 +543,11 @@ export default function IssuesPage() {
       return
     }
     void fetchAll()
-    void fetchStats()
   }
 
-  const montoEstimadoMes = Math.round((stats?.totalHoras ?? 0) * config.valorHoraUSD * 100) / 100
+  const enProduccion     = issues.filter((i) => i.estado === 'EN_PRODUCCION')
+  const totalHorasMes    = enProduccion.reduce((s, i) => s + i.totalHoras, 0)
+  const montoEstimadoMes = Math.round(totalHorasMes * config.valorHoraUSD * 100) / 100
 
   return (
     <div className="space-y-6">
@@ -204,9 +555,9 @@ export default function IssuesPage() {
 
       {/* Resumen */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <SummaryCard label="Issues totales"       value={stats ? String(stats.total) : '—'} />
-        <SummaryCard label="En producción"        value={stats ? String(stats.enProduccion) : '—'} />
-        <SummaryCard label="Horas en producción"  value={stats ? `${stats.totalHoras.toFixed(1)}h` : '—'} />
+        <SummaryCard label="Issues totales"       value={String(issues.length)} />
+        <SummaryCard label="En producción"        value={String(enProduccion.length)} />
+        <SummaryCard label="Horas en producción"  value={`${totalHorasMes.toFixed(1)}h`} />
         <SummaryCard
           label={`Monto est. (USD ${config.valorHoraUSD > 0 ? `$${config.valorHoraUSD}` : 'sin configurar'})`}
           value={montoEstimadoMes > 0 ? `$${montoEstimadoMes.toFixed(2)}` : '—'}
@@ -235,12 +586,7 @@ export default function IssuesPage() {
             <option value="facturado">Facturado</option>
           </Select>
           <div className="flex items-end">
-            <button
-              className="h-9 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white"
-              onClick={() => void fetchAll()}
-            >
-              Filtrar
-            </button>
+            <Button variant="secondary" onClick={() => void fetchAll()}>Filtrar</Button>
           </div>
         </div>
         {/* Fila 2: fechas + botones de acción */}
@@ -254,8 +600,8 @@ export default function IssuesPage() {
             <DateInput className="mt-1 block h-9 w-36 rounded-md border border-slate-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" value={fHasta} onChange={setFHasta} />
           </label>
           <div className="ml-auto flex items-end gap-3">
-            <button
-              className="h-9 rounded-md border border-emerald-600 px-4 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+            <Button
+              variant="outline"
               onClick={() => {
                 const qs = new URLSearchParams()
                 if (fEstado)      qs.set('estado',      fEstado)
@@ -268,13 +614,13 @@ export default function IssuesPage() {
               }}
             >
               Exportar Excel
-            </button>
-            <button
-              className="h-9 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white"
+            </Button>
+            <Button
+              variant={showForm ? 'ghost' : 'primary'}
               onClick={() => setShowForm((v) => !v)}
             >
               {showForm ? 'Cancelar' : '+ Nuevo issue'}
-            </button>
+            </Button>
           </div>
         </div>
       </section>
@@ -354,13 +700,9 @@ export default function IssuesPage() {
               <p className="md:col-span-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{formError}</p>
             ) : null}
             <div className="flex gap-2 md:col-span-3">
-              <button
-                className="h-9 rounded-md bg-blue-600 px-5 text-sm font-semibold text-white disabled:opacity-50"
-                disabled={saving}
-                type="submit"
-              >
+              <Button variant="primary" disabled={saving} type="submit">
                 {saving ? 'Guardando…' : 'Crear issue'}
-              </button>
+              </Button>
             </div>
           </form>
         </section>
@@ -368,7 +710,6 @@ export default function IssuesPage() {
 
       {/* Tabla */}
       {error ? <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
-      {total > 0 ? <PaginationBar page={page} total={total} totalPages={totalPages} pageSize={PAGE_SIZE} onPage={setPage} /> : null}
       <section className="rounded-xl border border-slate-200 bg-white">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
@@ -435,25 +776,25 @@ export default function IssuesPage() {
                   <Td>{issue.reportadoPor}</Td>
                   <Td>
                     <div className="flex items-center gap-2">
-                      <button
-                        className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:border-slate-400 hover:bg-slate-50"
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        icon={<PencilIcon />}
                         onClick={() => setEditingIssue(issue)}
-                        title="Editar issue"
                         type="button"
                       >
-                        <PencilIcon />
                         Editar
-                      </button>
-                      <button
-                        className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-600 hover:border-red-400 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        icon={<TrashIcon />}
                         disabled={issue.facturado}
                         onClick={() => !issue.facturado && void handleDelete(issue)}
-                        title={issue.facturado ? 'No se puede eliminar un issue facturado' : 'Eliminar issue'}
                         type="button"
                       >
-                        <TrashIcon />
                         Eliminar
-                      </button>
+                      </Button>
                     </div>
                   </Td>
                 </tr>
@@ -462,9 +803,6 @@ export default function IssuesPage() {
           </table>
         </div>
       </section>
-
-      {/* Paginación inferior */}
-      {total > 0 ? <PaginationBar page={page} total={total} totalPages={totalPages} pageSize={PAGE_SIZE} onPage={setPage} /> : null}
 
       {/* Produccion Modal */}
       {produccionPending ? (
@@ -500,38 +838,26 @@ export default function IssuesPage() {
   )
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── Icons ────────────────────────────────────────────────────────────────────
 
-function PaginationBar({ page, total, totalPages, pageSize, onPage }: {
-  page: number; total: number; totalPages: number; pageSize: number; onPage: (p: number) => void
-}) {
+function PencilIcon() {
   return (
-    <div className="flex items-center justify-end gap-4 rounded-xl border border-slate-200 bg-white px-5 py-3">
-      <p className="text-sm text-slate-500">
-        Mostrando {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} de {total} issues
-      </p>
-      <div className="flex items-center gap-2">
-        <button
-          className="h-8 rounded-md border border-slate-300 px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-          disabled={page <= 1}
-          onClick={() => onPage(page - 1)}
-          type="button"
-        >
-          ← Anterior
-        </button>
-        <span className="text-sm text-slate-500">{page} / {totalPages}</span>
-        <button
-          className="h-8 rounded-md border border-slate-300 px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-          disabled={page >= totalPages}
-          onClick={() => onPage(page + 1)}
-          type="button"
-        >
-          Siguiente →
-        </button>
-      </div>
-    </div>
+    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   )
 }
+
+function TrashIcon() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
 function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
@@ -567,6 +893,39 @@ function Input({
   )
 }
 
+function MInput({
+  label, value, onChange, type = 'text', step, min, required,
+}: {
+  label: string; value: string; onChange: (v: string) => void
+  type?: string; step?: string; min?: string; required?: boolean
+}) {
+  return (
+    <label className="block text-sm font-medium text-slate-700">
+      {label}
+      <input
+        className="mt-1 block h-9 w-full rounded-md border border-slate-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        type={type} value={value} onChange={(e) => onChange(e.target.value)}
+        step={step} min={min} required={required}
+      />
+    </label>
+  )
+}
+
+function ReadonlyField({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <label className="block text-sm font-medium text-slate-500">
+      {label}
+      <div className={`mt-1 flex h-9 w-full items-center rounded-md border px-3 text-sm font-semibold ${
+        highlight
+          ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+          : 'border-slate-200 bg-slate-100 text-slate-700'
+      }`}>
+        {value}
+      </div>
+    </label>
+  )
+}
+
 function Select({
   label, value, onChange, children, width = 'w-full',
 }: {
@@ -577,6 +936,25 @@ function Select({
       {label}
       <select
         className={`mt-1 block h-9 ${width} rounded-md border border-slate-300 px-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500`}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        {children}
+      </select>
+    </label>
+  )
+}
+
+function MSelect({
+  label, value, onChange, children,
+}: {
+  label: string; value: string; onChange: (v: string) => void; children: React.ReactNode
+}) {
+  return (
+    <label className="block text-sm font-medium text-slate-700">
+      {label}
+      <select
+        className="mt-1 block h-9 w-full rounded-md border border-slate-300 px-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >

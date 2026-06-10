@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { Building2, Plus, Search, Pencil, ToggleLeft, ToggleRight, X, AlertTriangle } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
+import { Button } from '@/components/ui/index'
 
 type Empresa = {
   id: string
@@ -139,22 +140,12 @@ function EmpresaForm({
       {error ? <p className="rounded-lg px-3 py-2 text-sm" style={{ background: 'rgba(239,68,68,0.08)', color: '#ef4444' }}>{error}</p> : null}
 
       <div className="flex gap-2 justify-end pt-1">
-        <button
-          className="h-10 rounded-xl px-4 text-sm font-semibold transition-colors"
-          style={{ background: SURFACE, color: '#5a6a82', border: `1px solid ${BORDER}` }}
-          type="button"
-          onClick={onCancel}
-        >
+        <Button variant="ghost" type="button" onClick={onCancel}>
           Cancelar
-        </button>
-        <button
-          className="h-10 rounded-xl px-5 text-sm font-semibold text-white disabled:opacity-60"
-          style={{ background: PRIMARY }}
-          disabled={loading || !form.nombre.trim()}
-          type="submit"
-        >
+        </Button>
+        <Button variant="primary" disabled={loading || !form.nombre.trim()} type="submit">
           {loading ? 'Guardando…' : submitLabel}
-        </button>
+        </Button>
       </div>
     </form>
   )
@@ -207,13 +198,9 @@ function EditPanel({
             <h2 className="text-lg font-bold" style={{ color: TEXT }}>Editar empresa</h2>
             <p className="text-sm" style={{ color: MUTED }}>{empresa.nombre}</p>
           </div>
-          <button
-            className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-[#F5F7FA]"
-            style={{ color: MUTED }}
-            onClick={onClose}
-          >
+          <Button variant="ghost" onClick={onClose}>
             <X size={16} />
-          </button>
+          </Button>
         </div>
         <EmpresaForm
           initial={initial}
@@ -240,20 +227,12 @@ function ConfirmToast({ empresa, onConfirm, onCancel }: {
     >
       <AlertTriangle size={18} style={{ color: '#fbbf24', flexShrink: 0 }} />
       <p className="flex-1 text-sm">¿Desactivar <strong>{empresa.nombre}</strong>?</p>
-      <button
-        className="rounded-lg px-3 py-1.5 text-xs font-semibold hover:opacity-80"
-        style={{ background: '#ef4444', color: 'white' }}
-        onClick={onConfirm}
-      >
+      <Button variant="danger" size="sm" onClick={onConfirm}>
         Desactivar
-      </button>
-      <button
-        className="rounded-lg px-3 py-1.5 text-xs font-semibold"
-        style={{ background: 'rgba(255,255,255,0.12)', color: 'white' }}
-        onClick={onCancel}
-      >
+      </Button>
+      <Button variant="ghost" size="sm" onClick={onCancel}>
         Cancelar
-      </button>
+      </Button>
     </div>
   )
 }
@@ -347,6 +326,11 @@ export default function EmpresasPage() {
         section="Configuración"
         title="Empresas"
         description={`${totalActivas} empresa${totalActivas !== 1 ? 's' : ''} activa${totalActivas !== 1 ? 's' : ''}`}
+        action={
+          <Button variant="primary" icon={<Plus size={16} />} onClick={() => { setShowNew(true); setNewError(null) }}>
+            Nueva empresa
+          </Button>
+        }
       />
 
       {/* Create form */}
@@ -372,19 +356,6 @@ export default function EmpresasPage() {
         className="overflow-x-auto rounded-2xl"
         style={{ background: '#ffffff', border: `1px solid ${BORDER}`, boxShadow: '0 1px 4px rgba(23,105,224,0.06)' }}
       >
-        {/* Card header */}
-        <div className="flex items-center justify-between border-b px-4 py-3" style={{ borderColor: BORDER }}>
-          <h2 className="text-base font-semibold" style={{ color: TEXT }}>Empresas</h2>
-          <button
-            className="h-9 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700 inline-flex items-center gap-2"
-            onClick={() => { setShowNew(true); setNewError(null) }}
-            type="button"
-          >
-            <Plus size={16} />
-            Nueva empresa
-          </button>
-        </div>
-
         {/* Search bar */}
         <div className="flex items-center gap-3 border-b px-4 py-3" style={{ borderColor: BORDER }}>
           <Search size={15} style={{ color: MUTED, flexShrink: 0 }} />
@@ -396,7 +367,7 @@ export default function EmpresasPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
           {search ? (
-            <button onClick={() => setSearch('')} style={{ color: MUTED }}><X size={14} /></button>
+            <Button variant="ghost" onClick={() => setSearch('')}><X size={14} /></Button>
           ) : null}
         </div>
 
@@ -418,9 +389,9 @@ export default function EmpresasPage() {
               {search ? 'Sin resultados para tu búsqueda' : 'No hay empresas registradas'}
             </p>
             {!search ? (
-              <button className="mt-1 text-sm font-semibold" style={{ color: PRIMARY }} onClick={() => setShowNew(true)}>
+              <Button variant="ghost" onClick={() => setShowNew(true)}>
                 Crear primera empresa →
-              </button>
+              </Button>
             ) : null}
           </div>
         ) : (
@@ -471,22 +442,12 @@ export default function EmpresasPage() {
                   {/* Acciones */}
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-1">
-                      <button
-                        className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-[#EEF4FF]"
-                        style={{ color: MUTED }}
-                        title="Editar empresa"
-                        onClick={() => setEditTarget(empresa)}
-                      >
+                      <Button variant="ghost" onClick={() => setEditTarget(empresa)}>
                         <Pencil size={14} />
-                      </button>
-                      <button
-                        className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-[#EEF4FF]"
-                        style={{ color: empresa.activa ? '#20E0B2' : MUTED }}
-                        title={empresa.activa ? 'Desactivar empresa' : 'Activar empresa'}
-                        onClick={() => handleToggle(empresa)}
-                      >
+                      </Button>
+                      <Button variant="ghost" onClick={() => handleToggle(empresa)}>
                         {empresa.activa ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>

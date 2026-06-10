@@ -1,8 +1,9 @@
 'use client'
+
 import type { ReactNode } from 'react'
 
 export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost'
-export type ButtonSize = 'sm' | 'md'
+export type ButtonSize    = 'sm' | 'md'
 
 const BASE = 'inline-flex items-center justify-center gap-1.5 font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 rounded-md'
 
@@ -21,23 +22,15 @@ const SIZE: Record<ButtonSize, string> = {
 
 function Spinner() {
   return (
-    <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+    <svg
+      className="h-4 w-4 animate-spin"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+      <path className="opacity-75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" fill="currentColor" />
     </svg>
   )
-}
-
-interface ButtonProps {
-  variant?: ButtonVariant
-  size?: ButtonSize
-  icon?: ReactNode
-  disabled?: boolean
-  loading?: boolean
-  onClick?: () => void
-  type?: 'button' | 'submit' | 'reset'
-  className?: string
-  children?: ReactNode
 }
 
 export function Button({
@@ -50,15 +43,25 @@ export function Button({
   type = 'button',
   className = '',
   children,
-}: ButtonProps) {
+}: {
+  variant?: ButtonVariant
+  size?: ButtonSize
+  icon?: ReactNode
+  disabled?: boolean
+  loading?: boolean
+  onClick?: () => void
+  type?: 'button' | 'submit' | 'reset'
+  className?: string
+  children?: ReactNode
+}) {
   return (
     <button
       type={type}
+      disabled={disabled ?? loading}
       onClick={onClick}
-      disabled={disabled || loading}
       className={`${BASE} ${VARIANT[variant]} ${SIZE[size]} ${className}`}
     >
-      {loading ? <Spinner /> : icon}
+      {loading ? <Spinner /> : icon ? icon : null}
       {children}
     </button>
   )
