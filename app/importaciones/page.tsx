@@ -120,12 +120,15 @@ export default function ImportacionesPage() {
         </label>
         <label className="space-y-1 text-sm font-medium text-slate-700">
           Estado
-          <input
+          <select
             className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
             value={pendingFilters.estado}
             onChange={(e) => setPendingFilters((f) => ({ ...f, estado: e.target.value }))}
-            placeholder="CONFIRMADA"
-          />
+          >
+            <option value="">Todas</option>
+            <option value="CONFIRMADA">CONFIRMADA</option>
+            <option value="ANULADA">ANULADA</option>
+          </select>
         </label>
         <div className="flex items-end gap-2">
           <Button variant="secondary" type="submit">
@@ -168,7 +171,7 @@ export default function ImportacionesPage() {
                 className="h-9 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white inline-flex items-center hover:bg-blue-700"
                 href="/importaciones/nueva"
               >
-                Nueva importacion
+                + Nueva importación
               </Link>
             </div>
             <table className="min-w-full border-collapse text-sm">
