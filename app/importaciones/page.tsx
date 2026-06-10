@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
+import { Button } from '@/components/ui/index'
+
 type ImportacionRow = {
   id: string
   anio: number
@@ -135,16 +137,12 @@ export default function ImportacionesPage() {
           />
         </label>
         <div className="flex items-end gap-2">
-          <button className="h-10 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white" type="submit">
+          <Button variant="secondary" type="submit">
             Filtrar
-          </button>
-          <button
-            className="inline-flex h-10 items-center rounded-md px-3 text-sm font-medium text-slate-600"
-            type="button"
-            onClick={handleClear}
-          >
+          </Button>
+          <Button variant="ghost" type="button" onClick={handleClear}>
             Limpiar
-          </button>
+          </Button>
         </div>
       </form>
 
@@ -163,20 +161,12 @@ export default function ImportacionesPage() {
                 : `Mostrando ${from}-${to} de ${total} importaciones`}
             </p>
             <div className="flex gap-2">
-              <button
-                className="rounded-md border border-slate-200 px-3 py-2 text-slate-400 disabled:cursor-not-allowed enabled:border-slate-300 enabled:font-semibold enabled:text-slate-700"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-              >
+              <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
                 Anterior
-              </button>
-              <button
-                className="rounded-md border border-slate-200 px-3 py-2 text-slate-400 disabled:cursor-not-allowed enabled:border-slate-300 enabled:font-semibold enabled:text-slate-700"
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => p + 1)}
-              >
+              </Button>
+              <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
                 Siguiente
-              </button>
+              </Button>
             </div>
           </div>
 

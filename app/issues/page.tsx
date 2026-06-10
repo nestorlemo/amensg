@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 
 import { DateInput } from '@/components/date-input'
 import { PageHeader } from '@/components/page-header'
+import { Button } from '@/components/ui/index'
 
 const ESTADOS = ['PENDIENTE', 'EN_DESARROLLO', 'EN_TEST', 'EN_PRODUCCION', 'CANCELADO'] as const
 const PRIORIDADES = ['ALTA', 'MEDIA', 'BAJA'] as const
@@ -102,11 +103,11 @@ function ProduccionModal({
       <div className="max-h-[90vh] w-full overflow-y-auto rounded-t-2xl bg-white shadow-2xl md:max-h-[85vh] md:max-w-md md:rounded-2xl">
         <div className="flex items-center justify-between rounded-t-2xl border-b border-slate-200 bg-slate-50 px-6 py-4">
           <h2 className="text-base font-semibold text-slate-950">Fecha en producción</h2>
-          <button className="rounded-md p-1 text-slate-400 hover:bg-slate-200" onClick={onClose} type="button">
+          <Button variant="ghost" onClick={onClose} type="button">
             <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-          </button>
+          </Button>
         </div>
         <form className="space-y-4 px-6 py-5" onSubmit={(e) => void handleSubmit(e)}>
           <p className="text-sm text-slate-600">
@@ -123,20 +124,10 @@ function ProduccionModal({
           </label>
           {error ? <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
           <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
-            <button
-              className="h-9 rounded-md border border-slate-300 px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
-              onClick={onClose}
-              type="button"
-            >
-              Volver
-            </button>
-            <button
-              className="h-9 rounded-md bg-emerald-600 px-5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
-              disabled={saving}
-              type="submit"
-            >
+            <Button variant="outline" onClick={onClose} type="button">Volver</Button>
+            <Button variant="primary" disabled={saving} type="submit">
               {saving ? 'Guardando…' : 'Confirmar'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -180,11 +171,11 @@ function CancelModal({
       <div className="max-h-[90vh] w-full overflow-y-auto rounded-t-2xl bg-white shadow-2xl md:max-h-[85vh] md:max-w-md md:rounded-2xl">
         <div className="flex items-center justify-between rounded-t-2xl border-b border-slate-200 bg-slate-50 px-6 py-4">
           <h2 className="text-base font-semibold text-slate-950">Cancelar issue</h2>
-          <button className="rounded-md p-1 text-slate-400 hover:bg-slate-200" onClick={onClose} type="button">
+          <Button variant="ghost" onClick={onClose} type="button">
             <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-          </button>
+          </Button>
         </div>
         <form className="space-y-4 px-6 py-5" onSubmit={(e) => void handleSubmit(e)}>
           <p className="text-sm text-slate-600">
@@ -203,20 +194,10 @@ function CancelModal({
           </label>
           {error ? <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
           <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
-            <button
-              className="h-9 rounded-md border border-slate-300 px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
-              onClick={onClose}
-              type="button"
-            >
-              Volver
-            </button>
-            <button
-              className="h-9 rounded-md bg-red-600 px-5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
-              disabled={saving}
-              type="submit"
-            >
+            <Button variant="outline" onClick={onClose} type="button">Volver</Button>
+            <Button variant="danger" disabled={saving} type="submit">
               {saving ? 'Cancelando…' : 'Confirmar cancelación'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -313,16 +294,11 @@ function EditModal({
       <div className="max-h-[90vh] w-full overflow-y-auto rounded-t-2xl bg-white shadow-2xl md:max-h-[85vh] md:max-w-2xl md:rounded-2xl">
         <div className="flex items-center justify-between rounded-t-2xl border-b border-slate-200 bg-slate-50 px-6 py-4">
           <h2 className="text-base font-semibold text-slate-950">Editar issue</h2>
-          <button
-            className="rounded-md p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700"
-            onClick={onClose}
-            type="button"
-            aria-label="Cerrar"
-          >
+          <Button variant="ghost" onClick={onClose} type="button">
             <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-          </button>
+          </Button>
         </div>
 
         <form className="space-y-4 px-6 py-5" onSubmit={(e) => void handleSave(e)}>
@@ -410,20 +386,10 @@ function EditModal({
           ) : null}
 
           <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
-            <button
-              className="h-9 rounded-md border border-slate-300 px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
-              onClick={onClose}
-              type="button"
-            >
-              Cancelar
-            </button>
-            <button
-              className="h-9 rounded-md bg-blue-600 px-5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
-              disabled={saving}
-              type="submit"
-            >
+            <Button variant="outline" onClick={onClose} type="button">Cancelar</Button>
+            <Button variant="primary" disabled={saving} type="submit">
               {saving ? 'Guardando…' : 'Guardar cambios'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -620,12 +586,7 @@ export default function IssuesPage() {
             <option value="facturado">Facturado</option>
           </Select>
           <div className="flex items-end">
-            <button
-              className="h-9 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white"
-              onClick={() => void fetchAll()}
-            >
-              Filtrar
-            </button>
+            <Button variant="secondary" onClick={() => void fetchAll()}>Filtrar</Button>
           </div>
         </div>
         {/* Fila 2: fechas + botones de acción */}
@@ -639,8 +600,8 @@ export default function IssuesPage() {
             <DateInput className="mt-1 block h-9 w-36 rounded-md border border-slate-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" value={fHasta} onChange={setFHasta} />
           </label>
           <div className="ml-auto flex items-end gap-3">
-            <button
-              className="h-9 rounded-md border border-emerald-600 px-4 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+            <Button
+              variant="outline"
               onClick={() => {
                 const qs = new URLSearchParams()
                 if (fEstado)      qs.set('estado',      fEstado)
@@ -653,13 +614,13 @@ export default function IssuesPage() {
               }}
             >
               Exportar Excel
-            </button>
-            <button
-              className="h-9 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white"
+            </Button>
+            <Button
+              variant={showForm ? 'ghost' : 'primary'}
               onClick={() => setShowForm((v) => !v)}
             >
               {showForm ? 'Cancelar' : '+ Nuevo issue'}
-            </button>
+            </Button>
           </div>
         </div>
       </section>
@@ -739,13 +700,9 @@ export default function IssuesPage() {
               <p className="md:col-span-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{formError}</p>
             ) : null}
             <div className="flex gap-2 md:col-span-3">
-              <button
-                className="h-9 rounded-md bg-blue-600 px-5 text-sm font-semibold text-white disabled:opacity-50"
-                disabled={saving}
-                type="submit"
-              >
+              <Button variant="primary" disabled={saving} type="submit">
                 {saving ? 'Guardando…' : 'Crear issue'}
-              </button>
+              </Button>
             </div>
           </form>
         </section>
@@ -819,25 +776,25 @@ export default function IssuesPage() {
                   <Td>{issue.reportadoPor}</Td>
                   <Td>
                     <div className="flex items-center gap-2">
-                      <button
-                        className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:border-slate-400 hover:bg-slate-50"
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        icon={<PencilIcon />}
                         onClick={() => setEditingIssue(issue)}
-                        title="Editar issue"
                         type="button"
                       >
-                        <PencilIcon />
                         Editar
-                      </button>
-                      <button
-                        className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-600 hover:border-red-400 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        icon={<TrashIcon />}
                         disabled={issue.facturado}
                         onClick={() => !issue.facturado && void handleDelete(issue)}
-                        title={issue.facturado ? 'No se puede eliminar un issue facturado' : 'Eliminar issue'}
                         type="button"
                       >
-                        <TrashIcon />
                         Eliminar
-                      </button>
+                      </Button>
                     </div>
                   </Td>
                 </tr>

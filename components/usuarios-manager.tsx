@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 import { AlertError } from '@/components/alerts'
+import { Button } from '@/components/ui/index'
 import { requestJson } from '@/lib/client-api'
 
 type Usuario = {
@@ -76,9 +77,7 @@ export function UsuariosManager({ usuarios }: { usuarios: Usuario[] }) {
             <input defaultChecked name="activo" type="checkbox" /> Activo
           </label>
           <div className="flex items-end">
-            <button className="h-10 w-full whitespace-nowrap rounded-md bg-slate-950 px-4 text-sm font-semibold text-white" type="submit">
-              Crear usuario
-            </button>
+            <Button variant="primary" type="submit" className="w-full whitespace-nowrap">Crear usuario</Button>
           </div>
         </form>
       </section>
@@ -109,13 +108,9 @@ export function UsuariosManager({ usuarios }: { usuarios: Usuario[] }) {
                 <input defaultChecked={usuario.activo} name="activo" type="checkbox" /> Activo
               </label>
               <div className="flex flex-wrap items-end gap-2">
-                <button className="h-10 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white" type="submit">
-                  Guardar
-                </button>
+                <Button variant="primary" type="submit">Guardar</Button>
                 {usuario.activo ? (
-                  <button className="h-10 rounded-md border border-slate-300 px-4 text-sm font-semibold text-slate-700" onClick={() => deactivate(usuario.id)} type="button">
-                    Desactivar
-                  </button>
+                  <Button variant="danger" onClick={() => deactivate(usuario.id)} type="button">Desactivar</Button>
                 ) : null}
               </div>
             </form>
