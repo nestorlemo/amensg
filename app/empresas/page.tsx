@@ -347,16 +347,6 @@ export default function EmpresasPage() {
         section="Configuración"
         title="Empresas"
         description={`${totalActivas} empresa${totalActivas !== 1 ? 's' : ''} activa${totalActivas !== 1 ? 's' : ''}`}
-        action={
-          <button
-            className="inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-            style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)' }}
-            onClick={() => { setShowNew(true); setNewError(null) }}
-          >
-            <Plus size={16} />
-            Nueva empresa
-          </button>
-        }
       />
 
       {/* Create form */}
@@ -382,6 +372,19 @@ export default function EmpresasPage() {
         className="overflow-x-auto rounded-2xl"
         style={{ background: '#ffffff', border: `1px solid ${BORDER}`, boxShadow: '0 1px 4px rgba(23,105,224,0.06)' }}
       >
+        {/* Card header */}
+        <div className="flex items-center justify-between border-b px-4 py-3" style={{ borderColor: BORDER }}>
+          <h2 className="text-base font-semibold" style={{ color: TEXT }}>Empresas</h2>
+          <button
+            className="h-9 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700 inline-flex items-center gap-2"
+            onClick={() => { setShowNew(true); setNewError(null) }}
+            type="button"
+          >
+            <Plus size={16} />
+            Nueva empresa
+          </button>
+        </div>
+
         {/* Search bar */}
         <div className="flex items-center gap-3 border-b px-4 py-3" style={{ borderColor: BORDER }}>
           <Search size={15} style={{ color: MUTED, flexShrink: 0 }} />
