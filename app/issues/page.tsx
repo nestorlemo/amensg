@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 
 import { DateInput } from '@/components/date-input'
 import { PageHeader } from '@/components/page-header'
-import { Button } from '@/components/ui/index'
+import { Badge, Button } from '@/components/ui/index'
 
 const ESTADOS = ['PENDIENTE', 'EN_DESARROLLO', 'EN_TEST', 'EN_PRODUCCION', 'CANCELADO'] as const
 const PRIORIDADES = ['ALTA', 'MEDIA', 'BAJA'] as const
@@ -769,8 +769,8 @@ export default function IssuesPage() {
                   </Td>
                   <Td>
                     {issue.facturado
-                      ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">Facturado</span>
-                      : <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">Sin facturar</span>
+                      ? <Badge variant="facturado" />
+                      : <Badge variant="pendiente" label="Sin facturar" />
                     }
                   </Td>
                   <Td>{issue.reportadoPor}</Td>

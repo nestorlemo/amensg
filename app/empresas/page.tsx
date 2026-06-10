@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { Building2, Plus, Search, Pencil, ToggleLeft, ToggleRight, X, AlertTriangle } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
-import { Button } from '@/components/ui/index'
+import { Badge, Button } from '@/components/ui/index'
 
 type Empresa = {
   id: string
@@ -237,22 +237,6 @@ function ConfirmToast({ empresa, onConfirm, onCancel }: {
   )
 }
 
-// ── badge ─────────────────────────────────────────────────────────────────────
-
-function Badge({ activa }: { activa: boolean }) {
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold"
-      style={activa
-        ? { background: 'rgba(32,224,178,0.12)', color: '#0d9488' }
-        : { background: 'rgba(139,163,199,0.12)', color: '#5a6a82' }}
-    >
-      <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: activa ? '#20E0B2' : '#8ba3c7' }} />
-      {activa ? 'Activa' : 'Inactiva'}
-    </span>
-  )
-}
-
 // ── main page ─────────────────────────────────────────────────────────────────
 
 export default function EmpresasPage() {
@@ -436,7 +420,7 @@ export default function EmpresasPage() {
 
                   {/* Estado */}
                   <td className="px-5 py-3">
-                    <Badge activa={empresa.activa} />
+                    <Badge variant={empresa.activa ? 'activo' : 'inactivo'} label={empresa.activa ? 'Activa' : 'Inactiva'} />
                   </td>
 
                   {/* Acciones */}

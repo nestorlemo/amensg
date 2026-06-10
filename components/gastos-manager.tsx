@@ -6,7 +6,7 @@ import { useState } from 'react'
 
 import { AlertError } from '@/components/alerts'
 import { DateInput } from '@/components/date-input'
-import { Button } from '@/components/ui/index'
+import { Badge, Button } from '@/components/ui/index'
 import { requestJson } from '@/lib/client-api'
 
 type Concepto = {
@@ -197,9 +197,7 @@ function ConceptoFijoRow({ concepto }: { concepto: Concepto }) {
       <td className="px-4 py-3 font-medium text-slate-900">{concepto.nombre}</td>
       <td className="px-4 py-3 text-right tabular-nums text-slate-700">{fmt(concepto.monto)}</td>
       <td className="px-4 py-3">
-        {concepto.activo
-          ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">Activo</span>
-          : <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">Inactivo</span>}
+        <Badge variant={concepto.activo ? 'activo' : 'inactivo'} />
       </td>
       <td className="px-4 py-3">
         <div className="flex gap-2">
