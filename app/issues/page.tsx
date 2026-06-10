@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 
 import { DateInput } from '@/components/date-input'
 import { PageHeader } from '@/components/page-header'
-import { Badge, Button } from '@/components/ui/index'
+import { Badge, Button, ModalShell } from '@/components/ui/index'
 
 const ESTADOS = ['PENDIENTE', 'EN_DESARROLLO', 'EN_TEST', 'EN_PRODUCCION', 'CANCELADO'] as const
 const PRIORIDADES = ['ALTA', 'MEDIA', 'BAJA'] as const
@@ -96,42 +96,29 @@ function ProduccionModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-center md:p-4"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
-    >
-      <div className="max-h-[90vh] w-full overflow-y-auto rounded-t-2xl bg-white shadow-2xl md:max-h-[85vh] md:max-w-md md:rounded-2xl">
-        <div className="flex items-center justify-between rounded-t-2xl border-b border-slate-200 bg-slate-50 px-6 py-4">
-          <h2 className="text-base font-semibold text-slate-950">Fecha en producción</h2>
-          <Button variant="ghost" onClick={onClose} type="button">
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+    <ModalShell isOpen={true} onClose={onClose} title="Fecha en producción" maxWidth="max-w-md">
+      <form className="space-y-4" onSubmit={(e) => void handleSubmit(e)}>
+        <p className="text-sm text-slate-600">
+          Issue: <span className="font-medium text-slate-900">{descripcion.length > 80 ? `${descripcion.slice(0, 80)}…` : descripcion}</span>
+        </p>
+        <label className="block text-sm font-medium text-slate-700">
+          Fecha en producción <span className="text-red-500">*</span>
+          <DateInput
+            className="mt-1 block h-9 w-full rounded-md border border-slate-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            value={fecha}
+            onChange={(v) => { setFecha(v); setError(null) }}
+            required
+          />
+        </label>
+        {error ? <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
+        <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
+          <Button variant="outline" onClick={onClose} type="button">Volver</Button>
+          <Button variant="primary" disabled={saving} type="submit">
+            {saving ? 'Guardando…' : 'Confirmar'}
           </Button>
         </div>
-        <form className="space-y-4 px-6 py-5" onSubmit={(e) => void handleSubmit(e)}>
-          <p className="text-sm text-slate-600">
-            Issue: <span className="font-medium text-slate-900">{descripcion.length > 80 ? `${descripcion.slice(0, 80)}…` : descripcion}</span>
-          </p>
-          <label className="block text-sm font-medium text-slate-700">
-            Fecha en producción <span className="text-red-500">*</span>
-            <DateInput
-              className="mt-1 block h-9 w-full rounded-md border border-slate-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              value={fecha}
-              onChange={(v) => { setFecha(v); setError(null) }}
-              required
-            />
-          </label>
-          {error ? <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
-          <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
-            <Button variant="outline" onClick={onClose} type="button">Volver</Button>
-            <Button variant="primary" disabled={saving} type="submit">
-              {saving ? 'Guardando…' : 'Confirmar'}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </ModalShell>
   )
 }
 
@@ -164,44 +151,31 @@ function CancelModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-center md:p-4"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
-    >
-      <div className="max-h-[90vh] w-full overflow-y-auto rounded-t-2xl bg-white shadow-2xl md:max-h-[85vh] md:max-w-md md:rounded-2xl">
-        <div className="flex items-center justify-between rounded-t-2xl border-b border-slate-200 bg-slate-50 px-6 py-4">
-          <h2 className="text-base font-semibold text-slate-950">Cancelar issue</h2>
-          <Button variant="ghost" onClick={onClose} type="button">
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+    <ModalShell isOpen={true} onClose={onClose} title="Cancelar issue" maxWidth="max-w-md">
+      <form className="space-y-4" onSubmit={(e) => void handleSubmit(e)}>
+        <p className="text-sm text-slate-600">
+          Issue: <span className="font-medium text-slate-900">{descripcion.length > 80 ? `${descripcion.slice(0, 80)}…` : descripcion}</span>
+        </p>
+        <label className="block text-sm font-medium text-slate-700">
+          Motivo de cancelación <span className="text-red-500">*</span>
+          <textarea
+            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            rows={3}
+            value={motivo}
+            onChange={(e) => { setMotivo(e.target.value); setError(null) }}
+            autoFocus
+            required
+          />
+        </label>
+        {error ? <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
+        <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
+          <Button variant="outline" onClick={onClose} type="button">Volver</Button>
+          <Button variant="danger" disabled={saving} type="submit">
+            {saving ? 'Cancelando…' : 'Confirmar cancelación'}
           </Button>
         </div>
-        <form className="space-y-4 px-6 py-5" onSubmit={(e) => void handleSubmit(e)}>
-          <p className="text-sm text-slate-600">
-            Issue: <span className="font-medium text-slate-900">{descripcion.length > 80 ? `${descripcion.slice(0, 80)}…` : descripcion}</span>
-          </p>
-          <label className="block text-sm font-medium text-slate-700">
-            Motivo de cancelación <span className="text-red-500">*</span>
-            <textarea
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              rows={3}
-              value={motivo}
-              onChange={(e) => { setMotivo(e.target.value); setError(null) }}
-              autoFocus
-              required
-            />
-          </label>
-          {error ? <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
-          <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
-            <Button variant="outline" onClick={onClose} type="button">Volver</Button>
-            <Button variant="danger" disabled={saving} type="submit">
-              {saving ? 'Cancelando…' : 'Confirmar cancelación'}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </ModalShell>
   )
 }
 
@@ -287,21 +261,8 @@ function EditModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-center md:p-4"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
-    >
-      <div className="max-h-[90vh] w-full overflow-y-auto rounded-t-2xl bg-white shadow-2xl md:max-h-[85vh] md:max-w-2xl md:rounded-2xl">
-        <div className="flex items-center justify-between rounded-t-2xl border-b border-slate-200 bg-slate-50 px-6 py-4">
-          <h2 className="text-base font-semibold text-slate-950">Editar issue</h2>
-          <Button variant="ghost" onClick={onClose} type="button">
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </Button>
-        </div>
-
-        <form className="space-y-4 px-6 py-5" onSubmit={(e) => void handleSave(e)}>
+    <ModalShell isOpen={true} onClose={onClose} title="Editar issue" maxWidth="max-w-2xl">
+        <form className="space-y-4" onSubmit={(e) => void handleSave(e)}>
           <div className="grid gap-3 md:grid-cols-2">
             <label className="block text-sm font-medium text-slate-700">
               Fecha
@@ -392,8 +353,7 @@ function EditModal({
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+    </ModalShell>
   )
 }
 

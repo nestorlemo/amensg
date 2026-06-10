@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { Building2, Plus, Search, Pencil, ToggleLeft, ToggleRight, X, AlertTriangle } from 'lucide-react'
+import { Building2, Plus, Pencil, ToggleLeft, ToggleRight, X, AlertTriangle } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
-import { Badge, Button } from '@/components/ui/index'
+import { Badge, Button, FilterInput } from '@/components/ui/index'
 
 type Empresa = {
   id: string
@@ -341,14 +341,12 @@ export default function EmpresasPage() {
         style={{ background: '#ffffff', border: `1px solid ${BORDER}`, boxShadow: '0 1px 4px rgba(23,105,224,0.06)' }}
       >
         {/* Search bar */}
-        <div className="flex items-center gap-3 border-b px-4 py-3" style={{ borderColor: BORDER }}>
-          <Search size={15} style={{ color: MUTED, flexShrink: 0 }} />
-          <input
-            className="flex-1 bg-transparent text-sm outline-none"
-            style={{ color: TEXT }}
-            placeholder="Buscar por nombre, razón social o RUT…"
+        <div className="flex items-center gap-2 border-b px-4 py-3" style={{ borderColor: BORDER }}>
+          <FilterInput
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={setSearch}
+            placeholder="Buscar por nombre, razón social o RUT…"
+            className="flex-1"
           />
           {search ? (
             <Button variant="ghost" onClick={() => setSearch('')}><X size={14} /></Button>

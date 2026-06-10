@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
-import { Button } from '@/components/ui/index'
+import { AppPageHeader, Button } from '@/components/ui/index'
 
 type ImportacionRow = {
   id: string
@@ -87,11 +87,11 @@ export default function ImportacionesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl p-6 text-white" style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%)' }}>
-        <p className="text-xs font-semibold uppercase tracking-wider opacity-70">Importaciones</p>
-        <h1 className="mt-1 text-2xl font-bold">Importaciones confirmadas</h1>
-        <p className="mt-1 text-sm opacity-80">Consulta de archivos importados y sus totales operativos.</p>
-      </div>
+      <AppPageHeader
+        section="Importaciones"
+        title="Importaciones confirmadas"
+        subtitle="Consulta de archivos importados y sus totales operativos."
+      />
 
       <form className="grid gap-3 rounded-md border border-slate-200 bg-white p-4 md:grid-cols-4" onSubmit={handleSubmit}>
         <label className="space-y-1 text-sm font-medium text-slate-700">
