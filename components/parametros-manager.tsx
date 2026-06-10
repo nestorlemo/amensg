@@ -5,6 +5,7 @@ import type { FormEvent } from 'react'
 import { useState } from 'react'
 
 import { AlertError } from '@/components/alerts'
+import { Button } from '@/components/ui/index'
 import { requestJson } from '@/lib/client-api'
 
 type Parametro = {
@@ -92,13 +93,7 @@ function ParametroRow({ parametro }: { parametro: Parametro }) {
             <input className="h-4 w-4" defaultChecked={parametro.activo} name="activo" type="checkbox" />
             Activo
           </label>
-          <button
-            className="h-10 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={isSaving}
-            type="submit"
-          >
-            Guardar
-          </button>
+          <Button variant="secondary" disabled={isSaving} type="submit">Guardar</Button>
           {error ? <AlertError className="lg:col-span-5">{error}</AlertError> : null}
         </form>
       </td>

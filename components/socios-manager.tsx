@@ -5,6 +5,7 @@ import type { FormEvent } from 'react'
 import { useState } from 'react'
 
 import { AlertError } from '@/components/alerts'
+import { Button } from '@/components/ui/index'
 import { requestJson } from '@/lib/client-api'
 
 type Socio = {
@@ -99,9 +100,7 @@ function CreateSocioForm() {
           Activo
         </label>
         <div className="flex items-end">
-          <button className="h-10 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white" type="submit">
-            Crear socio
-          </button>
+          <Button variant="primary" type="submit">Crear socio</Button>
         </div>
       </form>
       {error ? <AlertError>{error}</AlertError> : null}
@@ -161,21 +160,8 @@ function SocioRow({ socio }: { socio: Socio }) {
             Activo
           </label>
           <div className="grid grid-cols-2 gap-2">
-            <button
-              className="h-10 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={isSaving}
-              type="submit"
-            >
-              Guardar
-            </button>
-            <button
-              className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={isSaving || !socio.activo}
-              onClick={deactivate}
-              type="button"
-            >
-              Desactivar
-            </button>
+            <Button variant="primary" disabled={isSaving} type="submit">Guardar</Button>
+            <Button variant="danger" disabled={isSaving || !socio.activo} onClick={deactivate} type="button">Desactivar</Button>
           </div>
           {error ? <AlertError className="lg:col-span-6">{error}</AlertError> : null}
         </form>

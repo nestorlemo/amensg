@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 
 import { GastosFijosManager, GastosResumen, GastosVariablesManager, GastoRowActions } from '@/components/gastos-manager'
 import { PageHeader } from '@/components/page-header'
+import { Button } from '@/components/ui/index'
 import { getGastos } from '@/lib/gastos-ingresos'
 
 type PageProps = {
@@ -48,7 +49,7 @@ export default async function GastosPage({ searchParams }: PageProps) {
             </select>
           </label>
           <div className="flex items-end gap-2 md:col-span-2">
-            <button className="h-9 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white" type="submit">Filtrar</button>
+            <Button variant="secondary" type="submit">Filtrar</Button>
             <Link className="inline-flex h-9 items-center rounded-md px-3 text-sm font-medium text-slate-600" href="/gastos">Limpiar</Link>
           </div>
         </form>
