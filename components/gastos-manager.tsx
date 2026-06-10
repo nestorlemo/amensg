@@ -6,7 +6,7 @@ import { useState } from 'react'
 
 import { AlertError } from '@/components/alerts'
 import { DateInput } from '@/components/date-input'
-import { Badge, Button, ModalShell } from '@/components/ui/index'
+import { Badge, Button, ModalShell, typography } from '@/components/ui/index'
 import { requestJson } from '@/lib/client-api'
 
 type Concepto = {
@@ -119,12 +119,12 @@ export function GastosFijosManager({ conceptos }: { conceptos: Concepto[] }) {
       {fijos.length > 0 ? (
         <div className="overflow-x-auto rounded-md border border-slate-200">
           <table className="min-w-full text-sm">
-            <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <thead className="bg-slate-50 text-left">
               <tr>
-                <th className="px-4 py-3">Nombre</th>
-                <th className="px-4 py-3 text-right">Monto mensual S/IVA</th>
-                <th className="px-4 py-3">Estado</th>
-                <th className="px-4 py-3">Acciones</th>
+                <th className={`px-4 py-3 ${typography.tableHeader}`}>Nombre</th>
+                <th className={`px-4 py-3 text-right ${typography.tableHeader}`}>Monto mensual S/IVA</th>
+                <th className={`px-4 py-3 ${typography.tableHeader}`}>Estado</th>
+                <th className={`px-4 py-3 ${typography.tableHeader}`}>Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">

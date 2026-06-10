@@ -2,6 +2,8 @@
 
 import type { ReactNode } from 'react'
 
+import { typography } from './typography'
+
 export function TableHeader({ children }: { children: ReactNode }) {
   return (
     <thead className="bg-gray-50">
@@ -23,7 +25,7 @@ export function TableTh({
     'text-left'
   return (
     <th
-      className={`whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500 ${alignClass}`}
+      className={`whitespace-nowrap px-4 py-3 ${typography.tableHeader} ${alignClass}`}
     >
       {children}
     </th>
@@ -45,7 +47,7 @@ export function TableTd({
     ''
   return (
     <td
-      className={`whitespace-nowrap border-b border-gray-100 px-4 py-3 text-sm text-gray-700 ${alignClass}`}
+      className={`whitespace-nowrap border-b border-gray-100 px-4 py-3 ${typography.tableCell} ${alignClass}`}
       colSpan={colSpan}
     >
       {children}

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
-import { AppPageHeader, Button } from '@/components/ui/index'
+import { AppPageHeader, Button, typography } from '@/components/ui/index'
 
 type ImportacionRow = {
   id: string
@@ -175,7 +175,7 @@ export default function ImportacionesPage() {
               </Link>
             </div>
             <table className="min-w-full border-collapse text-sm">
-              <thead className="bg-slate-100 text-left text-xs uppercase text-slate-600">
+              <thead className="bg-slate-100 text-left">
                 <tr>
                   <Th>Periodo</Th>
                   <Th>Archivo</Th>
@@ -227,12 +227,12 @@ export default function ImportacionesPage() {
 }
 
 function Th({ children }: { children: React.ReactNode }) {
-  return <th className="whitespace-nowrap px-4 py-3 font-semibold">{children}</th>
+  return <th className={`whitespace-nowrap px-4 py-3 text-left ${typography.tableHeader}`}>{children}</th>
 }
 
 function Td({ children, colSpan }: { children: React.ReactNode; colSpan?: number }) {
   return (
-    <td className="whitespace-nowrap px-4 py-3 text-slate-700" colSpan={colSpan}>
+    <td className={`whitespace-nowrap px-4 py-3 ${typography.tableCell}`} colSpan={colSpan}>
       {children}
     </td>
   )

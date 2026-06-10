@@ -2,10 +2,12 @@
 
 import type { ReactNode } from 'react'
 
+import { typography } from './typography'
+
 export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost'
 export type ButtonSize    = 'sm' | 'md'
 
-const BASE = 'inline-flex items-center justify-center gap-1.5 font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 rounded-md'
+const BASE = 'inline-flex items-center justify-center gap-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-50 rounded-md'
 
 const VARIANT: Record<ButtonVariant, string> = {
   primary:   'bg-blue-600 text-white hover:bg-blue-700',
@@ -16,8 +18,8 @@ const VARIANT: Record<ButtonVariant, string> = {
 }
 
 const SIZE: Record<ButtonSize, string> = {
-  md: 'h-9 px-4 text-sm',
-  sm: 'h-7 px-3 text-xs',
+  md: `h-9 px-4 ${typography.button}`,
+  sm: 'h-7 px-3 text-xs font-semibold',
 }
 
 function Spinner() {

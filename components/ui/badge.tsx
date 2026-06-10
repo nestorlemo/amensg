@@ -1,5 +1,7 @@
 'use client'
 
+import { typography } from './typography'
+
 export type BadgeVariant =
   | 'activo'
   | 'inactivo'
@@ -61,7 +63,7 @@ export function Badge({
 }) {
   return (
     <span
-      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${CLASSES[variant]} ${className}`}
+      className={`inline-block rounded-full px-2.5 py-0.5 ${typography.badge} ${CLASSES[variant]} ${className}`}
     >
       {label ?? DEFAULT_LABEL[variant]}
     </span>

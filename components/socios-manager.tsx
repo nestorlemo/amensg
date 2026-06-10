@@ -3,7 +3,7 @@
 import { useState } from 'react'
 
 import { AlertError } from '@/components/alerts'
-import { Badge, Button, ModalShell } from '@/components/ui/index'
+import { Badge, Button, ModalShell, typography } from '@/components/ui/index'
 import { requestJson } from '@/lib/client-api'
 
 type Socio = {
@@ -91,10 +91,10 @@ export function SociosManager({ socios: initial, validation }: { socios: Socio[]
         {/* Table */}
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
-            <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <thead className="bg-slate-50 text-left">
               <tr>
                 {['Nombre', 'Porcentaje', 'Cuenta pesos', 'Cuenta USD', 'Estado', 'Acciones'].map((h) => (
-                  <th key={h} className="whitespace-nowrap px-5 py-3">{h}</th>
+                  <th key={h} className={`whitespace-nowrap px-5 py-3 ${typography.tableHeader}`}>{h}</th>
                 ))}
               </tr>
             </thead>

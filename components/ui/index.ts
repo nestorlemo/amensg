@@ -8,3 +8,5 @@ export { TableHeader, TableTh as AppTableTh, TableTd as AppTableTd } from './tab
 export { ModalShell } from './modal'
 export { PageHeader as AppPageHeader } from './pageheader'
 export { FilterInput } from './filterinput'
+export { typography } from './typography'
+export type { TypographyToken } from './typography'

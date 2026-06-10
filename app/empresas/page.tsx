@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { Building2, Pencil, ToggleLeft, ToggleRight, X, AlertTriangle } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
-import { Badge, Button, FilterInput } from '@/components/ui/index'
+import { Badge, Button, FilterInput, typography } from '@/components/ui/index'
 
 type Empresa = {
   id: string
@@ -384,7 +384,7 @@ export default function EmpresasPage() {
                 {['Nombre', 'Razón social', 'RUT', 'Estado', 'Acciones'].map((h) => (
                   <th
                     key={h}
-                    className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide"
+                    className={`px-5 py-3 text-left ${typography.tableHeader}`}
                     style={{ color: MUTED, background: SURFACE }}
                   >
                     {h}

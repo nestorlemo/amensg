@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 
 import { GastosFijosManager, GastosResumen, GastosVariablesManager, GastoRowActions } from '@/components/gastos-manager'
 import { PageHeader } from '@/components/page-header'
-import { Button } from '@/components/ui/index'
+import { Button, typography } from '@/components/ui/index'
 import { getGastos } from '@/lib/gastos-ingresos'
 
 type PageProps = {
@@ -64,7 +64,7 @@ export default async function GastosPage({ searchParams }: PageProps) {
 
         <div className="overflow-x-auto rounded-md border border-slate-200">
           <table className="min-w-full text-sm">
-            <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <thead className="bg-slate-50 text-left">
               <tr>
                 <Th>Concepto</Th>
                 <Th>Período</Th>
@@ -106,11 +106,11 @@ function FilterInput({ label, name, placeholder, value }: { label: string; name:
 }
 
 function Th({ children }: { children: ReactNode }) {
-  return <th className="whitespace-nowrap px-4 py-3">{children}</th>
+  return <th className={`whitespace-nowrap px-4 py-3 text-left ${typography.tableHeader}`}>{children}</th>
 }
 
 function Td({ children, colSpan }: { children: ReactNode; colSpan?: number }) {
-  return <td className="whitespace-nowrap px-4 py-3 text-slate-700" colSpan={colSpan}>{children}</td>
+  return <td className={`whitespace-nowrap px-4 py-3 ${typography.tableCell}`} colSpan={colSpan}>{children}</td>
 }
 
 function stringValue(value: string | string[] | undefined) {

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 
 import { DateInput } from '@/components/date-input'
 import { PageHeader } from '@/components/page-header'
-import { Badge, Button, ModalShell } from '@/components/ui/index'
+import { Badge, Button, ModalShell, typography } from '@/components/ui/index'
 
 const ESTADOS = ['PENDIENTE', 'EN_DESARROLLO', 'EN_TEST', 'EN_PRODUCCION', 'CANCELADO'] as const
 const PRIORIDADES = ['ALTA', 'MEDIA', 'BAJA'] as const
@@ -673,7 +673,7 @@ export default function IssuesPage() {
       <section className="rounded-xl border border-slate-200 bg-white">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
-            <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <thead className="bg-slate-50 text-left">
               <tr>
                 <Th>Fecha reg.</Th>
                 <Th>Fecha prod.</Th>
@@ -829,10 +829,10 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
 }
 
 function Th({ children }: { children: React.ReactNode }) {
-  return <th className="whitespace-nowrap px-4 py-3">{children}</th>
+  return <th className={`whitespace-nowrap px-4 py-3 text-left ${typography.tableHeader}`}>{children}</th>
 }
 function Td({ children }: { children: React.ReactNode }) {
-  return <td className="whitespace-nowrap px-4 py-3 text-slate-700">{children}</td>
+  return <td className={`whitespace-nowrap px-4 py-3 ${typography.tableCell}`}>{children}</td>
 }
 
 function Input({
