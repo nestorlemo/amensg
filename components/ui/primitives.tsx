@@ -5,10 +5,10 @@ import type { LucideIcon } from 'lucide-react'
 
 export { Button } from './button'
 export type { ButtonVariant, ButtonSize } from './button'
-export { Badge } from './Badge'
-export type { BadgeVariant } from './Badge'
+export { Badge } from './badge'
+export type { BadgeVariant } from './badge'
 export { TableHeader, TableTh as TableThNew, TableTd as TableTdNew } from './Table'
-export { ModalShell } from './Modal'
+export { ModalShell } from './modal'
 export { PageHeader as PageHeaderNew } from './PageHeader'
 export { FilterInput } from './FilterInput'
 
