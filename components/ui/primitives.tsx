@@ -3,6 +3,15 @@
 import type { ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
 
+export { Button } from './Button'
+export type { ButtonVariant, ButtonSize } from './Button'
+export { Badge } from './Badge'
+export type { BadgeVariant } from './Badge'
+export { TableHeader, TableTh as TableThNew, TableTd as TableTdNew } from './Table'
+export { ModalShell } from './Modal'
+export { PageHeader as PageHeaderNew } from './PageHeader'
+export { FilterInput } from './FilterInput'
+
 const accentConfig: Record<string, { border: string; iconBg: string; iconColor: string }> = {
   default: { border: '#e6eefc', iconBg: 'rgba(23,105,224,0.08)', iconColor: '#1769E0' },
   green:   { border: '#20E0B2', iconBg: 'rgba(32,224,178,0.12)', iconColor: '#20E0B2' },
