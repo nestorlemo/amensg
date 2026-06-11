@@ -130,7 +130,7 @@ export function AppSidebar({ user, onClose }: { user: CurrentUser; onClose?: () 
               >
                 {Icon ? <Icon size={16} className="shrink-0" /> : null}
                 <span className="flex-1">{item.label}</span>
-                {item.href === '/cobros-unificado' && pendingCobros !== null ? (
+                {item.href === '/cobros-unificado' && pendingCobros !== null && pendingCobros > 0 ? (
                   <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white leading-none">
                     {pendingCobros === 0 ? '' : pendingCobros > 99 ? '99+' : pendingCobros}
                   </span>
