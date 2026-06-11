@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import type { ReactNode } from 'react'
 
 import { PageHeader } from '@/components/page-header'
+import { StatCard } from '@/components/ui/index'
 import { ReabrirCierreForm } from '@/components/reabrir-cierre-form'
 import { getCurrentUser, isAdmin } from '@/lib/auth'
 import { getCierre } from '@/lib/liquidaciones'
@@ -57,15 +58,15 @@ export default async function CierreDetailPage({ params }: PageProps) {
       ) : null}
 
       <section className="grid gap-3 md:grid-cols-4">
-        <Metric label="Estado" value={cierre.estado} />
-        <Metric label="Total activaciones" value={cierre.totalActivaciones} />
-        <Metric label="Empresas" value={displayValue(snapshot.totalEmpresas, '0')} />
-        <Metric label="Tipo cambio USD" value={displayValue(snapshot.tipoCambioUsd, 'Sin dato')} />
-        <Metric label="Ingresos sin IVA" value={displayValue(snapshot.totalIngresosSinIva, '0.00')} />
-        <Metric label="IVA total" value={displayValue(snapshot.totalIva, '0.00')} />
-        <Metric label="Ingresos con IVA" value={displayValue(snapshot.totalIngresosConIva, '0.00')} />
-        <Metric label="Total gastos" value={displayValue(snapshot.totalGastos, '0.00')} />
-        <Metric label="Resultado distribuible" value={displayValue(snapshot.resultadoDistribuible, '0.00')} />
+        <StatCard label="Estado" value={String(displayValue(cierre.estado, ''))} />
+        <StatCard label="Total activaciones" value={cierre.totalActivaciones} />
+        <StatCard label="Empresas" value={String(displayValue(snapshot.totalEmpresas, '0'))} />
+        <StatCard label="Tipo cambio USD" value={String(displayValue(snapshot.tipoCambioUsd, 'Sin dato'))} />
+        <StatCard label="Ingresos sin IVA" value={String(displayValue(snapshot.totalIngresosSinIva, '0.00'))} />
+        <StatCard label="IVA total" value={String(displayValue(snapshot.totalIva, '0.00'))} />
+        <StatCard label="Ingresos con IVA" value={String(displayValue(snapshot.totalIngresosConIva, '0.00'))} />
+        <StatCard label="Total gastos" value={String(displayValue(snapshot.totalGastos, '0.00'))} />
+        <StatCard label="Resultado distribuible" value={String(displayValue(snapshot.resultadoDistribuible, '0.00'))} />
       </section>
 
       <section className="rounded-md border border-slate-200 bg-white p-4">
@@ -219,15 +220,6 @@ export default async function CierreDetailPage({ params }: PageProps) {
           </table>
         </div>
       </section>
-    </div>
-  )
-}
-
-function Metric({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="rounded-md border border-slate-200 bg-white p-4">
-      <p className="text-xs font-semibold uppercase text-slate-500">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-slate-950">{value}</p>
     </div>
   )
 }

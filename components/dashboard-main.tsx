@@ -7,7 +7,7 @@ import {
   Calculator, BarChart2, Receipt, FileText, ArrowRight, AlertTriangle,
 } from 'lucide-react'
 
-import { StatCard } from '@/components/ui/primitives'
+import { StatCard, StatCardExtended } from '@/components/ui/index'
 import { PageHeader } from '@/components/page-header'
 
 type Stats = {
@@ -49,56 +49,6 @@ function vsText(current: string, prev: string, tieneDatos: boolean) {
   return `$${fmt(prev)} (${sign}${diff.toFixed(1)}%)`
 }
 
-function ResumenCard({
-  label,
-  value,
-  badge,
-  badgeColor,
-  vs,
-  vsLabel,
-  sub,
-  valuePrefix,
-}: {
-  label: string
-  value: string
-  badge: string
-  badgeColor: 'green' | 'amber' | 'blue' | 'red'
-  vs: string | null
-  vsLabel: string
-  sub?: string
-  valuePrefix?: string
-}) {
-  const badgeClasses = {
-    green: 'bg-emerald-100 text-emerald-700',
-    amber: 'bg-amber-100 text-amber-700',
-    blue: 'bg-blue-100 text-blue-700',
-    red: 'bg-red-100 text-red-700',
-  }[badgeColor]
-
-  return (
-    <div className="flex flex-col gap-2 rounded-xl border border-[#e6eefc] bg-white p-5 shadow-sm">
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${badgeClasses}`}>{badge}</span>
-      </div>
-      <p className="text-2xl font-bold tabular-nums text-slate-950">
-        {valuePrefix ? <span className="mr-1 text-base font-semibold text-slate-400">{valuePrefix}</span> : null}
-        {fmt(value)}
-      </p>
-      {sub ? <p className="text-xs font-medium text-slate-400">{sub}</p> : null}
-      {vs !== null ? (
-        <p className="text-xs text-slate-400">
-          vs {vsLabel}:{' '}
-          <span className={vs.includes('(-)') || vs.startsWith('$-') ? 'text-red-500' : 'text-emerald-600'}>
-            {vs}
-          </span>
-        </p>
-      ) : (
-        <p className="text-xs text-slate-400">vs {vsLabel}: sin datos</p>
-      )}
-    </div>
-  )
-}
 
 const MUTED  = '#8ba3c7'
 const TEXT   = '#0B1F3A'
@@ -210,25 +160,25 @@ export function DashboardMain() {
               </Link>
             </div>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <ResumenCard
+              <StatCardExtended
                 label="Activaciones cobradas"
-                value={activacionesCobradas}
+                value={fmt(activacionesCobradas)}
                 badge="COBRADO"
                 badgeColor="green"
                 vs={vsText(activacionesCobradas, mesAnterior.activacionesCobradas, mesAnterior.tieneDatos)}
                 vsLabel={mesAnteriorNombre}
               />
-              <ResumenCard
+              <StatCardExtended
                 label="Activaciones pendientes"
-                value={activacionesPendientes}
+                value={fmt(activacionesPendientes)}
                 badge="FACTURADO"
                 badgeColor="amber"
                 vs={vsText(activacionesPendientes, mesAnterior.activacionesPendientes, mesAnterior.tieneDatos)}
                 vsLabel={mesAnteriorNombre}
               />
-              <ResumenCard
+              <StatCardExtended
                 label="Desarrollo pendiente"
-                value={desarrolloPendienteUSD}
+                value={fmt(desarrolloPendienteUSD)}
                 valuePrefix="USD"
                 badge="FACTURADO"
                 badgeColor="amber"
@@ -236,9 +186,9 @@ export function DashboardMain() {
                 vsLabel={mesAnteriorNombre}
                 sub={Number(desarrolloPendienteUYU) > 0 ? `≈ UYU ${fmt(desarrolloPendienteUYU)}` : undefined}
               />
-              <ResumenCard
+              <StatCardExtended
                 label="Resultado estimado"
-                value={resultadoEstimado}
+                value={fmt(resultadoEstimado)}
                 badge={resultadoNeg ? 'NEGATIVO' : 'ESTIMADO'}
                 badgeColor={resultadoNeg ? 'red' : 'blue'}
                 vs={vsText(resultadoEstimado, mesAnterior.resultadoDistribuible, mesAnterior.tieneDatos)}

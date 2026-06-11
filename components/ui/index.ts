@@ -1,4 +1,5 @@
 export { StatCard } from './primitives'
+export { StatCardExtended } from './statcard-extended'
 export { TableTh, TableTd, FilterTextInput } from './primitives'
 export { Button } from './button'
 export type { ButtonVariant, ButtonSize } from './button'

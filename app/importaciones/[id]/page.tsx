@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 
 import { AnularImportacionForm } from '@/components/anular-importacion-form'
 import { PageHeader } from '@/components/page-header'
+import { StatCard } from '@/components/ui/index'
 import { getCurrentUser, isAdmin } from '@/lib/auth'
 import { getImportacionDetail } from '@/lib/read-models'
 
@@ -43,10 +44,10 @@ export default async function ImportacionDetailPage({ params }: PageProps) {
       ) : null}
 
       <section className="grid gap-3 md:grid-cols-4">
-        <Metric label="Estado" value={importacion.estado} />
-        <Metric label="Filas" value={importacion.totalRows} />
-        <Metric label="Completadas" value={importacion.completedActivations} />
-        <Metric label="Sin fecha real" value={importacion.withoutRealActivationDate} />
+        <StatCard label="Estado" value={importacion.estado} />
+        <StatCard label="Filas" value={importacion.totalRows} />
+        <StatCard label="Completadas" value={importacion.completedActivations} />
+        <StatCard label="Sin fecha real" value={importacion.withoutRealActivationDate} />
       </section>
 
       <section className="flex flex-wrap gap-3">
@@ -130,15 +131,6 @@ export default async function ImportacionDetailPage({ params }: PageProps) {
           </table>
         </div>
       </section>
-    </div>
-  )
-}
-
-function Metric({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="rounded-md border border-slate-200 bg-white p-4">
-      <p className="text-xs font-semibold uppercase text-slate-500">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-slate-950">{value}</p>
     </div>
   )
 }

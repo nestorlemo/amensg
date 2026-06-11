@@ -3,9 +3,10 @@ import { Fragment } from 'react'
 import { CerrarLiquidacionButton } from '@/components/cerrar-liquidacion-button'
 import {
   EmptyRow, FinancialRow, FilterInput,
-  Metric, SectionHeader, Td, Th,
+  SectionHeader, Td, Th,
 } from '@/components/liquidaciones/LiquidacionComponents'
 import { PageHeader } from '@/components/page-header'
+import { StatCard } from '@/components/ui/index'
 import { getCurrentUser, isAdmin } from '@/lib/auth'
 import { buildLiquidacionPreview } from '@/lib/liquidaciones'
 import { formatInteger, formatMoney, formatPercent, parseIntParam, sumMoney } from '@/lib/liquidaciones-format'
@@ -68,17 +69,17 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
       ) : null}
 
       <section className="grid min-w-0 gap-3 md:grid-cols-2 lg:grid-cols-4">
-        <Metric label="Total ingresos S/IVA (UYU)" value={preview.ingresos.totalIngresosSinIva} />
-        <Metric label="IVA total (UYU)" value={preview.ingresos.totalIva} />
-        <Metric label="Total ingresos C/IVA (UYU)" value={preview.ingresos.ingresosConIva} />
-        <Metric label="Total gastos S/IVA (UYU)" value={preview.gastos.totalGastos} />
+        <StatCard label="Total ingresos S/IVA (UYU)" value={formatMoney(preview.ingresos.totalIngresosSinIva)} />
+        <StatCard label="IVA total (UYU)" value={formatMoney(preview.ingresos.totalIva)} />
+        <StatCard label="Total ingresos C/IVA (UYU)" value={formatMoney(preview.ingresos.ingresosConIva)} />
+        <StatCard label="Total gastos S/IVA (UYU)" value={formatMoney(preview.gastos.totalGastos)} />
       </section>
 
       <section className="grid min-w-0 gap-3 md:grid-cols-2 lg:grid-cols-4">
-        <Metric label="Resultado activaciones (UYU)" value={preview.resultado.resultadoActivaciones} />
-        <Metric label="Resultado adicionales (USD)" value={preview.resultado.resultadoAdicionales} />
-        <Metric label="Resultado desarrollo (USD)" value={preview.resultado.resultadoDesarrolloUSD} />
-        <Metric label="Resultado distribuible (UYU)" value={preview.resultado.resultadoDistribuible} />
+        <StatCard label="Resultado activaciones (UYU)" value={formatMoney(preview.resultado.resultadoActivaciones)} />
+        <StatCard label="Resultado adicionales (USD)" value={formatMoney(preview.resultado.resultadoAdicionales)} />
+        <StatCard label="Resultado desarrollo (USD)" value={formatMoney(preview.resultado.resultadoDesarrolloUSD)} />
+        <StatCard label="Resultado distribuible (UYU)" value={formatMoney(preview.resultado.resultadoDistribuible)} />
       </section>
 
       <section className="rounded-md border border-slate-200 bg-white p-4">

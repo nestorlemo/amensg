@@ -6,7 +6,7 @@ import { useState } from 'react'
 
 import { AlertError } from '@/components/alerts'
 import { DateInput } from '@/components/date-input'
-import { Badge, Button, ModalShell, typography } from '@/components/ui/index'
+import { Badge, Button, ModalShell, StatCard, typography } from '@/components/ui/index'
 import { requestJson } from '@/lib/client-api'
 
 type Concepto = {
@@ -49,21 +49,13 @@ export function GastosResumen({
 
   return (
     <div className="grid gap-3 sm:grid-cols-3">
-      <SummaryCard label="Gastos fijos del mes S/IVA" value={fmt(totalFijos)} accent="#1769E0" />
-      <SummaryCard label="Gastos variables del mes S/IVA" value={fmt(totalVariables)} accent="#5a6a82" />
-      <SummaryCard label="Total gastos S/IVA" value={fmt(total)} accent="#0B1F3A" bold />
+      <StatCard label="Gastos fijos del mes S/IVA" value={fmt(totalFijos)} />
+      <StatCard label="Gastos variables del mes S/IVA" value={fmt(totalVariables)} />
+      <StatCard label="Total gastos S/IVA" value={fmt(total)} />
     </div>
   )
 }
 
-function SummaryCard({ label, value, accent, bold }: { label: string; value: string; accent: string; bold?: boolean }) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4" style={{ borderLeftColor: accent, borderLeftWidth: 4 }}>
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className={`mt-2 text-2xl tabular-nums ${bold ? 'font-bold' : 'font-semibold'} text-slate-950`}>{value}</p>
-    </div>
-  )
-}
 
 // ─── Sección 1: Gastos fijos ──────────────────────────────────────────────────
 

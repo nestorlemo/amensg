@@ -30,15 +30,6 @@ export function SectionTitle({ title, color }: { title: string; color: string })
   )
 }
 
-export function KpiCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-[#e6eefc] bg-gradient-to-br from-[#EEF4FF] to-white p-5 shadow-sm">
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-2 text-2xl font-bold text-[#1769E0] tabular-nums">{value}</p>
-    </div>
-  )
-}
-
 export function Skeleton() {
   return (
     <div className="space-y-6">
