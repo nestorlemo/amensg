@@ -69,17 +69,17 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
       ) : null}
 
       <section className="grid min-w-0 gap-3 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Total ingresos S/IVA (UYU)" value={formatMoney(preview.ingresos.totalIngresosSinIva)} />
+        <StatCard label="Total ingresos S/IVA (UYU)" value={formatMoney(preview.ingresos.totalIngresosSinIva)} accent="green" />
         <StatCard label="IVA total (UYU)" value={formatMoney(preview.ingresos.totalIva)} />
-        <StatCard label="Total ingresos C/IVA (UYU)" value={formatMoney(preview.ingresos.ingresosConIva)} />
-        <StatCard label="Total gastos S/IVA (UYU)" value={formatMoney(preview.gastos.totalGastos)} />
+        <StatCard label="Total ingresos C/IVA (UYU)" value={formatMoney(preview.ingresos.ingresosConIva)} accent="green" />
+        <StatCard label="Total gastos S/IVA (UYU)" value={formatMoney(preview.gastos.totalGastos)} accent="red" />
       </section>
 
       <section className="grid min-w-0 gap-3 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Resultado activaciones (UYU)" value={formatMoney(preview.resultado.resultadoActivaciones)} />
-        <StatCard label="Resultado adicionales (USD)" value={formatMoney(preview.resultado.resultadoAdicionales)} />
-        <StatCard label="Resultado desarrollo (USD)" value={formatMoney(preview.resultado.resultadoDesarrolloUSD)} />
-        <StatCard label="Resultado distribuible (UYU)" value={formatMoney(preview.resultado.resultadoDistribuible)} />
+        <StatCard label="Resultado activaciones (UYU)" value={formatMoney(preview.resultado.resultadoActivaciones)} accent="green" />
+        <StatCard label="Resultado adicionales (USD)" value={formatMoney(preview.resultado.resultadoAdicionales)} accent="green" />
+        <StatCard label="Resultado desarrollo (USD)" value={formatMoney(preview.resultado.resultadoDesarrolloUSD)} accent="purple" />
+        <StatCard label="Resultado distribuible (UYU)" value={formatMoney(preview.resultado.resultadoDistribuible)} accent="green" />
       </section>
 
       <section className="rounded-md border border-slate-200 bg-white p-4">

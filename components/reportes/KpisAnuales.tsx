@@ -13,9 +13,9 @@ export function KpisAnuales({ kpis, empresaNombre }: Props) {
       <SectionTitle title={empresaNombre ? `KPIs del año — ${empresaNombre}` : 'KPIs del año'} color="#1769E0" />
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard label="Total activaciones" value={fmt(kpis.activaciones)} />
-        <StatCard label="Facturado activaciones S/IVA (UYU)" value={fmt(kpis.facturadoActivaciones)} />
-        <StatCard label="Facturado desarrollo S/IVA (USD)" value={fmt(kpis.facturadoDesarrollo)} />
-        <StatCard label="Resultado distribuible (UYU)" value={fmt(kpis.resultado)} />
+        <StatCard label="Facturado activaciones S/IVA (UYU)" value={fmt(kpis.facturadoActivaciones)} accent="green" />
+        <StatCard label="Facturado desarrollo S/IVA (USD)" value={fmt(kpis.facturadoDesarrollo)} accent="purple" />
+        <StatCard label="Resultado distribuible (UYU)" value={fmt(kpis.resultado)} accent="green" />
       </div>
     </section>
   )

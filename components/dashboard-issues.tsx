@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Bug, PlusCircle, ArrowRight } from 'lucide-react'
 
-import { StatCard } from '@/components/ui/primitives'
+import { StatCard } from '@/components/ui/index'
 import { PageHeader } from '@/components/page-header'
 
 type IssuesStats = {
@@ -55,7 +55,7 @@ export function DashboardIssues() {
         </h2>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <StatCard label="Issues pendientes"        value={stats ? String(stats.pendientes)      : null} accent="amber"  icon={Bug} />
-          <StatCard label="En desarrollo"            value={stats ? String(stats.enDesarrollo)    : null}                icon={Bug} />
+          <StatCard label="En desarrollo"            value={stats ? String(stats.enDesarrollo)    : null} accent="purple" icon={Bug} />
           <StatCard label="En producción este mes"   value={stats ? String(stats.enProduccionMes) : null} accent="green"  icon={Bug} />
           <StatCard label="Monto estimado este mes"  value={monto}                                        accent="purple" icon={Bug} />
         </div>

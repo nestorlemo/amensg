@@ -12,3 +12,13 @@ export const typography = {
 } as const
 
 export type TypographyToken = keyof typeof typography
+
+export const accentCriteria = {
+  positive:  'green',
+  pending:   'amber',
+  neutral:   'default',
+  negative:  'red',
+  highlight: 'purple',
+} as const
+
+export type AccentCriteria = keyof typeof accentCriteria

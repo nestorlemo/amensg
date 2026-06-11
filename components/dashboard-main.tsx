@@ -124,9 +124,9 @@ export function DashboardMain() {
             accent={stats ? (stats.cobrosVencidos > 0 ? 'red' : stats.pendingCobros > 0 ? 'amber' : 'green') : 'amber'}
             icon={CreditCard}
           />
-          <StatCard label="Importaciones activas"  value={stats?.activeImports    ?? null}               icon={Upload} />
+          <StatCard label="Importaciones activas"  value={stats?.activeImports    ?? null}                icon={Upload} />
           <StatCard label="Importaciones este mes" value={stats?.importsThisMonth ?? null} accent="green" icon={Zap} />
-          <StatCard label="Empresas activas"       value={stats?.activeEmpresas   ?? null}               icon={Building2} />
+          <StatCard label="Empresas activas"       value={stats?.activeEmpresas   ?? null}                icon={Building2} />
         </div>
         {stats && stats.cobrosVencidos > 0 ? (
           <div className="mt-4 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-5 py-3">

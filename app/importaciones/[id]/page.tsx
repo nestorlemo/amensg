@@ -46,8 +46,8 @@ export default async function ImportacionDetailPage({ params }: PageProps) {
       <section className="grid gap-3 md:grid-cols-4">
         <StatCard label="Estado" value={importacion.estado} />
         <StatCard label="Filas" value={importacion.totalRows} />
-        <StatCard label="Completadas" value={importacion.completedActivations} />
-        <StatCard label="Sin fecha real" value={importacion.withoutRealActivationDate} />
+        <StatCard label="Completadas" value={importacion.completedActivations} accent="green" />
+        <StatCard label="Sin fecha real" value={importacion.withoutRealActivationDate} accent="amber" />
       </section>
 
       <section className="flex flex-wrap gap-3">
