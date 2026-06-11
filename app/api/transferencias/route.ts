@@ -25,6 +25,14 @@ function buildConcepto(tipo: string, meses: { anio: number; mes: number }[], emp
   return `${label} ${mesLabel(first.mes, true)} ${first.anio}-${mesLabel(last.mes, true)} ${last.anio}`
 }
 
+function periodoFromConcepto(concepto: string): { anio: number; mes: number } | null {
+  const match = concepto.match(/([A-Za-záéíóúÁÉÍÓÚ]+)\s+(\d{4})$/)
+  if (!match) return null
+  const mesIdx = MESES.findIndex(m => m.toLowerCase() === (match[1] ?? '').toLowerCase())
+  if (mesIdx === -1) return null
+  return { anio: parseInt(match[2]!), mes: mesIdx + 1 }
+}
+
 export async function GET(req: NextRequest) {
   const auth = await requireApiAuth()
   if ('error' in auth) return auth.error
@@ -86,17 +94,61 @@ export async function GET(req: NextRequest) {
     orderBy: [{ cobro: { anio: 'desc' } }, { cobro: { mes: 'desc' } }, { socio: { nombre: 'asc' } }],
   })
 
+  // Derive period for each transferencia (needed for CierreMensual lookup)
+  type TWithPeriod = { t: typeof transferencias[number]; desde: { anio: number; mes: number }; hasta: { anio: number; mes: number } }
+  const withPeriod: TWithPeriod[] = transferencias.map(t => {
+    const cobrosVinculados = t.cobrosCobro.map(tc => tc.cobro)
+    const sorted = [...cobrosVinculados].sort((a, b) => a.anio !== b.anio ? a.anio - b.anio : a.mes - b.mes)
+    const desde = sorted[0]
+      ?? (t.cobro ? { anio: t.cobro.anio, mes: t.cobro.mes } : null)
+      ?? periodoFromConcepto(t.concepto)
+      ?? { anio: new Date().getFullYear(), mes: new Date().getMonth() + 1 }
+    const hasta = sorted[sorted.length - 1] ?? desde
+    return { t, desde, hasta }
+  })
+
+  // Batch load CierreMensual + CierreSocio for all unique periods / socios
+  const uniquePeriods = [...new Map(
+    withPeriod.map(({ desde }) => [`${desde.anio}-${desde.mes}`, desde])
+  ).values()]
+
+  const cierres = await prisma.cierreMensual.findMany({
+    where: { OR: uniquePeriods.map(p => ({ anio: p.anio, mes: p.mes })) },
+    select: { id: true, anio: true, mes: true, snapshot: true },
+  })
+  const cierreByPeriod = new Map(cierres.map(c => [`${c.anio}-${c.mes}`, c]))
+
+  const cierresSocio = cierres.length > 0
+    ? await prisma.cierreSocio.findMany({
+        where: {
+          cierreMensualId: { in: cierres.map(c => c.id) },
+          socioId: { in: [...new Set(transferencias.map(t => t.socioId))] },
+        },
+        select: { cierreMensualId: true, socioId: true, snapshot: true },
+      })
+    : []
+  const cierreSocioByKey = new Map(cierresSocio.map(cs => [`${cs.cierreMensualId}:${cs.socioId}`, cs]))
+
   return NextResponse.json({
-    transferencias: transferencias.map((t) => {
+    transferencias: withPeriod.map(({ t, desde, hasta }) => {
       const cobrosVinculados = t.cobrosCobro.map(tc => tc.cobro)
-      const sorted = [...cobrosVinculados].sort((a, b) =>
-        a.anio !== b.anio ? a.anio - b.anio : a.mes - b.mes,
-      )
-      // For transferencias without linked cobros (new cierre-based flow),
-      // fall back to the reference cobro or derive from concepto
-      const fallback = t.cobro ?? { anio: new Date().getFullYear(), mes: new Date().getMonth() + 1 }
-      const desde = sorted[0] ?? { anio: fallback.anio, mes: fallback.mes }
-      const hasta = sorted[sorted.length - 1] ?? desde
+
+      // Build cierreResumen
+      let cierreResumen: { facturacionSinIva: string; totalGastos: string; resultadoActivaciones: string; socioPorcentaje: string | null } | null = null
+      const cierre = cierreByPeriod.get(`${desde.anio}-${desde.mes}`)
+      if (cierre) {
+        const snap = (cierre.snapshot ?? {}) as Record<string, unknown>
+        const ingresosSnap = (snap.ingresos ?? {}) as Record<string, unknown>
+        const facturacionSinIva = String(ingresosSnap.facturacionSinIva ?? snap.totalIngresosSinIva ?? '0.00')
+        const totalGastos = String(snap.totalGastos ?? '0.00')
+        const resultadoActivaciones = (Number(facturacionSinIva) - Number(totalGastos)).toFixed(2)
+
+        const cs = cierreSocioByKey.get(`${cierre.id}:${t.socioId}`)
+        const csSnap = (cs?.snapshot ?? {}) as Record<string, unknown>
+        const socioPorcentaje = csSnap.socioPorcentaje != null ? String(csSnap.socioPorcentaje) : null
+
+        cierreResumen = { facturacionSinIva, totalGastos, resultadoActivaciones, socioPorcentaje }
+      }
 
       return {
         id: t.id,
@@ -123,6 +175,7 @@ export async function GET(req: NextRequest) {
           montoSinIva: c.montoSinIva.toString(),
           moneda: c.moneda,
         })),
+        cierreResumen,
       }
     }),
   })

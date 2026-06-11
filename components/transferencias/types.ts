@@ -20,6 +20,13 @@ export type CobroDetalle = {
   moneda: string
 }
 
+export type CierreResumen = {
+  facturacionSinIva: string
+  totalGastos: string
+  resultadoActivaciones: string
+  socioPorcentaje: string | null
+}
+
 export type Transferencia = {
   id: string
   socioId: string
@@ -39,6 +46,7 @@ export type Transferencia = {
   periodoDesde: { anio: number; mes: number }
   periodoHasta: { anio: number; mes: number }
   cobrosDetalle: CobroDetalle[]
+  cierreResumen: CierreResumen | null
 }
 
 export type Socio = { id: string; nombre: string }

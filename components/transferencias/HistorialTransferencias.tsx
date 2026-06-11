@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Download, Eye } from 'lucide-react'
-import { fmt, mesNombre, MESES, ESTADO_BADGE, TIPO_BADGE, type CobroDetalle, type Transferencia, type Socio } from './types'
+import { fmt, MESES, ESTADO_BADGE, TIPO_BADGE, type CobroDetalle, type CierreResumen, type Transferencia, type Socio } from './types'
 import { Badge, ModalShell } from './primitives'
 
 type Props = {
@@ -71,6 +71,8 @@ export function HistorialTransferencias({ socios, refreshTrigger }: Props) {
   function handleExport() {
     const params = new URLSearchParams()
     if (filtroSocio)  params.set('socioId', filtroSocio)
+    if (filtroMoneda) params.set('moneda', filtroMoneda)
+    if (filtroEstado) params.set('estado', filtroEstado)
     if (filtroAnio)   params.set('anio', filtroAnio)
     if (filtroMes)    params.set('mes', filtroMes)
     window.open(`/api/transferencias/export?${params}`, '_blank')
@@ -253,12 +255,43 @@ export function HistorialTransferencias({ socios, refreshTrigger }: Props) {
 
 // ── Modal detalle ─────────────────────────────────────────────────────────────
 
+function ResumenRow({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+  return (
+    <div className="flex items-center justify-between py-1.5">
+      <span className="text-sm text-slate-600">{label}</span>
+      <span className={`tabular-nums text-sm ${bold ? 'font-bold text-slate-950' : 'text-slate-800'}`}>{value}</span>
+    </div>
+  )
+}
+
+function CierreResumenSection({ resumen, moneda, monto }: { resumen: CierreResumen; moneda: string; monto: string }) {
+  const pct = resumen.socioPorcentaje != null
+    ? `${(Number(resumen.socioPorcentaje) * 100).toFixed(2)}%`
+    : '—'
+  return (
+    <div className="mb-5 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Resumen del período</p>
+      <div className="divide-y divide-slate-100">
+        <ResumenRow label="Total activaciones s/IVA" value={`${moneda === 'UYU' ? 'UYU' : 'USD'} ${fmt(resumen.facturacionSinIva)}`} />
+        <ResumenRow label="Total gastos" value={`UYU ${fmt(resumen.totalGastos)}`} />
+        <ResumenRow label="Resultado activaciones neto" value={`UYU ${fmt(resumen.resultadoActivaciones)}`} />
+        <ResumenRow label="Participación del socio" value={pct} />
+        <ResumenRow label="Monto a transferir" value={`${moneda} ${fmt(monto)}`} bold />
+      </div>
+    </div>
+  )
+}
+
 function DetalleModal({ transferencia: t, onClose }: { transferencia: Transferencia; onClose: () => void }) {
   const pd = t.periodoDesde ?? { anio: t.cobroAnio, mes: t.cobroMes }
   const ph = t.periodoHasta ?? pd
   const titulo = `Transferencia — ${t.socio} ${periodoLabel(pd, ph)}`
   const cobros: CobroDetalle[] = t.cobrosDetalle ?? []
   const total = cobros.reduce((s, c) => s + Number(c.montoSinIva), 0)
+
+  function handleExportDetalle() {
+    window.open(`/api/transferencias/${t.id}/export`, '_blank')
+  }
 
   return (
     <div
@@ -278,44 +311,61 @@ function DetalleModal({ transferencia: t, onClose }: { transferencia: Transferen
 
         {/* Body */}
         <div className="px-6 py-5">
+          {/* Resumen del cierre */}
+          {t.cierreResumen && (
+            <CierreResumenSection resumen={t.cierreResumen} moneda={t.moneda} monto={t.monto} />
+          )}
+
+          {/* Tabla de cobros */}
           {cobros.length === 0 ? (
             <p className="py-6 text-center text-sm text-slate-400">Sin cobros vinculados.</p>
           ) : (
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  <th className="pb-2 pr-4">Empresa</th>
-                  <th className="pb-2 pr-4">Tipo</th>
-                  <th className="pb-2 pr-4">Período</th>
-                  <th className="pb-2 text-right">Monto S/IVA</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {cobros.map((c, i) => (
-                  <tr key={i} className="hover:bg-slate-50">
-                    <td className="py-2.5 pr-4 font-medium text-slate-900">{c.empresa}</td>
-                    <td className="py-2.5 pr-4">
-                      <Badge label={c.tipo} cls={TIPO_BADGE[c.tipo] ?? 'bg-slate-100 text-slate-700'} />
-                    </td>
-                    <td className="py-2.5 pr-4 text-slate-600">{c.periodo}</td>
-                    <td className="py-2.5 text-right tabular-nums font-medium text-slate-900">
-                      {c.moneda} {fmt(c.montoSinIva)}
-                    </td>
+            <>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Detalle de cobros</p>
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    <th className="pb-2 pr-4">Empresa</th>
+                    <th className="pb-2 pr-4">Tipo</th>
+                    <th className="pb-2 pr-4">Período</th>
+                    <th className="pb-2 text-right">Monto S/IVA</th>
                   </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t-2 border-slate-200">
-                  <td colSpan={3} className="pt-3 pr-4 text-xs font-semibold uppercase tracking-wide text-slate-500">Total</td>
-                  <td className="pt-3 text-right tabular-nums font-bold text-slate-950">{t.moneda} {fmt(total)}</td>
-                </tr>
-              </tfoot>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {cobros.map((c, i) => (
+                    <tr key={i} className="hover:bg-slate-50">
+                      <td className="py-2.5 pr-4 font-medium text-slate-900">{c.empresa}</td>
+                      <td className="py-2.5 pr-4">
+                        <Badge label={c.tipo} cls={TIPO_BADGE[c.tipo] ?? 'bg-slate-100 text-slate-700'} />
+                      </td>
+                      <td className="py-2.5 pr-4 text-slate-600">{c.periodo}</td>
+                      <td className="py-2.5 text-right tabular-nums font-medium text-slate-900">
+                        {c.moneda} {fmt(c.montoSinIva)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-slate-200">
+                    <td colSpan={3} className="pt-3 pr-4 text-xs font-semibold uppercase tracking-wide text-slate-500">Total</td>
+                    <td className="pt-3 text-right tabular-nums font-bold text-slate-950">{t.moneda} {fmt(total)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </>
           )}
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end border-t border-slate-100 px-6 py-4">
+        <div className="flex items-center justify-between border-t border-slate-100 px-6 py-4">
+          <button
+            className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            onClick={handleExportDetalle}
+            type="button"
+          >
+            <Download size={13} />
+            Exportar Excel
+          </button>
           <button
             className="h-9 rounded-md border border-slate-300 px-5 text-sm font-medium text-slate-700 hover:bg-slate-50"
             onClick={onClose}

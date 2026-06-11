@@ -27,18 +27,39 @@ export async function GET(request: Request) {
   const auth = await requireApiAuth()
   if ('error' in auth) return auth.error
 
+  const MESES_EXPORT = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+
   const { searchParams } = new URL(request.url)
   const socioId = searchParams.get('socioId') ?? undefined
+  const moneda  = searchParams.get('moneda')  ?? undefined
+  const estado  = searchParams.get('estado')  ?? undefined
   const anio    = searchParams.get('anio')    ? parseInt(searchParams.get('anio')!)    : undefined
   const mes     = searchParams.get('mes')     ? parseInt(searchParams.get('mes')!)     : undefined
 
   const where: Record<string, unknown> = {}
   if (socioId) where.socioId = socioId
+  if (moneda)  where.moneda  = moneda
+  if (estado)  where.estado  = estado
   if (anio || mes) {
-    where.cobro = {
-      ...(anio ? { anio } : {}),
-      ...(mes  ? { mes  } : {}),
-    }
+    const conceptoFilter = anio && mes
+      ? { concepto: { contains: `${MESES_EXPORT[mes - 1] ?? ''} ${anio}` } }
+      : anio
+        ? { concepto: { contains: String(anio) } }
+        : { concepto: { contains: MESES_EXPORT[(mes ?? 1) - 1] ?? '' } }
+
+    where.OR = [
+      {
+        cobrosCobro: {
+          some: {
+            cobro: {
+              ...(anio ? { anio } : {}),
+              ...(mes  ? { mes  } : {}),
+            },
+          },
+        },
+      },
+      conceptoFilter,
+    ]
   }
 
   const transferencias = await prisma.transferencia.findMany({
