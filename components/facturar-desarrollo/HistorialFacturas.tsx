@@ -1,6 +1,7 @@
 'use client'
 
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react'
+import { Eye } from 'lucide-react'
 
 import { ConfirmarCobroModal } from '@/components/confirmar-cobro-modal'
 
@@ -192,9 +193,10 @@ export const HistorialFacturas = forwardRef<HistorialHandle, {
                         {f.issues.length > 0 && (
                           <button
                             onClick={() => setIssuesModal(f)}
-                            className="rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                            className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
                           >
-                            Detalles
+                            <Eye size={12} />
+                            Ver detalle
                           </button>
                         )}
                         {f.estado !== 'COBRADO' && (
