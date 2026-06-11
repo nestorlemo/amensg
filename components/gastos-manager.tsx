@@ -49,9 +49,9 @@ export function GastosResumen({
 
   return (
     <div className="grid gap-3 sm:grid-cols-3">
-      <StatCard label="Gastos fijos del mes S/IVA" value={fmt(totalFijos)} accent="red" />
-      <StatCard label="Gastos variables del mes S/IVA" value={fmt(totalVariables)} accent="red" />
-      <StatCard label="Total gastos S/IVA" value={fmt(total)} accent="red" />
+      <StatCard label="Gastos fijos del mes S/IVA" value={fmt(totalFijos)} />
+      <StatCard label="Gastos variables del mes S/IVA" value={fmt(totalVariables)} />
+      <StatCard label="Total gastos S/IVA" value={fmt(total)} />
     </div>
   )
 }

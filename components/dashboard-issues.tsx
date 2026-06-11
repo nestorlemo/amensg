@@ -57,7 +57,7 @@ export function DashboardIssues() {
           <StatCard label="Issues pendientes"        value={stats ? String(stats.pendientes)      : null} accent="amber"  icon={Bug} />
           <StatCard label="En desarrollo"            value={stats ? String(stats.enDesarrollo)    : null} accent="purple" icon={Bug} />
           <StatCard label="En producción este mes"   value={stats ? String(stats.enProduccionMes) : null} accent="green"  icon={Bug} />
-          <StatCard label="Monto estimado este mes"  value={monto}                                        accent="purple" icon={Bug} />
+          <StatCard label="Monto estimado este mes"  value={monto}                                        accent="green"  icon={Bug} />
         </div>
       </section>
 

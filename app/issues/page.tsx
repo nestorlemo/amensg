@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 
 import { DateInput } from '@/components/date-input'
 import { PageHeader } from '@/components/page-header'
-import { Badge, Button, ModalShell, typography } from '@/components/ui/index'
+import { Badge, Button, ModalShell, StatCard, typography } from '@/components/ui/index'
 
 const ESTADOS = ['PENDIENTE', 'EN_DESARROLLO', 'EN_TEST', 'EN_PRODUCCION', 'CANCELADO'] as const
 const PRIORIDADES = ['ALTA', 'MEDIA', 'BAJA'] as const
@@ -515,12 +515,13 @@ export default function IssuesPage() {
 
       {/* Resumen */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <SummaryCard label="Issues totales"       value={String(issues.length)} />
-        <SummaryCard label="En producción"        value={String(enProduccion.length)} />
-        <SummaryCard label="Horas en producción"  value={`${totalHorasMes.toFixed(1)}h`} />
-        <SummaryCard
+        <StatCard label="Issues totales"       value={String(issues.length)} />
+        <StatCard label="En producción"        value={String(enProduccion.length)} accent="purple" />
+        <StatCard label="Horas en producción"  value={`${totalHorasMes.toFixed(1)}h`} accent="purple" />
+        <StatCard
           label={`Monto est. (USD ${config.valorHoraUSD > 0 ? `$${config.valorHoraUSD}` : 'sin configurar'})`}
           value={montoEstimadoMes > 0 ? `$${montoEstimadoMes.toFixed(2)}` : '—'}
+          accent="green"
         />
       </div>
 
@@ -818,15 +819,6 @@ function TrashIcon() {
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
-
-function SummaryCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
-      <p className="text-xs font-medium text-slate-500">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-slate-950">{value}</p>
-    </div>
-  )
-}
 
 function Th({ children }: { children: React.ReactNode }) {
   return <th className={`whitespace-nowrap px-4 py-3 text-left ${typography.tableHeader}`}>{children}</th>

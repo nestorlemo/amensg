@@ -72,7 +72,7 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
         <StatCard label="Total ingresos S/IVA (UYU)" value={formatMoney(preview.ingresos.totalIngresosSinIva)} accent="green" />
         <StatCard label="IVA total (UYU)" value={formatMoney(preview.ingresos.totalIva)} />
         <StatCard label="Total ingresos C/IVA (UYU)" value={formatMoney(preview.ingresos.ingresosConIva)} accent="green" />
-        <StatCard label="Total gastos S/IVA (UYU)" value={formatMoney(preview.gastos.totalGastos)} accent="red" />
+        <StatCard label="Total gastos S/IVA (UYU)" value={formatMoney(preview.gastos.totalGastos)} />
       </section>
 
       <section className="grid min-w-0 gap-3 md:grid-cols-2 lg:grid-cols-4">

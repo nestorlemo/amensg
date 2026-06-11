@@ -65,7 +65,7 @@ export default async function CierreDetailPage({ params }: PageProps) {
         <StatCard label="Ingresos sin IVA" value={String(displayValue(snapshot.totalIngresosSinIva, '0.00'))} accent="green" />
         <StatCard label="IVA total" value={String(displayValue(snapshot.totalIva, '0.00'))} />
         <StatCard label="Ingresos con IVA" value={String(displayValue(snapshot.totalIngresosConIva, '0.00'))} accent="green" />
-        <StatCard label="Total gastos" value={String(displayValue(snapshot.totalGastos, '0.00'))} accent="red" />
+        <StatCard label="Total gastos" value={String(displayValue(snapshot.totalGastos, '0.00'))} />
         <StatCard label="Resultado distribuible" value={String(displayValue(snapshot.resultadoDistribuible, '0.00'))} accent="green" />
       </section>
 

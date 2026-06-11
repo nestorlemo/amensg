@@ -14,11 +14,11 @@ export const typography = {
 export type TypographyToken = keyof typeof typography
 
 export const accentCriteria = {
-  positive:  'green',
-  pending:   'amber',
-  neutral:   'default',
-  negative:  'red',
-  highlight: 'purple',
+  positive:  'green',    // cobrado, completado, resultado positivo
+  pending:   'amber',    // pendientes, por resolver, por cobrar
+  neutral:   'default',  // conteos informativos, gastos, métricas neutras
+  negative:  'red',      // alertas, deudas, empresas con deuda
+  highlight: 'purple',   // desarrollo, issues, horas
 } as const
 
 export type AccentCriteria = keyof typeof accentCriteria

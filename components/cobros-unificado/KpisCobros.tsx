@@ -26,7 +26,7 @@ export function KpisCobros({ resumen }: Props) {
       <StatCard
         label="Facturas pendientes"
         value={resumen ? resumen.facturasPendientes : null}
-        accent="default"
+        accent="amber"
       />
       <StatCard
         label="Empresas con deuda"
