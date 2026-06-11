@@ -1,4 +1,4 @@
-import { StatCard } from '@/components/ui/primitives'
+import { StatCard } from '@/components/ui/index'
 import { fmt, type ResumenData } from './types'
 
 type Props = {
