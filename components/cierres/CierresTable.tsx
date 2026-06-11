@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { Eye } from 'lucide-react'
 
 import { ReabrirCierreForm } from '@/components/reabrir-cierre-form'
 
@@ -174,7 +175,8 @@ export function CierresTable({ rows, isAdmin }: Props) {
                 <td className="whitespace-nowrap px-4 py-3 text-slate-700">{formatDate(row.cerradoAt)}</td>
                 <td className="whitespace-nowrap px-4 py-3">
                   <div className="flex min-w-0 flex-wrap items-start gap-3">
-                    <Link className="py-2 font-semibold text-slate-950 underline" href={`/cierres/${row.id}`}>
+                    <Link className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50" href={`/cierres/${row.id}`}>
+                      <Eye size={12} />
                       Ver detalle
                     </Link>
                     {isAdmin && isCerrado(row.estado) ? <ReabrirCierreForm cierreId={row.id} /> : null}

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Eye } from 'lucide-react'
 
 import { AccessDenied } from '@/components/access-denied'
 import { DateInput } from '@/components/date-input'
@@ -90,7 +91,10 @@ export default async function AuditoriaPage({ searchParams }: PageProps) {
                 <Td>{row.resumen}</Td>
                 <Td>
                   <details className="group">
-                    <summary className="cursor-pointer text-sm font-semibold text-slate-950 underline">Ver detalle</summary>
+                    <summary className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                      <Eye size={12} />
+                      Ver detalle
+                    </summary>
                     <dl className="mt-3 grid max-w-xl gap-2 rounded-md border border-slate-200 bg-slate-50 p-3">
                       <Detail label="Accion" value={row.accion} />
                       <Detail label="Entidad" value={row.entidad} />

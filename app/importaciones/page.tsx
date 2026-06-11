@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { Eye } from 'lucide-react'
 
 import { AppPageHeader, Button, typography } from '@/components/ui/index'
 
@@ -205,7 +206,8 @@ export default function ImportacionesPage() {
                     <Td>{formatDate(row.creadaEn)}</Td>
                     <Td>
                       <div className="flex min-w-0 flex-wrap items-start gap-3">
-                        <Link className="py-2 font-semibold text-slate-950 underline" href={`/importaciones/${row.id}`}>
+                        <Link className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50" href={`/importaciones/${row.id}`}>
+                          <Eye size={12} />
                           Ver detalle
                         </Link>
                       </div>
