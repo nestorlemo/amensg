@@ -109,23 +109,25 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
   const facturacionSinIva = sumDecimal(facturaciones.map((row) => row.totalSinIva))
   const facturacionIva = sumDecimal(facturaciones.map((row) => row.iva))
   const facturacionConIva = sumDecimal(facturaciones.map((row) => row.totalConIva))
-  const ingresosAdicionalesSinIva = sumDecimal(ingresosAdicionales.map((row) => row.montoSinIva))
-  const ingresosAdicionalesIva = sumDecimal(ingresosAdicionales.map((row) => row.iva))
-  const ingresosAdicionalesConIva = sumDecimal(ingresosAdicionales.map((row) => row.montoConIva))
-  const totalIngresosSinIva = facturacionSinIva.add(ingresosAdicionalesSinIva)
-  const totalIva = facturacionIva.add(ingresosAdicionalesIva)
-  const totalIngresosConIva = facturacionConIva.add(ingresosAdicionalesConIva)
   const totalGastosVariables = sumDecimal(gastos.map((row) => row.importe))
   const totalGastosFijos = sumDecimal(gastosFijosConceptos.map((c) => c.monto!))
   const totalGastos = totalGastosVariables.add(totalGastosFijos)
 
+  // Exclude IngresoAdicional rows that belong to a FacturaDesarrollo to avoid double-counting
   const facturaDesarrolloIngresoIds = new Set(
     facturaDesarrollo.map(f => f.ingresoAdicionalId).filter((id): id is string => id !== null)
   )
   const ingresosAdicionalesPuros = ingresosAdicionales.filter(i => !facturaDesarrolloIngresoIds.has(i.id))
 
+  const ingresosAdicionalesSinIva = sumDecimal(ingresosAdicionalesPuros.map((row) => row.montoSinIva))
+  const ingresosAdicionalesIva = sumDecimal(ingresosAdicionalesPuros.map((row) => row.iva))
+  const ingresosAdicionalesConIva = sumDecimal(ingresosAdicionalesPuros.map((row) => row.montoConIva))
+  const totalIngresosSinIva = facturacionSinIva.add(ingresosAdicionalesSinIva)
+  const totalIva = facturacionIva.add(ingresosAdicionalesIva)
+  const totalIngresosConIva = facturacionConIva.add(ingresosAdicionalesConIva)
+
   const resultadoActivaciones = facturacionSinIva.sub(totalGastos)
-  const ingresosAdicionalesPurosSinIva = sumDecimal(ingresosAdicionalesPuros.map(i => i.montoSinIva))
+  const ingresosAdicionalesPurosSinIva = ingresosAdicionalesSinIva
   const resultadoAdicionales = ingresosAdicionalesPurosSinIva
   const desarrolloTotalUYU = sumDecimal(facturaDesarrollo.map(f => f.totalUYU))
   const resultadoDesarrollo = desarrolloTotalUYU
@@ -222,7 +224,7 @@ export async function buildLiquidacionPreview(period: PeriodInput) {
         totalConIva: money(row.totalConIva),
         cantidadActivaciones: row.cantidadActivaciones,
       })),
-      adicionales: ingresosAdicionales.map((row) => ({
+      adicionales: ingresosAdicionalesPuros.map((row) => ({
         id: row.id,
         concepto: row.concepto,
         empresa: row.empresa?.nombre ?? null,

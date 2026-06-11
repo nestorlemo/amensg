@@ -93,10 +93,10 @@ export async function POST(request: Request) {
   if (!tipoCambio || tipoCambio <= 0) return NextResponse.json({ error: 'VALIDATION_ERROR', message: 'Tipo de cambio inválido.' }, { status: 422 })
   if (issueIds.length === 0)      return NextResponse.json({ error: 'VALIDATION_ERROR', message: 'Debe seleccionar al menos un issue.' }, { status: 422 })
 
-  // Use current date for período, not the issue date range
-  const ahora = new Date()
-  const anio = ahora.getFullYear()
-  const mes  = ahora.getMonth() + 1
+  // Derive período from fechaHasta of the invoice range
+  const fechaHastaParsed = new Date(fechaHasta)
+  const anio = fechaHastaParsed.getFullYear()
+  const mes  = fechaHastaParsed.getMonth() + 1
 
   // Read valor hora from parametros
   const valorHoraParam = await prisma.parametro.findUnique({ where: { clave: 'valor_hora_desarrollo_usd' } })
@@ -110,11 +110,15 @@ export async function POST(request: Request) {
 
   // Get issues and calc hours
   const issues = await prisma.issue.findMany({ where: { id: { in: issueIds }, eliminado: false } })
-  const totalHoras  = issues.reduce((s, i) => s + Number(i.totalHoras), 0)
-  const totalUSD    = Math.round(totalHoras * valorHoraUSD * 100) / 100
-  const totalUYU    = Math.round(totalUSD * tipoCambio * 100) / 100
-  const iva         = Math.round(totalUYU * IVA * 100) / 100
-  const totalConIva = Math.round((totalUYU + iva) * 100) / 100
+  const totalHoras      = issues.reduce((s, i) => s + Number(i.totalHoras), 0)
+  const totalUSD        = Math.round(totalHoras * valorHoraUSD * 100) / 100
+  const totalUYU        = Math.round(totalUSD * tipoCambio * 100) / 100
+  // IngresoAdicional stores amounts in the original currency (USD)
+  const ivaUSD          = Math.round(totalUSD * IVA * 100) / 100
+  const totalConIvaUSD  = Math.round(totalUSD * (1 + IVA) * 100) / 100
+  // FacturaDesarrollo stores UYU amounts for the resultado distribuible
+  const ivaUYU          = Math.round(totalUYU * IVA * 100) / 100
+  const totalConIvaUYU  = Math.round((totalUYU + ivaUYU) * 100) / 100
 
   // Build ingreso adicional description
   const empresa = await prisma.empresa.findUnique({ where: { id: empresaId }, select: { nombre: true } })
@@ -133,10 +137,10 @@ export async function POST(request: Request) {
         tipoCambioAplicado: tipoCambio,
         fuenteTipoCambio: 'MANUAL',
         fechaTipoCambio: new Date(),
-        montoSinIva: totalUYU,
+        montoSinIva: totalUSD,
         porcentajeIva: IVA,
-        iva,
-        montoConIva: totalConIva,
+        iva: ivaUSD,
+        montoConIva: totalConIvaUSD,
       },
     })
 
@@ -150,8 +154,8 @@ export async function POST(request: Request) {
         totalUSD,
         tipoCambio,
         totalUYU,
-        iva,
-        totalConIva,
+        iva: ivaUYU,
+        totalConIva: totalConIvaUYU,
         ingresoAdicionalId: ingreso.id,
         facturaIssues: {
           create: issueIds.map((issueId) => ({ issueId })),
