@@ -25,8 +25,6 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
   const preview = await buildLiquidacionPreview({ anio, mes })
   const facturacionIva = sumMoney(preview.ingresos.facturaciones.map((row) => row.iva))
   const facturacionConIva = sumMoney(preview.ingresos.facturaciones.map((row) => row.totalConIva))
-  const ingresosAdicionalesIva = sumMoney(preview.ingresos.adicionales.map((row) => row.iva))
-  const ingresosAdicionalesConIva = sumMoney(preview.ingresos.adicionales.map((row) => row.montoConIva))
 
   return (
     <div className="min-w-0 max-w-full space-y-6">
@@ -77,7 +75,6 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
 
       <section className="grid min-w-0 gap-3 md:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Resultado activaciones (UYU)" value={formatMoney(preview.resultado.resultadoActivaciones)} accent="green" />
-        <StatCard label="Resultado adicionales (USD)" value={formatMoney(preview.resultado.resultadoAdicionales)} accent="green" />
         <StatCard label="Resultado desarrollo (USD)" value={formatMoney(preview.resultado.resultadoDesarrolloUSD)} accent="purple" />
         <StatCard label="Resultado distribuible (UYU)" value={formatMoney(preview.resultado.resultadoDistribuible)} accent="green" />
       </section>
@@ -106,12 +103,6 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
                 iva={facturacionIva}
                 total={facturacionConIva}
                 withoutIva={preview.ingresos.facturacionSinIva}
-              />
-              <FinancialRow
-                concept="Ingresos adicionales"
-                iva={ingresosAdicionalesIva}
-                total={ingresosAdicionalesConIva}
-                withoutIva={preview.ingresos.ingresosAdicionalesSinIva}
               />
               <FinancialRow
                 concept="Total ingresos"
@@ -153,40 +144,6 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
               ))}
               {preview.ingresos.facturaciones.length === 0 ? (
                 <EmptyRow colSpan={5} message="No hay facturación activa para este periodo." />
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="rounded-md border border-slate-200 bg-white p-4">
-        <SectionHeader
-          description="Ingresos cargados manualmente para sumar al resultado mensual."
-          title="Ingresos adicionales"
-        />
-        <div className="mt-4 overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="bg-slate-100 text-left text-xs uppercase text-slate-600">
-              <tr>
-                <Th>Concepto</Th>
-                <Th>Empresa</Th>
-                <Th align="right">Monto S/IVA</Th>
-                <Th align="right">IVA</Th>
-                <Th align="right">Monto C/IVA</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {preview.ingresos.adicionales.map((row) => (
-                <tr className="border-t border-slate-200" key={row.id}>
-                  <Td>{row.concepto}</Td>
-                  <Td>{row.empresa ?? 'General'}</Td>
-                  <Td align="right">{formatMoney(row.montoSinIva)}</Td>
-                  <Td align="right">{formatMoney(row.iva)}</Td>
-                  <Td align="right">{formatMoney(row.montoConIva)}</Td>
-                </tr>
-              ))}
-              {preview.ingresos.adicionales.length === 0 ? (
-                <EmptyRow colSpan={5} message="No hay ingresos adicionales para este periodo." />
               ) : null}
             </tbody>
           </table>
@@ -279,11 +236,9 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
               <tr>
                 <Th>Socio</Th>
                 <Th align="right">Porcentaje</Th>
-                <Th align="right">Activaciones</Th>
-                <Th align="right">Adicionales</Th>
-                <Th align="right">Desarrollo</Th>
-                <Th align="right">Total UYU</Th>
-                <Th align="right">Total USD</Th>
+                <Th align="right">Activaciones (UYU)</Th>
+                <Th align="right">Desarrollo (UYU)</Th>
+                <Th align="right">Desarrollo (USD)</Th>
               </tr>
             </thead>
             <tbody>
@@ -292,13 +247,11 @@ export default async function LiquidacionesPage({ searchParams }: PageProps) {
                   <Td>{socio.nombre}</Td>
                   <Td align="right">{formatPercent(socio.porcentaje)}</Td>
                   <Td align="right">{formatMoney(socio.montoActivaciones)}</Td>
-                  <Td align="right">{formatMoney(socio.montoAdicionales)}</Td>
-                  <Td align="right">{formatMoney(socio.montoDesarrollo)}</Td>
-                  <Td align="right">{formatMoney(socio.montoPesos)}</Td>
-                  <Td align="right">{socio.montoUsd ? formatMoney(socio.montoUsd) : 'Sin configurar'}</Td>
+                  <Td align="right">{formatMoney(socio.montoDesarrolloUYU)}</Td>
+                  <Td align="right">{formatMoney(socio.montoDesarrolloUSD)}</Td>
                 </tr>
               ))}
-              {preview.socios.length === 0 ? <EmptyRow colSpan={7} message="No hay socios activos configurados." /> : null}
+              {preview.socios.length === 0 ? <EmptyRow colSpan={5} message="No hay socios activos configurados." /> : null}
             </tbody>
           </table>
         </div>

@@ -73,9 +73,12 @@ async function main() {
     if (!cierreSocio) continue
 
     const snap = cierreSocio.snapshot as Record<string, unknown>
+    // Prefer new desglose fields; fall back to old fields for historical cierres
     const montoCorrecto = t.moneda === 'UYU'
-      ? (snap.montoPesos != null ? Number(snap.montoPesos) : null)
-      : (snap.montoUsd   != null ? Number(snap.montoUsd)   : null)
+      ? (snap.montoActivaciones != null ? Number(snap.montoActivaciones)
+         : snap.montoPesos != null ? Number(snap.montoPesos) : null)
+      : (snap.montoDesarrolloUSD != null ? Number(snap.montoDesarrolloUSD)
+         : snap.montoUsd != null ? Number(snap.montoUsd) : null)
 
     if (montoCorrecto === null) continue
 

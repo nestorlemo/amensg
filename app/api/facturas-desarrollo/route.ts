@@ -14,7 +14,6 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url)
   const empresaId          = searchParams.get('empresaId')          ?? undefined
-  const ingresoAdicionalId = searchParams.get('ingresoAdicionalId') ?? undefined
   const estado             = searchParams.get('estado')             ?? undefined
   const fechaDesde         = searchParams.get('fechaDesde')         ?? undefined
   const fechaHasta         = searchParams.get('fechaHasta')         ?? undefined
@@ -56,7 +55,6 @@ export async function GET(request: Request) {
 
   const where: Record<string, unknown> = {}
   if (empresaId) where.empresaId = empresaId
-  if (ingresoAdicionalId) where.ingresoAdicionalId = ingresoAdicionalId
 
   const facturas = await prisma.facturaDesarrollo.findMany({
     where,
@@ -113,37 +111,10 @@ export async function POST(request: Request) {
   const totalHoras      = issues.reduce((s, i) => s + Number(i.totalHoras), 0)
   const totalUSD        = Math.round(totalHoras * valorHoraUSD * 100) / 100
   const totalUYU        = Math.round(totalUSD * tipoCambio * 100) / 100
-  // IngresoAdicional stores amounts in the original currency (USD)
-  const ivaUSD          = Math.round(totalUSD * IVA * 100) / 100
-  const totalConIvaUSD  = Math.round(totalUSD * (1 + IVA) * 100) / 100
-  // FacturaDesarrollo stores UYU amounts for the resultado distribuible
   const ivaUYU          = Math.round(totalUYU * IVA * 100) / 100
   const totalConIvaUYU  = Math.round((totalUYU + ivaUYU) * 100) / 100
 
-  // Build ingreso adicional description
-  const empresa = await prisma.empresa.findUnique({ where: { id: empresaId }, select: { nombre: true } })
-  const concepto = `Desarrollo ${empresa?.nombre ?? ''} ${fechaDesde} / ${fechaHasta}`
-
   const factura = await prisma.$transaction(async (tx) => {
-    const ingreso = await tx.ingresoAdicional.create({
-      data: {
-        concepto,
-        empresaId,
-        anio,
-        mes,
-        moneda: 'USD',
-        montoOrigen: totalUSD,
-        fechaFacturacion: new Date(),
-        tipoCambioAplicado: tipoCambio,
-        fuenteTipoCambio: 'MANUAL',
-        fechaTipoCambio: new Date(),
-        montoSinIva: totalUSD,
-        porcentajeIva: IVA,
-        iva: ivaUSD,
-        montoConIva: totalConIvaUSD,
-      },
-    })
-
     const fd = await tx.facturaDesarrollo.create({
       data: {
         anio,
@@ -156,7 +127,6 @@ export async function POST(request: Request) {
         totalUYU,
         iva: ivaUYU,
         totalConIva: totalConIvaUYU,
-        ingresoAdicionalId: ingreso.id,
         facturaIssues: {
           create: issueIds.map((issueId) => ({ issueId })),
         },
@@ -164,7 +134,7 @@ export async function POST(request: Request) {
           create: distribuciones.map((d) => ({
             socioId: d.socioId,
             porcentaje: d.porcentaje,
-            montoUYU: Math.round(totalUSD * (d.porcentaje / 100) * 100) / 100,
+            montoUYU: Math.round(totalUYU * (d.porcentaje / 100) * 100) / 100,
           })),
         } : undefined,
       },

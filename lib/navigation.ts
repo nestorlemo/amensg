@@ -15,7 +15,6 @@ export const navigationItems: NavItem[] = [
   // ── GESTIÓN DE FACTURACIÓN ────────────────────────────────────────────────
   { href: '/cobros',               label: 'Facturación Activaciones', icon: 'CreditCard',  section: 'GESTIÓN DE FACTURACIÓN' },
   { href: '/issues/facturar',      label: 'Facturación Desarrollo',   icon: 'FileCode2' },
-  { href: '/ingresos-adicionales', label: 'Facturación Adicional',    icon: 'PlusCircle' },
   { href: '/cobros-unificado',     label: 'Gestión de Cobros',        icon: 'Wallet' },
 
   // ── GESTIÓN MENSUAL ───────────────────────────────────────────────────────

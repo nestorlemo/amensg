@@ -46,8 +46,9 @@ export async function GET(req: NextRequest) {
 
   const socios = cierre.cierresSocio.map((cs) => {
     const snap = cs.snapshot as Record<string, unknown>
-    const montoPesos = snap.montoPesos as string | null
-    const montoUsd   = snap.montoUsd   as string | null
+    // Prefer new desglose fields; fall back to old fields for historical cierres
+    const montoPesos = ((snap.montoActivaciones ?? snap.montoPesos) as string | null)
+    const montoUsd   = ((snap.montoDesarrolloUSD ?? snap.montoUsd)  as string | null)
     const cuentas    = cs.socio.cuentas as Record<string, string> | null
 
     return {

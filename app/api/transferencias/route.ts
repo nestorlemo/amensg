@@ -322,8 +322,11 @@ async function postDesdeCierre(body: Record<string, unknown>, usuarioId: string)
 
   for (const cs of cierre.cierresSocio) {
     const snap = cs.snapshot as Record<string, unknown>
-    const montoPesos = Number(snap.montoPesos ?? 0)
-    const montoUsd   = snap.montoUsd != null ? Number(snap.montoUsd) : null
+    // Prefer new desglose fields; fall back to old fields for historical cierres
+    const montoPesos = Number(snap.montoActivaciones ?? snap.montoPesos ?? 0)
+    const montoUsd   = snap.montoDesarrolloUSD != null ? Number(snap.montoDesarrolloUSD)
+                     : snap.montoUsd != null ? Number(snap.montoUsd)
+                     : null
     const cuentas    = cs.socio.cuentas as Record<string, string> | null
 
     if (montoPesos > 0 && !existenteSet.has(`${cs.socio.id}:UYU`)) {
