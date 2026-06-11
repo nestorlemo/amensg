@@ -74,11 +74,13 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     data: data.map((r) => {
       const facturaciones = r.cobroFacturaciones.map((cf) => ({
-        empresaId: cf.facturacionMensual.empresa.id,
-        empresa:   cf.facturacionMensual.empresa.nombre,
+        id:          cf.facturacionMensual.id,
+        empresaId:   cf.facturacionMensual.empresa.id,
+        empresa:     cf.facturacionMensual.empresa.nombre,
         totalSinIva: cf.facturacionMensual.totalSinIva.toString(),
         iva:         cf.facturacionMensual.iva.toString(),
         totalConIva: cf.facturacionMensual.totalConIva.toString(),
+        urlPdfFactura: cf.facturacionMensual.urlPdfFactura ?? null,
       }))
 
       // Deduplicate empresa list
@@ -101,6 +103,11 @@ export async function GET(req: NextRequest) {
         ? facturaciones.reduce((s, f) => s + Number(f.totalConIva), 0).toFixed(2)
         : r.montoConIva.toString()
 
+      // PDF from FacturacionMensual takes precedence over legacy Cobro field
+      const facturacionMensualId = facturaciones[0]?.id ?? null
+      const urlPdfFactura =
+        facturaciones[0]?.urlPdfFactura ?? r.urlPdfFactura ?? null
+
       return {
         id: r.id,
         tipo: r.tipo,
@@ -115,7 +122,8 @@ export async function GET(req: NextRequest) {
         moneda: r.moneda,
         estado: r.estado,
         fechaCobro: r.fechaCobro?.toISOString() ?? null,
-        urlPdfFactura: r.urlPdfFactura ?? null,
+        urlPdfFactura,
+        facturacionMensualId,
       }
     }),
     total,

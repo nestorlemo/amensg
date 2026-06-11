@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { Eye } from 'lucide-react'
 import { fmt, formatPeriod, type CobroRow, type Filters, type Totals } from './types'
 
 type Props = {
@@ -13,11 +14,93 @@ type Props = {
   setPage: (updater: (p: number) => number) => void
   filters: Filters
   pendingFilters: Filters
-  setFilters: (updater: (f: Filters) => Filters) => void
-  setPendingFilters: (updater: (f: Filters) => Filters) => void
+  setFilters: React.Dispatch<React.SetStateAction<Filters>>
+  setPendingFilters: React.Dispatch<React.SetStateAction<Filters>>
   empresas: { id: string; nombre: string }[]
   onMarcarCobrado: (id: string, fechaCobro: string) => Promise<void>
-  onUploadPdf: (id: string, file: File) => Promise<void>
+  onUploadPdf: (facturacionMensualId: string | null, cobroId: string, file: File) => Promise<void>
+}
+
+// A display row: either a FacturacionMensual group or a standalone Cobro
+type DisplayRow = {
+  key: string
+  facturacionMensualId: string | null
+  cobroId: string
+  cobros: CobroRow[]
+  tipo: string
+  empresa: string
+  anio: number
+  mes: number
+  montoSinIva: string
+  iva: string
+  montoConIva: string
+  moneda: string
+  estado: string
+  fechaCobro: string | null
+  urlPdfFactura: string | null
+}
+
+function buildDisplayRows(rows: CobroRow[]): DisplayRow[] {
+  const fmGroups = new Map<string, CobroRow[]>()
+  const standalone: CobroRow[] = []
+
+  for (const row of rows) {
+    if (row.facturacionMensualId) {
+      const group = fmGroups.get(row.facturacionMensualId) ?? []
+      group.push(row)
+      fmGroups.set(row.facturacionMensualId, group)
+    } else {
+      standalone.push(row)
+    }
+  }
+
+  const result: DisplayRow[] = []
+
+  for (const [fmId, cobros] of fmGroups.entries()) {
+    const first = cobros[0]!
+    const sinIva = cobros.reduce((s, c) => s + Number(c.montoSinIva), 0).toFixed(2)
+    const ivaTotal = cobros.reduce((s, c) => s + Number(c.iva), 0).toFixed(2)
+    const conIva = cobros.reduce((s, c) => s + Number(c.montoConIva), 0).toFixed(2)
+    result.push({
+      key: fmId,
+      facturacionMensualId: fmId,
+      cobroId: first.id,
+      cobros,
+      tipo: first.tipo,
+      empresa: first.empresa,
+      anio: first.anio,
+      mes: first.mes,
+      montoSinIva: sinIva,
+      iva: ivaTotal,
+      montoConIva: conIva,
+      moneda: first.moneda,
+      estado: cobros.every((c) => c.estado === 'COBRADO') ? 'COBRADO' : 'FACTURADO',
+      fechaCobro: cobros.find((c) => c.fechaCobro)?.fechaCobro ?? null,
+      urlPdfFactura: cobros.find((c) => c.urlPdfFactura)?.urlPdfFactura ?? null,
+    })
+  }
+
+  for (const row of standalone) {
+    result.push({
+      key: row.id,
+      facturacionMensualId: null,
+      cobroId: row.id,
+      cobros: [row],
+      tipo: row.tipo,
+      empresa: row.empresa,
+      anio: row.anio,
+      mes: row.mes,
+      montoSinIva: row.montoSinIva,
+      iva: row.iva,
+      montoConIva: row.montoConIva,
+      moneda: row.moneda,
+      estado: row.estado,
+      fechaCobro: row.fechaCobro,
+      urlPdfFactura: row.urlPdfFactura,
+    })
+  }
+
+  return result
 }
 
 function TipoBadge({ tipo }: { tipo: string }) {
@@ -45,6 +128,97 @@ function EstadoBadge({ estado }: { estado: string }) {
   )
 }
 
+function DetalleModal({ row, onClose }: { row: DisplayRow; onClose: () => void }) {
+  const totalSinIva = row.cobros.reduce((s, c) => s + Number(c.montoSinIva), 0)
+  const totalIva    = row.cobros.reduce((s, c) => s + Number(c.iva), 0)
+  const totalConIva = row.cobros.reduce((s, c) => s + Number(c.montoConIva), 0)
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl">
+        <div className="mb-4 flex items-start justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">{row.empresa}</h2>
+            <p className="text-sm text-slate-500">
+              Período {formatPeriod(row.anio, row.mes)} · {row.tipo}
+            </p>
+          </div>
+          <button
+            className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            type="button"
+            onClick={onClose}
+          >
+            ✕
+          </button>
+        </div>
+
+        {row.urlPdfFactura && (
+          <a
+            className="mb-4 inline-flex items-center gap-1 rounded-md border border-blue-300 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-50"
+            href={
+              row.facturacionMensualId
+                ? `/api/cobros-unificado/facturacion/${row.facturacionMensualId}/pdf`
+                : `/api/cobros-unificado/${row.cobroId}/pdf`
+            }
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            Ver PDF
+          </a>
+        )}
+
+        <div className="overflow-x-auto rounded-md border border-slate-200">
+          <table className="min-w-full text-sm">
+            <thead className="bg-slate-100 text-left text-xs uppercase text-slate-600">
+              <tr>
+                <th className="px-3 py-2">Tipo</th>
+                <th className="px-3 py-2">Empresa</th>
+                <th className="px-3 py-2">Moneda</th>
+                <th className="px-3 py-2 text-right">S/IVA</th>
+                <th className="px-3 py-2 text-right">IVA</th>
+                <th className="px-3 py-2 text-right">C/IVA</th>
+                <th className="px-3 py-2">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {row.cobros.map((c) => (
+                <tr className="border-t border-slate-100" key={c.id}>
+                  <td className="px-3 py-2"><TipoBadge tipo={c.tipo} /></td>
+                  <td className="px-3 py-2">{c.empresa}</td>
+                  <td className="px-3 py-2">{c.moneda}</td>
+                  <td className="px-3 py-2 text-right">{fmt(c.montoSinIva)}</td>
+                  <td className="px-3 py-2 text-right">{fmt(c.iva)}</td>
+                  <td className="px-3 py-2 text-right font-semibold">{fmt(c.montoConIva)}</td>
+                  <td className="px-3 py-2"><EstadoBadge estado={c.estado} /></td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot className="border-t-2 border-slate-300 bg-slate-50 text-xs font-semibold text-slate-700">
+              <tr>
+                <td className="px-3 py-2" colSpan={3}>TOTAL</td>
+                <td className="px-3 py-2 text-right">{fmt(totalSinIva.toFixed(2))}</td>
+                <td className="px-3 py-2 text-right">{fmt(totalIva.toFixed(2))}</td>
+                <td className="px-3 py-2 text-right">{fmt(totalConIva.toFixed(2))}</td>
+                <td className="px-3 py-2" />
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <div className="mt-4 flex justify-end">
+          <button
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            type="button"
+            onClick={onClose}
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function TablaCobros({
   rows,
   totals,
@@ -63,7 +237,10 @@ export function TablaCobros({
 }: Props) {
   const [cobrandoId, setCobrandoId] = useState<string | null>(null)
   const [fechaCobro, setFechaCobro] = useState('')
+  const [detalleRow, setDetalleRow] = useState<DisplayRow | null>(null)
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+
+  const displayRows = buildDisplayRows(rows)
 
   const pageSize = 50
   const startIndex = (page - 1) * pageSize + 1
@@ -201,64 +378,96 @@ export function TablaCobros({
               <tr>
                 <td className="px-4 py-6 text-center text-slate-400" colSpan={11}>Cargando...</td>
               </tr>
-            ) : rows.length === 0 ? (
+            ) : displayRows.length === 0 ? (
               <tr>
                 <td className="px-4 py-6 text-center text-slate-400" colSpan={11}>No hay cobros para los filtros seleccionados.</td>
               </tr>
             ) : (
               <>
-                {rows.map((row) => (
-                  <tr className="border-t border-slate-200 hover:bg-slate-50 transition-colors" key={row.id}>
-                    <td className="px-4 py-3"><TipoBadge tipo={row.tipo} /></td>
-                    <td className="px-4 py-3 font-medium">{row.empresa}</td>
-                    <td className="px-4 py-3">{formatPeriod(row.anio, row.mes)}</td>
-                    <td className="px-4 py-3">{row.moneda}</td>
-                    <td className="px-4 py-3 text-right">{fmt(row.montoSinIva)}</td>
-                    <td className="px-4 py-3 text-right">{fmt(row.iva)}</td>
-                    <td className="px-4 py-3 text-right font-semibold">{fmt(row.montoConIva)}</td>
-                    <td className="px-4 py-3"><EstadoBadge estado={row.estado} /></td>
-                    <td className="px-4 py-3">
-                      {row.fechaCobro ? new Intl.DateTimeFormat('es-UY').format(new Date(row.fechaCobro)) : '-'}
-                    </td>
-                    <td className="px-4 py-3">
-                      {row.urlPdfFactura ? (
-                        <div className="flex gap-1">
-                          <a
-                            className="rounded border border-blue-300 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
-                            href={`/api/cobros-unificado/${row.id}/pdf`}
-                            rel="noopener noreferrer"
-                            target="_blank"
-                          >
-                            Ver PDF
-                          </a>
+                {displayRows.map((row) => {
+                  const pdfUrl = row.facturacionMensualId
+                    ? `/api/cobros-unificado/facturacion/${row.facturacionMensualId}/pdf`
+                    : `/api/cobros-unificado/${row.cobroId}/pdf`
+
+                  return (
+                    <tr className="border-t border-slate-200 hover:bg-slate-50 transition-colors" key={row.key}>
+                      <td className="px-4 py-3"><TipoBadge tipo={row.tipo} /></td>
+                      <td className="px-4 py-3 font-medium">{row.empresa}</td>
+                      <td className="px-4 py-3">{formatPeriod(row.anio, row.mes)}</td>
+                      <td className="px-4 py-3">{row.moneda}</td>
+                      <td className="px-4 py-3 text-right">{fmt(row.montoSinIva)}</td>
+                      <td className="px-4 py-3 text-right">{fmt(row.iva)}</td>
+                      <td className="px-4 py-3 text-right font-semibold">{fmt(row.montoConIva)}</td>
+                      <td className="px-4 py-3"><EstadoBadge estado={row.estado} /></td>
+                      <td className="px-4 py-3">
+                        {row.fechaCobro
+                          ? new Intl.DateTimeFormat('es-UY').format(new Date(row.fechaCobro))
+                          : '-'}
+                      </td>
+                      <td className="px-4 py-3">
+                        {row.urlPdfFactura ? (
+                          <div className="flex gap-1">
+                            <a
+                              className="rounded border border-blue-300 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
+                              href={pdfUrl}
+                              rel="noopener noreferrer"
+                              target="_blank"
+                            >
+                              Ver PDF
+                            </a>
+                            <label className="cursor-pointer rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                              Reemplazar
+                              <input
+                                accept="application/pdf"
+                                className="hidden"
+                                type="file"
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0]
+                                  if (f) void onUploadPdf(row.facturacionMensualId, row.cobroId, f)
+                                }}
+                              />
+                            </label>
+                          </div>
+                        ) : (
                           <label className="cursor-pointer rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
-                            Reemplazar
-                            <input accept="application/pdf" className="hidden" type="file"
-                              onChange={(e) => { const f = e.target.files?.[0]; if (f) void onUploadPdf(row.id, f) }} />
+                            Subir PDF
+                            <input
+                              accept="application/pdf"
+                              className="hidden"
+                              ref={(el) => { fileInputRefs.current[row.key] = el }}
+                              type="file"
+                              onChange={(e) => {
+                                const f = e.target.files?.[0]
+                                if (f) void onUploadPdf(row.facturacionMensualId, row.cobroId, f)
+                              }}
+                            />
                           </label>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                            type="button"
+                            onClick={() => setDetalleRow(row)}
+                          >
+                            <Eye size={12} />
+                            Ver detalle
+                          </button>
+                          {row.estado === 'FACTURADO' && (
+                            <button
+                              className="rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors"
+                              type="button"
+                              onClick={() => { setCobrandoId(row.cobroId); setFechaCobro('') }}
+                            >
+                              Marcar cobrado
+                            </button>
+                          )}
                         </div>
-                      ) : (
-                        <label className="cursor-pointer rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
-                          Subir PDF
-                          <input accept="application/pdf" className="hidden"
-                            ref={(el) => { fileInputRefs.current[row.id] = el }} type="file"
-                            onChange={(e) => { const f = e.target.files?.[0]; if (f) void onUploadPdf(row.id, f) }} />
-                        </label>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      {row.estado === 'FACTURADO' && (
-                        <button
-                          className="rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors"
-                          type="button"
-                          onClick={() => { setCobrandoId(row.id); setFechaCobro('') }}
-                        >
-                          Marcar cobrado
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  )
+                })}
                 {totals && (
                   <tr className="border-t-2 border-slate-300 bg-slate-100 text-xs font-semibold text-slate-700">
                     <td className="px-4 py-3" colSpan={4}>TOTALES (UYU)</td>
@@ -342,6 +551,11 @@ export function TablaCobros({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal: Ver detalle */}
+      {detalleRow && (
+        <DetalleModal row={detalleRow} onClose={() => setDetalleRow(null)} />
       )}
     </>
   )

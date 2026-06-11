@@ -134,6 +134,7 @@ model FacturacionMensual {
   observaciones  String?
   snapshot       Json?
   creadaEn       DateTime @default(now())
+  urlPdfFactura  String?
   importacion    ImportacionActivacion @relation(fields: [importacionId], references: [id])
   empresa        Empresa  @relation(fields: [empresaId], references: [id])
   estadoCobro    EstadoCobro @relation(fields: [estadoCobroId], references: [id])

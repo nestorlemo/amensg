@@ -75,10 +75,13 @@ export default function CobrosUnificadoPage() {
     fetchResumen()
   }
 
-  async function handleUploadPdf(id: string, file: File) {
+  async function handleUploadPdf(facturacionMensualId: string | null, cobroId: string, file: File) {
     const fd = new FormData()
     fd.append('file', file)
-    await fetch(`/api/cobros-unificado/${id}/pdf`, { method: 'POST', body: fd })
+    const url = facturacionMensualId
+      ? `/api/cobros-unificado/facturacion/${facturacionMensualId}/pdf`
+      : `/api/cobros-unificado/${cobroId}/pdf`
+    await fetch(url, { method: 'POST', body: fd })
     setFilters((f) => ({ ...f }))
   }
 
