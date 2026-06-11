@@ -41,14 +41,26 @@ export async function GET(req: NextRequest) {
   if (estado)  where.estado  = estado
   if (moneda)  where.moneda  = moneda
   if (anio || mes) {
-    where.cobrosCobro = {
-      some: {
-        cobro: {
-          ...(anio ? { anio } : {}),
-          ...(mes  ? { mes  } : {}),
+    // Match both legacy (via cobros) and new flow (via concepto string)
+    const conceptoFilter = anio && mes
+      ? { concepto: { contains: `${MESES[mes - 1] ?? ''} ${anio}` } }
+      : anio
+        ? { concepto: { contains: String(anio) } }
+        : { concepto: { contains: MESES[(mes ?? 1) - 1] ?? '' } }
+
+    where.OR = [
+      {
+        cobrosCobro: {
+          some: {
+            cobro: {
+              ...(anio ? { anio } : {}),
+              ...(mes  ? { mes  } : {}),
+            },
+          },
         },
       },
-    }
+      conceptoFilter,
+    ]
   }
 
   const transferencias = await prisma.transferencia.findMany({
@@ -80,7 +92,10 @@ export async function GET(req: NextRequest) {
       const sorted = [...cobrosVinculados].sort((a, b) =>
         a.anio !== b.anio ? a.anio - b.anio : a.mes - b.mes,
       )
-      const desde = sorted[0] ?? { anio: t.cobro.anio, mes: t.cobro.mes }
+      // For transferencias without linked cobros (new cierre-based flow),
+      // fall back to the reference cobro or derive from concepto
+      const fallback = t.cobro ?? { anio: new Date().getFullYear(), mes: new Date().getMonth() + 1 }
+      const desde = sorted[0] ?? { anio: fallback.anio, mes: fallback.mes }
       const hasta = sorted[sorted.length - 1] ?? desde
 
       return {
@@ -88,10 +103,10 @@ export async function GET(req: NextRequest) {
         socioId: t.socioId,
         socio: t.socio.nombre,
         cobroId: t.cobroId,
-        cobroTipo: t.cobro.tipo,
-        cobroAnio: t.cobro.anio,
-        cobroMes: t.cobro.mes,
-        empresa: t.cobro.empresa.nombre,
+        cobroTipo: t.cobro?.tipo ?? 'CIERRE',
+        cobroAnio: t.cobro?.anio ?? desde.anio,
+        cobroMes:  t.cobro?.mes  ?? desde.mes,
+        empresa:   t.cobro?.empresa?.nombre ?? '—',
         moneda: t.moneda,
         monto: t.monto.toString(),
         cuentaDestino: t.cuentaDestino,
@@ -118,6 +133,13 @@ export async function POST(req: NextRequest) {
   if ('error' in auth) return auth.error
 
   const body = await req.json().catch(() => ({})) as Record<string, unknown>
+
+  // New flow: generate from CierreMensual by period
+  if (body.anio !== undefined || body.mes !== undefined) {
+    return postDesdeCierre(body, auth.user.id)
+  }
+
+  // Legacy flow: generate from selected cobros
   const cobroIds = Array.isArray(body.cobroIds) ? (body.cobroIds as string[]) : []
   if (cobroIds.length === 0) return NextResponse.json({ error: 'cobroIds es requerido.' }, { status: 422 })
 
@@ -256,4 +278,92 @@ export async function POST(req: NextRequest) {
   })
 
   return NextResponse.json({ ok: true, created: transferenciasData.length }, { status: 201 })
+}
+
+// ── New flow: generate transferencias from a closed CierreMensual ─────────────
+
+async function postDesdeCierre(body: Record<string, unknown>, usuarioId: string) {
+  const anio = typeof body.anio === 'number' ? body.anio : parseInt(String(body.anio ?? ''))
+  const mes  = typeof body.mes  === 'number' ? body.mes  : parseInt(String(body.mes  ?? ''))
+
+  if (!anio || !mes || mes < 1 || mes > 12) {
+    return NextResponse.json({ error: 'Parámetros anio y mes requeridos.' }, { status: 422 })
+  }
+
+  const cierre = await prisma.cierreMensual.findUnique({
+    where: { anio_mes: { anio, mes } },
+    include: {
+      cierresSocio: {
+        include: { socio: { select: { id: true, nombre: true, cuentas: true } } },
+      },
+    },
+  })
+
+  if (!cierre) {
+    return NextResponse.json({ error: 'No existe cierre para el período indicado.', code: 'CIERRE_NO_ENCONTRADO' }, { status: 404 })
+  }
+
+  if (cierre.estado.trim().toUpperCase() !== 'CERRADO') {
+    return NextResponse.json({ error: 'El período no está cerrado. Solo se pueden generar transferencias desde períodos cerrados.', code: 'CIERRE_NO_CERRADO' }, { status: 422 })
+  }
+
+  // Prevent duplicates: match by concepto containing the period label
+  const periodoStr = `${MESES[mes - 1] ?? ''} ${anio}`
+  const existentes = await prisma.transferencia.findMany({
+    where: { concepto: { contains: periodoStr } },
+    select: { socioId: true, moneda: true },
+  })
+  const existenteSet = new Set(existentes.map(t => `${t.socioId}:${t.moneda}`))
+
+  const periodoLabel = `${MESES[mes - 1] ?? ''} ${anio}`
+
+  type Row = { socioId: string; moneda: string; monto: number; cuentaDestino: string | null; concepto: string; estado: string }
+  const rows: Row[] = []
+
+  for (const cs of cierre.cierresSocio) {
+    const snap = cs.snapshot as Record<string, unknown>
+    const montoPesos = Number(snap.montoPesos ?? 0)
+    const montoUsd   = snap.montoUsd != null ? Number(snap.montoUsd) : null
+    const cuentas    = cs.socio.cuentas as Record<string, string> | null
+
+    if (montoPesos > 0 && !existenteSet.has(`${cs.socio.id}:UYU`)) {
+      rows.push({
+        socioId:       cs.socio.id,
+        moneda:        'UYU',
+        monto:         Math.round(montoPesos * 100) / 100,
+        cuentaDestino: cuentas?.pesos ?? cuentas?.UYU ?? null,
+        concepto:      `Activaciones ${periodoLabel}`,
+        estado:        'PENDIENTE',
+      })
+    }
+
+    if (montoUsd !== null && montoUsd > 0 && !existenteSet.has(`${cs.socio.id}:USD`)) {
+      rows.push({
+        socioId:       cs.socio.id,
+        moneda:        'USD',
+        monto:         Math.round(montoUsd * 100) / 100,
+        cuentaDestino: cuentas?.usd ?? cuentas?.USD ?? null,
+        concepto:      `Desarrollo ${periodoLabel}`,
+        estado:        'PENDIENTE',
+      })
+    }
+  }
+
+  if (rows.length === 0) {
+    return NextResponse.json({ error: 'No hay transferencias a generar. Puede que ya existan para este período o los montos sean cero.', code: 'SIN_TRANSFERENCIAS' }, { status: 422 })
+  }
+
+  await prisma.transferencia.createMany({ data: rows })
+
+  await prisma.auditoria.create({
+    data: {
+      usuarioId,
+      entidad: 'Transferencia',
+      entidadId: cierre.id,
+      accion: 'GENERAR_TRANSFERENCIAS_DESDE_CIERRE',
+      detalle: { anio, mes, cantidad: rows.length },
+    },
+  })
+
+  return NextResponse.json({ ok: true, created: rows.length }, { status: 201 })
 }
