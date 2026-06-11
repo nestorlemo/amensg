@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
+import { StatCard } from '@/components/ui/index'
 import { PageHeader } from '@/components/page-header'
 import { PencilIcon, TrashIcon } from '@/components/issues/IssueIcons'
 
@@ -197,10 +198,10 @@ export default function IngresosAdicionalesPage() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <SummaryCard label="Total registros"   value={String(totalRegistros)} />
-        <SummaryCard label="Total UYU s/IVA"   value={`$${fmt(totalUYU)}`} />
-        <SummaryCard label="Total USD s/IVA"   value={`USD ${fmt(totalUSD)}`} />
-        <SummaryCard label="Total IVA"         value={`$${fmt(totalIVA)}`} />
+        <StatCard label="Total registros"   value={String(totalRegistros)} />
+        <StatCard label="Total UYU s/IVA"   value={`$${fmt(totalUYU)}`} accent="green" />
+        <StatCard label="Total USD s/IVA"   value={`USD ${fmt(totalUSD)}`} accent="green" />
+        <StatCard label="Total IVA"         value={`$${fmt(totalIVA)}`} />
       </div>
 
       {/* Filtros */}
@@ -424,15 +425,6 @@ export default function IngresosAdicionalesPage() {
 }
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
-
-function SummaryCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
-      <p className="text-xs font-medium text-slate-500">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-slate-950">{value}</p>
-    </div>
-  )
-}
 
 function Th({ children }: { children: React.ReactNode }) {
   return <th className="whitespace-nowrap px-4 py-3">{children}</th>
