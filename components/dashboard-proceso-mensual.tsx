@@ -6,10 +6,10 @@ import { CheckCircle2, AlertTriangle } from 'lucide-react'
 type ProcesoData = {
   periodo: { anio: number; mes: number; nombre: string }
   importacion: { completo: boolean; empresasFaltantes: string[] }
-  issuesFacturables: { cantidad: number }
-  liquidacion: { existe: boolean; estado: string | null }
-  transferencias: { generadas: boolean; cantidad: number }
-  facturacionActivaciones: { pendientes: number }
+  issuesFacturables: { pendientes: number; enProduccionSinFacturar: number; enDesarrollo: number }
+  liquidacion: { periodo: string | null; fechaCierre: string | null }
+  transferencias: { completas: boolean; pendientes: number }
+  facturacionActivaciones: { completas: boolean; pendientes: number }
 }
 
 type StepProps = {
@@ -32,7 +32,7 @@ function Step({ ok, label, detail }: StepProps) {
         : <AlertTriangle size={18} className="mt-0.5 shrink-0" style={{ color: '#f59e0b' }} />}
       <div className="min-w-0">
         <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#8ba3c7' }}>{label}</p>
-        <p className="mt-0.5 text-sm font-medium" style={{ color: ok ? '#0d7a5f' : '#92400e' }}>{detail}</p>
+        <p className="mt-0.5 text-sm font-medium whitespace-pre-line" style={{ color: ok ? '#0d7a5f' : '#92400e' }}>{detail}</p>
       </div>
     </div>
   )
@@ -45,6 +45,11 @@ function StepSkeleton() {
       <div className="mt-2 h-4 w-40 animate-pulse rounded bg-amensg-surface" />
     </div>
   )
+}
+
+function formatFecha(iso: string | null) {
+  if (!iso) return ''
+  return new Intl.DateTimeFormat('es-UY').format(new Date(iso))
 }
 
 export function ProcesoMensual() {
@@ -75,48 +80,49 @@ export function ProcesoMensual() {
 
 function buildSteps(d: ProcesoData): StepProps[] {
   const imp = d.importacion
+  const iss = d.issuesFacturables
   const liq = d.liquidacion
   const tr  = d.transferencias
   const fa  = d.facturacionActivaciones
-  const iss = d.issuesFacturables
+
+  // Issues: ok if nothing pending/in-progress/unfactured
+  const issuesOk = iss.enProduccionSinFacturar === 0 && iss.enDesarrollo === 0
+  const issuesLines: string[] = []
+  if (iss.pendientes > 0)              issuesLines.push(`Pendientes: ${iss.pendientes}`)
+  if (iss.enDesarrollo > 0)            issuesLines.push(`En desarrollo: ${iss.enDesarrollo}`)
+  if (iss.enProduccionSinFacturar > 0) issuesLines.push(`En prod. sin facturar: ${iss.enProduccionSinFacturar}`)
+  const issuesDetail = issuesLines.length > 0 ? issuesLines.join('\n') : 'Sin pendientes'
+
+  const liqOk = liq.periodo !== null
+  const liqDetail = liqOk
+    ? `Cerrada${liq.fechaCierre ? ' · ' + formatFecha(liq.fechaCierre) : ''}`
+    : 'Sin cerrar'
 
   return [
     {
       ok: imp.completo,
       label: 'Importación',
-      detail: imp.completo
-        ? 'Completa'
-        : `Faltan: ${imp.empresasFaltantes.join(', ')}`,
+      detail: imp.completo ? 'Completa' : `Faltan: ${imp.empresasFaltantes.join(', ')}`,
     },
     {
-      ok: iss.cantidad === 0,
+      ok: issuesOk,
       label: 'Issues a facturar',
-      detail: iss.cantidad === 0
-        ? 'Sin pendientes'
-        : `${iss.cantidad} pendiente${iss.cantidad !== 1 ? 's' : ''}`,
+      detail: issuesDetail,
     },
     {
-      ok: liq.existe && liq.estado?.trim().toUpperCase() === 'CERRADO',
+      ok: liqOk,
       label: 'Liquidación',
-      detail: !liq.existe
-        ? 'Sin cerrar'
-        : liq.estado?.trim().toUpperCase() === 'CERRADO'
-          ? 'Cerrada'
-          : `Estado: ${liq.estado}`,
+      detail: liqDetail,
     },
     {
-      ok: tr.generadas,
+      ok: tr.completas,
       label: 'Transferencias',
-      detail: tr.generadas
-        ? `Generadas (${tr.cantidad})`
-        : 'Sin generar',
+      detail: tr.completas ? 'Al día' : `Pendientes: ${tr.pendientes}`,
     },
     {
-      ok: fa.pendientes === 0,
+      ok: fa.completas,
       label: 'Facturación activaciones',
-      detail: fa.pendientes === 0
-        ? 'Completa'
-        : `${fa.pendientes} pendiente${fa.pendientes !== 1 ? 's' : ''}`,
+      detail: fa.completas ? 'Completa' : `Pendientes: ${fa.pendientes}`,
     },
   ]
 }

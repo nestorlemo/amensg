@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   // Default: mes anterior al actual
   const now = new Date()
   let anio = searchParams.get('anio') ? parseInt(searchParams.get('anio')!) : now.getFullYear()
-  let mes  = searchParams.get('mes')  ? parseInt(searchParams.get('mes')!)  : now.getMonth() // getMonth() is 0-based, so .getMonth() = mes anterior (1-based)
+  let mes  = searchParams.get('mes')  ? parseInt(searchParams.get('mes')!)  : now.getMonth()
   if (!searchParams.get('mes')) {
     if (now.getMonth() === 0) { mes = 12; anio = now.getFullYear() - 1 }
     else mes = now.getMonth()
@@ -25,21 +25,24 @@ export async function GET(req: NextRequest) {
 
   const mesNombre = MESES[mes - 1] ?? ''
   const mesAbrev  = MESES_ABR[mes - 1] ?? ''
-  const periodoStr = `${mesNombre} ${anio}`
-  // Flujo viejo (buildConcepto): "Activaciones May-May 2026" o "Activaciones May 2026"
+  const periodoStr      = `${mesNombre} ${anio}`
   const periodoStrAbrev = `${mesAbrev} ${anio}`
 
-  // Rango de fechaProduccion para el período (para issues)
+  // fechaProduccion range for issues
   const fechaInicio = new Date(anio, mes - 1, 1)
-  const fechaFin    = new Date(anio, mes, 1) // exclusive
+  const fechaFin    = new Date(anio, mes, 1)
 
   const [
     empresasActivas,
     importacionesExistentes,
-    issuesPendientes,
+    issuesPendientesCount,
+    issuesEnProduccionSinFacturarCount,
+    issuesEnDesarrolloCount,
     cierreMensual,
     transferenciasCount,
+    cierresSocioCount,
     facturacionesSinCobro,
+    facturacionesTotales,
   ] = await Promise.all([
     prisma.empresa.findMany({
       where: { activa: true },
@@ -54,6 +57,11 @@ export async function GET(req: NextRequest) {
       select: { empresaId: true },
       distinct: ['empresaId'],
     }),
+    // PENDIENTE: not started
+    prisma.issue.count({
+      where: { eliminado: false, estado: 'PENDIENTE', fechaProduccion: null },
+    }),
+    // EN_PRODUCCION sin FacturaDesarrollo (filtrando por fechaProduccion del período)
     prisma.issue.count({
       where: {
         eliminado: false,
@@ -62,23 +70,38 @@ export async function GET(req: NextRequest) {
         fechaProduccion: { gte: fechaInicio, lt: fechaFin },
       },
     }),
+    // EN_DESARROLLO: in progress
+    prisma.issue.count({
+      where: { eliminado: false, estado: 'EN_DESARROLLO' },
+    }),
     prisma.cierreMensual.findUnique({
       where: { anio_mes: { anio, mes } },
-      select: { estado: true },
+      select: { estado: true, cerradoAt: true },
     }),
     prisma.transferencia.count({
       where: {
         OR: [
-          { concepto: { contains: periodoStr } },      // "Activaciones Mayo 2026"
-          { concepto: { contains: periodoStrAbrev } }, // "Activaciones May-May 2026" / "Activaciones May 2026"
+          { concepto: { contains: periodoStr } },
+          { concepto: { contains: periodoStrAbrev } },
         ],
       },
+    }),
+    // Expected transferencias: count CierreSocio for this period (one per socio)
+    prisma.cierreSocio.count({
+      where: { cierreMensual: { anio, mes } },
     }),
     prisma.facturacionMensual.count({
       where: {
         anio,
         mes,
         cobroFacturaciones: { none: {} },
+        importacion: { estado: { not: 'ANULADA' } },
+      },
+    }),
+    prisma.facturacionMensual.count({
+      where: {
+        anio,
+        mes,
         importacion: { estado: { not: 'ANULADA' } },
       },
     }),
@@ -89,21 +112,33 @@ export async function GET(req: NextRequest) {
     .filter((e) => !importadasIds.has(e.id))
     .map((e) => e.nombre)
 
+  const transferPendientes = Math.max(0, cierresSocioCount - transferenciasCount)
+  const transferCompletas  = transferPendientes === 0 && cierresSocioCount > 0
+
+  const facturacionCompleta = facturacionesSinCobro === 0 && facturacionesTotales > 0
+
   return NextResponse.json({
     periodo: { anio, mes, nombre: periodoStr },
     importacion: {
       completo: empresasFaltantes.length === 0,
       empresasFaltantes,
     },
-    issuesFacturables: { cantidad: issuesPendientes },
+    issuesFacturables: {
+      pendientes:               issuesPendientesCount,
+      enProduccionSinFacturar:  issuesEnProduccionSinFacturarCount,
+      enDesarrollo:             issuesEnDesarrolloCount,
+    },
     liquidacion: {
-      existe: cierreMensual !== null,
-      estado: cierreMensual?.estado ?? null,
+      periodo:      cierreMensual ? periodoStr : null,
+      fechaCierre:  cierreMensual?.cerradoAt?.toISOString() ?? null,
     },
     transferencias: {
-      generadas: transferenciasCount > 0,
-      cantidad: transferenciasCount,
+      completas:  transferCompletas,
+      pendientes: transferPendientes,
     },
-    facturacionActivaciones: { pendientes: facturacionesSinCobro },
+    facturacionActivaciones: {
+      completas: facturacionCompleta,
+      pendientes: facturacionesSinCobro,
+    },
   })
 }

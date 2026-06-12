@@ -23,11 +23,21 @@ type Kpis = {
   horasDesarrollo: number
 }
 
+type DesarrolloInfo = {
+  periodo: { anio: number; mes: number; nombre: string } | null
+  periodoAnterior: { anio: number; mes: number; nombre: string } | null
+  usdActual: number | null
+  usdAnterior: number | null
+  horasActual: number | null
+  horasAnterior: number | null
+}
+
 type Resumen = {
   periodo: { anio: number; mes: number; nombre: string } | null
   periodoAnterior: { anio: number; mes: number; nombre: string } | null
   actual: Kpis | null
   anterior: Kpis | null
+  desarrollo: DesarrolloInfo | null
 }
 
 const MESES_LARGO = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
@@ -110,9 +120,10 @@ export function DashboardMain() {
       <ProcesoMensual />
 
       {resumen?.periodo && resumen.actual ? (() => {
-        const { periodo, periodoAnterior, actual, anterior } = resumen
+        const { periodo, periodoAnterior, actual, anterior, desarrollo } = resumen
         const ant = anterior ?? null
         const antNombre = periodoAnterior?.nombre ?? null
+        const dev = desarrollo ?? null
 
         return (
           <section>
@@ -145,13 +156,14 @@ export function DashboardMain() {
               />
               <StatCardExtended
                 label="Desarrollo Facturado"
-                value={fmt(actual.desarrolloUSD)}
-                valuePrefix="USD"
+                value={dev?.usdActual != null ? fmt(dev.usdActual) : 'Sin datos'}
+                valuePrefix={dev?.usdActual != null ? 'USD' : undefined}
                 badge="SIN IVA"
                 badgeColor="blue"
                 accent="purple"
-                vs={vsNum(actual.desarrolloUSD, ant?.desarrolloUSD ?? null)}
-                vsLabel={antNombre ?? undefined}
+                vs={dev?.usdActual != null ? vsNum(dev.usdActual, dev.usdAnterior) : null}
+                vsLabel={dev?.periodoAnterior?.nombre ?? undefined}
+                sub={dev?.periodo && dev.periodo.nombre !== periodo!.nombre ? `Último: ${dev.periodo.nombre}` : undefined}
               />
               <StatCardExtended
                 label="Activaciones"
@@ -164,12 +176,12 @@ export function DashboardMain() {
               />
               <StatCardExtended
                 label="Horas Desarrollo"
-                value={`${actual.horasDesarrollo}h`}
+                value={dev?.horasActual != null ? `${dev.horasActual}h` : 'Sin datos'}
                 badge="FACTURADAS"
                 badgeColor="blue"
                 accent="purple"
-                vs={vsNum(actual.horasDesarrollo, ant?.horasDesarrollo ?? null)}
-                vsLabel={antNombre ?? undefined}
+                vs={dev?.horasActual != null ? vsNum(dev.horasActual, dev.horasAnterior) : null}
+                vsLabel={dev?.periodoAnterior?.nombre ?? undefined}
               />
             </div>
           </section>
