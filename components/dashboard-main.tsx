@@ -9,6 +9,7 @@ import {
 
 import { StatCard, StatCardExtended } from '@/components/ui/index'
 import { PageHeader } from '@/components/page-header'
+import { ProcesoMensual } from '@/components/dashboard-proceso-mensual'
 
 type Stats = {
   pendingCobros: number
@@ -112,6 +113,8 @@ export function DashboardMain() {
           </Link>
         </div>
       )}
+
+      <ProcesoMensual />
 
       <section>
         <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest" style={{ color: MUTED }}>
