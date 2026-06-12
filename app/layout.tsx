@@ -5,8 +5,8 @@ import { SidebarWrapper } from '@/components/sidebar-wrapper'
 import { getCurrentUser } from '@/lib/auth'
 
 export const metadata = {
-  title: 'AMENSG',
-  description: 'Sistema de facturacion de activaciones AMENSG',
+  title: 'amensg',
+  description: 'Sistema de gestión operativo y estratégico',
 }
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
