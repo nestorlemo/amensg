@@ -15,33 +15,33 @@ type Stats = {
   ultimoCierre: { anio: number; mes: number } | null
 }
 
+type Kpis = {
+  totalFacturadoUYU: number
+  resultadoDistribuible: number
+  desarrolloUSD: number
+  totalActivaciones: number
+  horasDesarrollo: number
+}
+
 type Resumen = {
-  periodo: { anio: number; mes: number }
-  activacionesCobradas: string
-  activacionesPendientes: string
-  desarrolloCobrado: string
-  desarrolloPendiente: string
-  desarrolloPendienteUSD: string
-  desarrolloPendienteUYU: string
-  gastosFijos: string
-  resultadoEstimado: string
-  mesAnterior: { activacionesCobradas: string; activacionesPendientes: string; desarrolloPendienteUSD: string; resultadoDistribuible: string; tieneDatos: boolean }
+  periodo: { anio: number; mes: number; nombre: string } | null
+  periodoAnterior: { anio: number; mes: number; nombre: string } | null
+  actual: Kpis | null
+  anterior: Kpis | null
 }
 
 const MESES_LARGO = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
-function fmt(v: string | number) {
-  return new Intl.NumberFormat('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(v))
+function fmt(v: number) {
+  return new Intl.NumberFormat('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v)
 }
 
-function vsText(current: string, prev: string, tieneDatos: boolean) {
-  if (!tieneDatos) return null
-  const c = Number(current)
-  const p = Number(prev)
-  if (p === 0) return c === 0 ? '$0,00 (0%)' : `$${fmt(prev)} (—)`
-  const diff = ((c - p) / Math.abs(p)) * 100
+function vsNum(current: number, prev: number | null): string | null {
+  if (prev === null) return null
+  if (prev === 0) return current === 0 ? '0 (0%)' : `${fmt(prev)} (—)`
+  const diff = ((current - prev) / Math.abs(prev)) * 100
   const sign = diff >= 0 ? '+' : ''
-  return `$${fmt(prev)} (${sign}${diff.toFixed(1)}%)`
+  return `${fmt(prev)} (${sign}${diff.toFixed(1)}%)`
 }
 
 const MUTED  = '#8ba3c7'
@@ -109,58 +109,67 @@ export function DashboardMain() {
 
       <ProcesoMensual />
 
-      {resumen ? (() => {
-        const { periodo, activacionesCobradas, activacionesPendientes, desarrolloPendienteUSD, desarrolloPendienteUYU, resultadoEstimado, mesAnterior } = resumen
-        const mesNombre = MESES_LARGO[periodo.mes - 1]
-        const mesAnteriorNombre = periodo.mes === 1
-          ? `${MESES_LARGO[11]} ${periodo.anio - 1}`
-          : `${MESES_LARGO[periodo.mes - 2]} ${periodo.anio}`
-        const resultadoNeg = Number(resultadoEstimado) < 0
+      {resumen?.periodo && resumen.actual ? (() => {
+        const { periodo, periodoAnterior, actual, anterior } = resumen
+        const ant = anterior ?? null
+        const antNombre = periodoAnterior?.nombre ?? null
 
         return (
           <section>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: MUTED }}>
-                Resumen {mesNombre} {periodo.anio}
+                Resumen {periodo!.nombre}
               </h2>
-              <Link href={`/liquidaciones?anio=${periodo.anio}&mes=${periodo.mes}`} className="text-xs font-semibold text-[#1769E0] hover:underline">
+              <Link href={`/liquidaciones?anio=${periodo!.anio}&mes=${periodo!.mes}`} className="text-xs font-semibold text-[#1769E0] hover:underline">
                 Ver liquidación completa →
               </Link>
             </div>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
               <StatCardExtended
-                label="Activaciones cobradas"
-                value={fmt(activacionesCobradas)}
-                badge="COBRADO"
+                label="Total Facturado"
+                value={fmt(actual.totalFacturadoUYU)}
+                badge="SIN IVA"
                 badgeColor="green"
-                vs={vsText(activacionesCobradas, mesAnterior.activacionesCobradas, mesAnterior.tieneDatos)}
-                vsLabel={mesAnteriorNombre}
+                accent="green"
+                vs={vsNum(actual.totalFacturadoUYU, ant?.totalFacturadoUYU ?? null)}
+                vsLabel={antNombre ?? undefined}
               />
               <StatCardExtended
-                label="Activaciones pendientes"
-                value={fmt(activacionesPendientes)}
-                badge="FACTURADO"
-                badgeColor="amber"
-                vs={vsText(activacionesPendientes, mesAnterior.activacionesPendientes, mesAnterior.tieneDatos)}
-                vsLabel={mesAnteriorNombre}
+                label="Resultado Distribuible"
+                value={fmt(actual.resultadoDistribuible)}
+                badge={actual.resultadoDistribuible < 0 ? 'NEGATIVO' : 'NETO'}
+                badgeColor={actual.resultadoDistribuible < 0 ? 'red' : 'green'}
+                accent="green"
+                vs={vsNum(actual.resultadoDistribuible, ant?.resultadoDistribuible ?? null)}
+                vsLabel={antNombre ?? undefined}
               />
               <StatCardExtended
-                label="Desarrollo pendiente"
-                value={fmt(desarrolloPendienteUSD)}
+                label="Desarrollo Facturado"
+                value={fmt(actual.desarrolloUSD)}
                 valuePrefix="USD"
-                badge="FACTURADO"
-                badgeColor="amber"
-                vs={vsText(desarrolloPendienteUSD, mesAnterior.desarrolloPendienteUSD, mesAnterior.tieneDatos)}
-                vsLabel={mesAnteriorNombre}
-                sub={Number(desarrolloPendienteUYU) > 0 ? `≈ UYU ${fmt(desarrolloPendienteUYU)}` : undefined}
+                badge="SIN IVA"
+                badgeColor="blue"
+                accent="purple"
+                vs={vsNum(actual.desarrolloUSD, ant?.desarrolloUSD ?? null)}
+                vsLabel={antNombre ?? undefined}
               />
               <StatCardExtended
-                label="Resultado estimado"
-                value={fmt(resultadoEstimado)}
-                badge={resultadoNeg ? 'NEGATIVO' : 'ESTIMADO'}
-                badgeColor={resultadoNeg ? 'red' : 'blue'}
-                vs={vsText(resultadoEstimado, mesAnterior.resultadoDistribuible, mesAnterior.tieneDatos)}
-                vsLabel={mesAnteriorNombre}
+                label="Activaciones"
+                value={actual.totalActivaciones}
+                badge="CANTIDAD"
+                badgeColor="blue"
+                accent="default"
+                vs={vsNum(actual.totalActivaciones, ant?.totalActivaciones ?? null)}
+                vsLabel={antNombre ?? undefined}
+              />
+              <StatCardExtended
+                label="Horas Desarrollo"
+                value={`${actual.horasDesarrollo}h`}
+                badge="FACTURADAS"
+                badgeColor="blue"
+                accent="purple"
+                vs={vsNum(actual.horasDesarrollo, ant?.horasDesarrollo ?? null)}
+                vsLabel={antNombre ?? undefined}
               />
             </div>
           </section>
