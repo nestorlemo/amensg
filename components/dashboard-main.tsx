@@ -87,7 +87,7 @@ export function DashboardMain() {
       <PageHeader
         section="SISTEMA ACTIVO"
         title="Bienvenido"
-        description="Sistema de facturación mensual de activaciones"
+        description="Sistema de gestión operativo y estratégico"
         statusDot
       />
 
