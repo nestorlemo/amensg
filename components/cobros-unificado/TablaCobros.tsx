@@ -116,6 +116,17 @@ function buildDisplayRows(rows: CobroRow[]): DisplayRow[] {
   return result
 }
 
+function EmpresaCell({ cobros }: { cobros: CobroRow[] }) {
+  const nombres = [...new Set(cobros.map((c) => c.empresa))]
+  if (nombres.length <= 1) return <>{nombres[0] ?? ''}</>
+  const extra = nombres.length - 1
+  return (
+    <span title={nombres.join(', ')}>
+      {nombres[0]} <span className="text-slate-400">+{extra}</span>
+    </span>
+  )
+}
+
 function TipoBadge({ tipo }: { tipo: string }) {
   const colors: Record<string, string> = {
     ACTIVACIONES: 'bg-blue-100 text-blue-800',
@@ -376,7 +387,7 @@ export function TablaCobros({
           <thead className="bg-slate-100 text-left text-xs uppercase text-slate-600">
             <tr>
               <th className="px-4 py-3">Tipo</th>
-              <th className="px-4 py-3">Empresa</th>
+              <th className="px-4 py-3">Empresa(s)</th>
               <th className="px-4 py-3">Período</th>
               <th className="px-4 py-3">Moneda</th>
               <th className="px-4 py-3 text-right">Monto S/IVA</th>
@@ -409,7 +420,9 @@ export function TablaCobros({
                   return (
                     <tr className="border-t border-slate-200 hover:bg-slate-50 transition-colors" key={row.key}>
                       <td className="px-4 py-3"><TipoBadge tipo={row.tipo} /></td>
-                      <td className="px-4 py-3 font-medium">{row.empresa}</td>
+                      <td className="px-4 py-3 font-medium">
+                        <EmpresaCell cobros={row.cobros} />
+                      </td>
                       <td className="px-4 py-3">{formatPeriod(row.anio, row.mes)}</td>
                       <td className="px-4 py-3">{row.moneda}</td>
                       <td className="px-4 py-3 text-right">{fmt(row.montoSinIva)}</td>

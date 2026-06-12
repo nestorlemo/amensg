@@ -19,11 +19,16 @@ export async function GET(req: NextRequest) {
   const pageSize  = 50
 
   const where: Record<string, unknown> = {}
-  if (tipo)      where.tipo      = tipo
-  if (empresaId) where.empresaId = empresaId
-  if (anio)      where.anio      = anio
-  if (mes)       where.mes       = mes
-  if (estado)    where.estado    = estado
+  if (tipo)   where.tipo   = tipo
+  if (anio)   where.anio   = anio
+  if (mes)    where.mes    = mes
+  if (estado) where.estado = estado
+  if (empresaId) {
+    where.OR = [
+      { empresaId },
+      { factura: { cobros: { some: { empresaId } } } },
+    ]
+  }
 
   const [data, total, allRows, tipoCambioParam] = await Promise.all([
     prisma.cobro.findMany({
