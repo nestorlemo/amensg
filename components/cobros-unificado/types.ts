@@ -12,6 +12,7 @@ export type CobroRow = {
   estado: string
   fechaCobro: string | null
   urlPdfFactura: string | null
+  facturaId: string | null
   facturacionMensualId: string | null
 }
 

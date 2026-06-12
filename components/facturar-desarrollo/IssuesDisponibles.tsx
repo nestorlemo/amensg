@@ -25,7 +25,8 @@ export function IssuesDisponibles({
   const [socios, setSocios] = useState<SocioState[]>(sociosProp)
   const [buscando, setBuscando] = useState(false)
   const [searched, setSearched] = useState(false)
-  const [generando, setGenerando] = useState(false)
+  const [generando,      setGenerando]      = useState(false)
+  const [agruparFactura, setAgruparFactura] = useState(true)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
@@ -118,6 +119,7 @@ export function IssuesDisponibles({
           issueIds: Array.from(selectedIds),
           distribuciones,
           crearCobro: true,
+          agruparEnFactura: agruparFactura,
         }),
       })
       const data = (await res.json()) as { message?: string; totalConIva?: number }
@@ -340,6 +342,17 @@ export function IssuesDisponibles({
               {errorMsg}
             </p>
           )}
+
+          {/* Agrupar en factura */}
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={agruparFactura}
+              onChange={(e) => setAgruparFactura(e.target.checked)}
+              className="rounded"
+            />
+            Agrupar en una sola factura (PDF único)
+          </label>
 
           {/* Generate button */}
           <button

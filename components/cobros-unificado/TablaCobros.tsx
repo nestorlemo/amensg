@@ -18,12 +18,13 @@ type Props = {
   setPendingFilters: React.Dispatch<React.SetStateAction<Filters>>
   empresas: { id: string; nombre: string }[]
   onMarcarCobrado: (id: string, fechaCobro: string) => Promise<void>
-  onUploadPdf: (facturacionMensualId: string | null, cobroId: string, file: File) => Promise<void>
+  onUploadPdf: (facturaId: string | null, facturacionMensualId: string | null, cobroId: string, file: File) => Promise<void>
 }
 
-// A display row: either a FacturacionMensual group or a standalone Cobro
+// A display row: a Factura group, a FacturacionMensual group, or a standalone Cobro
 type DisplayRow = {
   key: string
+  facturaId: string | null
   facturacionMensualId: string | null
   cobroId: string
   cobros: CobroRow[]
@@ -40,15 +41,44 @@ type DisplayRow = {
   urlPdfFactura: string | null
 }
 
+function makeGroup(key: string, facturaId: string | null, facturacionMensualId: string | null, cobros: CobroRow[]): DisplayRow {
+  const first = cobros[0]!
+  return {
+    key,
+    facturaId,
+    facturacionMensualId,
+    cobroId: first.id,
+    cobros,
+    tipo: first.tipo,
+    empresa: first.empresa,
+    anio: first.anio,
+    mes: first.mes,
+    montoSinIva: cobros.reduce((s, c) => s + Number(c.montoSinIva), 0).toFixed(2),
+    iva: cobros.reduce((s, c) => s + Number(c.iva), 0).toFixed(2),
+    montoConIva: cobros.reduce((s, c) => s + Number(c.montoConIva), 0).toFixed(2),
+    moneda: first.moneda,
+    estado: cobros.every((c) => c.estado === 'COBRADO') ? 'COBRADO' : 'FACTURADO',
+    fechaCobro: cobros.find((c) => c.fechaCobro)?.fechaCobro ?? null,
+    urlPdfFactura: cobros.find((c) => c.urlPdfFactura)?.urlPdfFactura ?? null,
+  }
+}
+
 function buildDisplayRows(rows: CobroRow[]): DisplayRow[] {
-  const fmGroups = new Map<string, CobroRow[]>()
+  // Priority 1: group by facturaId
+  const facturaGroups    = new Map<string, CobroRow[]>()
+  // Priority 2: group by facturacionMensualId (for cobros without facturaId)
+  const fmGroups         = new Map<string, CobroRow[]>()
   const standalone: CobroRow[] = []
 
   for (const row of rows) {
-    if (row.facturacionMensualId) {
-      const group = fmGroups.get(row.facturacionMensualId) ?? []
-      group.push(row)
-      fmGroups.set(row.facturacionMensualId, group)
+    if (row.facturaId) {
+      const g = facturaGroups.get(row.facturaId) ?? []
+      g.push(row)
+      facturaGroups.set(row.facturaId, g)
+    } else if (row.facturacionMensualId) {
+      const g = fmGroups.get(row.facturacionMensualId) ?? []
+      g.push(row)
+      fmGroups.set(row.facturacionMensualId, g)
     } else {
       standalone.push(row)
     }
@@ -56,33 +86,16 @@ function buildDisplayRows(rows: CobroRow[]): DisplayRow[] {
 
   const result: DisplayRow[] = []
 
-  for (const [fmId, cobros] of fmGroups.entries()) {
-    const first = cobros[0]!
-    const sinIva = cobros.reduce((s, c) => s + Number(c.montoSinIva), 0).toFixed(2)
-    const ivaTotal = cobros.reduce((s, c) => s + Number(c.iva), 0).toFixed(2)
-    const conIva = cobros.reduce((s, c) => s + Number(c.montoConIva), 0).toFixed(2)
-    result.push({
-      key: fmId,
-      facturacionMensualId: fmId,
-      cobroId: first.id,
-      cobros,
-      tipo: first.tipo,
-      empresa: first.empresa,
-      anio: first.anio,
-      mes: first.mes,
-      montoSinIva: sinIva,
-      iva: ivaTotal,
-      montoConIva: conIva,
-      moneda: first.moneda,
-      estado: cobros.every((c) => c.estado === 'COBRADO') ? 'COBRADO' : 'FACTURADO',
-      fechaCobro: cobros.find((c) => c.fechaCobro)?.fechaCobro ?? null,
-      urlPdfFactura: cobros.find((c) => c.urlPdfFactura)?.urlPdfFactura ?? null,
-    })
+  for (const [fid, cobros] of facturaGroups.entries()) {
+    result.push(makeGroup(`factura-${fid}`, fid, cobros[0]?.facturacionMensualId ?? null, cobros))
   }
-
+  for (const [fmId, cobros] of fmGroups.entries()) {
+    result.push(makeGroup(`fm-${fmId}`, null, fmId, cobros))
+  }
   for (const row of standalone) {
     result.push({
       key: row.id,
+      facturaId: null,
       facturacionMensualId: null,
       cobroId: row.id,
       cobros: [row],
@@ -156,7 +169,9 @@ function DetalleModal({ row, onClose }: { row: DisplayRow; onClose: () => void }
           <a
             className="mb-4 inline-flex items-center gap-1 rounded-md border border-blue-300 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-50"
             href={
-              row.facturacionMensualId
+              row.facturaId
+                ? `/api/facturas/${row.facturaId}/pdf`
+                : row.facturacionMensualId
                 ? `/api/cobros-unificado/facturacion/${row.facturacionMensualId}/pdf`
                 : `/api/cobros-unificado/${row.cobroId}/pdf`
             }
@@ -385,7 +400,9 @@ export function TablaCobros({
             ) : (
               <>
                 {displayRows.map((row) => {
-                  const pdfUrl = row.facturacionMensualId
+                  const pdfUrl = row.facturaId
+                    ? `/api/facturas/${row.facturaId}/pdf`
+                    : row.facturacionMensualId
                     ? `/api/cobros-unificado/facturacion/${row.facturacionMensualId}/pdf`
                     : `/api/cobros-unificado/${row.cobroId}/pdf`
 
@@ -423,7 +440,7 @@ export function TablaCobros({
                                 type="file"
                                 onChange={(e) => {
                                   const f = e.target.files?.[0]
-                                  if (f) void onUploadPdf(row.facturacionMensualId, row.cobroId, f)
+                                  if (f) void onUploadPdf(row.facturaId, row.facturacionMensualId, row.cobroId, f)
                                 }}
                               />
                             </label>
@@ -438,7 +455,7 @@ export function TablaCobros({
                               type="file"
                               onChange={(e) => {
                                 const f = e.target.files?.[0]
-                                if (f) void onUploadPdf(row.facturacionMensualId, row.cobroId, f)
+                                if (f) void onUploadPdf(row.facturaId, row.facturacionMensualId, row.cobroId, f)
                               }}
                             />
                           </label>

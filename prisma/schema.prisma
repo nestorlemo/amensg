@@ -315,6 +315,8 @@ model Cobro {
   facturaDesarrolloId   String?   @db.Uuid
   facturaDesarrollo     FacturaDesarrollo?   @relation(fields: [facturaDesarrolloId],  references: [id])
   ingresoAdicionalId    String?   @db.Uuid
+  facturaId             String?   @db.Uuid
+  factura               Factura?  @relation(fields: [facturaId], references: [id])
   cobroFacturaciones    CobroFacturacion[]
   transferencias        Transferencia[]
   transferenciaCobros   TransferenciaCobro[]
@@ -326,6 +328,15 @@ model Cobro {
   @@index([estado])
   @@index([tipo])
   @@index([facturaDesarrolloId])
+  @@index([facturaId])
+}
+
+model Factura {
+  id            String    @id @default(uuid()) @db.Uuid
+  urlPdf        String?
+  observaciones String?
+  creadaEn      DateTime  @default(now())
+  cobros        Cobro[]
 }
 
 model CobroFacturacion {

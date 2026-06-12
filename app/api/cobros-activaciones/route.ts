@@ -104,8 +104,9 @@ export async function POST(req: NextRequest) {
   if ('error' in auth) return auth.error
 
   const body = await req.json().catch(() => ({})) as Record<string, unknown>
-  const facturacionIds = Array.isArray(body.facturacionIds) ? (body.facturacionIds as string[]) : []
-  const estado = typeof body.estado === 'string' ? body.estado : 'FACTURADO'
+  const facturacionIds   = Array.isArray(body.facturacionIds) ? (body.facturacionIds as string[]) : []
+  const estado           = typeof body.estado === 'string' ? body.estado : 'FACTURADO'
+  const agruparEnFactura = body.agruparEnFactura !== false // default true
 
   if (facturacionIds.length === 0) {
     return NextResponse.json({ error: 'Debe seleccionar al menos una facturación.' }, { status: 422 })
@@ -130,6 +131,13 @@ export async function POST(req: NextRequest) {
   const first = facturaciones[0]!
 
   const cobro = await prisma.$transaction(async (tx) => {
+    // Create Factura if agrupando
+    let facturaId: string | undefined
+    if (agruparEnFactura) {
+      const factura = await tx.factura.create({ data: {} })
+      facturaId = factura.id
+    }
+
     const c = await tx.cobro.create({
       data: {
         tipo: 'ACTIVACIONES',
@@ -141,6 +149,7 @@ export async function POST(req: NextRequest) {
         montoConIva: totalConIva,
         moneda: 'UYU',
         estado,
+        facturaId,
         cobroFacturaciones: {
           create: facturaciones.map((f) => ({ facturacionMensualId: f.id })),
         },
@@ -162,9 +171,11 @@ export async function POST(req: NextRequest) {
         facturacionesCount: facturaciones.length,
         totalSinIva: totalSinIva.toString(),
         totalConIva: totalConIva.toString(),
+        agruparEnFactura,
+        facturaId: cobro.facturaId ?? null,
       },
     },
   })
 
-  return NextResponse.json({ ok: true, id: cobro.id, created: facturaciones.length }, { status: 201 })
+  return NextResponse.json({ ok: true, id: cobro.id, facturaId: cobro.facturaId ?? null, created: facturaciones.length }, { status: 201 })
 }

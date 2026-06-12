@@ -84,7 +84,8 @@ export async function POST(request: Request) {
   const distribuciones = Array.isArray(body.distribuciones)
     ? (body.distribuciones as { socioId: string; porcentaje: number }[])
     : []
-  const crearCobro = body.crearCobro === true
+  const crearCobro       = body.crearCobro === true
+  const agruparEnFactura = body.agruparEnFactura !== false // default true
 
   if (!fechaDesde || !fechaHasta) return NextResponse.json({ error: 'VALIDATION_ERROR', message: 'Fecha desde y hasta son requeridas.' }, { status: 422 })
   if (!empresaId)                 return NextResponse.json({ error: 'VALIDATION_ERROR', message: 'Empresa es requerida.' }, { status: 422 })
@@ -146,6 +147,11 @@ export async function POST(request: Request) {
     })
 
     if (crearCobro) {
+      let facturaId: string | undefined
+      if (agruparEnFactura) {
+        const factura = await tx.factura.create({ data: {} })
+        facturaId = factura.id
+      }
       await tx.cobro.create({
         data: {
           tipo: 'DESARROLLO',
@@ -158,6 +164,7 @@ export async function POST(request: Request) {
           moneda: 'USD',
           estado: 'FACTURADO',
           facturaDesarrolloId: fd.id,
+          facturaId,
         },
       })
     }

@@ -20,7 +20,8 @@ export function ActivacionesDisponibles({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [buscando,  setBuscando]  = useState(false)
   const [searched,  setSearched]  = useState(false)
-  const [marcando,  setMarcando]  = useState(false)
+  const [marcando,        setMarcando]        = useState(false)
+  const [agruparFactura,  setAgruparFactura]  = useState(true)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
   const [errorMsg,   setErrorMsg]   = useState<string | null>(null)
 
@@ -76,13 +77,18 @@ export function ActivacionesDisponibles({
       const res = await fetch('/api/cobros-activaciones', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ facturacionIds: Array.from(selectedIds), estado: 'FACTURADO' }),
+        body: JSON.stringify({
+          facturacionIds: Array.from(selectedIds),
+          estado: 'FACTURADO',
+          agruparEnFactura: agruparFactura,
+        }),
       })
-      const data = (await res.json()) as { ok?: boolean; created?: number; error?: string }
+      const data = (await res.json()) as { ok?: boolean; created?: number; facturaId?: string | null; error?: string }
       if (!res.ok) {
         setErrorMsg(data.error ?? 'Error al registrar.')
       } else {
-        setSuccessMsg(`Cobro creado agrupando ${data.created ?? selectedIds.size} empresa(s) — estado: FACTURADO.`)
+        const facturaMsg = data.facturaId ? ' (factura agrupada creada)' : ''
+        setSuccessMsg(`Cobro creado agrupando ${data.created ?? selectedIds.size} empresa(s) — estado: FACTURADO${facturaMsg}.`)
         setFacturaciones([])
         setSelectedIds(new Set())
         setSearched(false)
@@ -201,6 +207,18 @@ export function ActivacionesDisponibles({
                   </div>
                 </div>
               </div>
+            )}
+
+            {selRows.length > 1 && (
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={agruparFactura}
+                  onChange={(e) => setAgruparFactura(e.target.checked)}
+                  className="rounded"
+                />
+                Agrupar en una sola factura (PDF único para todas las empresas)
+              </label>
             )}
 
             <button

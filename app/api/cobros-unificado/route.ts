@@ -103,8 +103,9 @@ export async function GET(req: NextRequest) {
         ? facturaciones.reduce((s, f) => s + Number(f.totalConIva), 0).toFixed(2)
         : r.montoConIva.toString()
 
-      // PDF from FacturacionMensual takes precedence over legacy Cobro field
+      const facturaId = r.facturaId ?? null
       const facturacionMensualId = facturaciones[0]?.id ?? null
+      // PDF: Factura > FacturacionMensual > Cobro (legacy)
       const urlPdfFactura =
         facturaciones[0]?.urlPdfFactura ?? r.urlPdfFactura ?? null
 
@@ -123,6 +124,7 @@ export async function GET(req: NextRequest) {
         estado: r.estado,
         fechaCobro: r.fechaCobro?.toISOString() ?? null,
         urlPdfFactura,
+        facturaId,
         facturacionMensualId,
       }
     }),
