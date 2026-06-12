@@ -25,6 +25,7 @@ export type CobroHistorial = {
   estado: string
   fechaCobro: string | null
   urlPdfFactura: string | null
+  facturaId: string | null
 }
 
 export type EmpresaOption = { id: string; nombre: string }
