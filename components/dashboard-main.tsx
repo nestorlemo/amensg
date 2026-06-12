@@ -3,20 +3,14 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
-  CreditCard, Upload, Zap, Building2,
-  Calculator, BarChart2, Receipt, FileText, ArrowRight, AlertTriangle,
+  Upload, Calculator, BarChart2, Receipt, FileText, ArrowRight, CreditCard,
 } from 'lucide-react'
 
-import { StatCard, StatCardExtended } from '@/components/ui/index'
+import { StatCardExtended } from '@/components/ui/index'
 import { PageHeader } from '@/components/page-header'
 import { ProcesoMensual } from '@/components/dashboard-proceso-mensual'
 
 type Stats = {
-  pendingCobros: number
-  cobrosVencidos: number
-  activeImports: number
-  importsThisMonth: number
-  activeEmpresas: number
   periodoActivo: { anio: number; mes: number }
   ultimoCierre: { anio: number; mes: number } | null
 }
@@ -49,7 +43,6 @@ function vsText(current: string, prev: string, tieneDatos: boolean) {
   const sign = diff >= 0 ? '+' : ''
   return `$${fmt(prev)} (${sign}${diff.toFixed(1)}%)`
 }
-
 
 const MUTED  = '#8ba3c7'
 const TEXT   = '#0B1F3A'
@@ -115,34 +108,6 @@ export function DashboardMain() {
       )}
 
       <ProcesoMensual />
-
-      <section>
-        <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest" style={{ color: MUTED }}>
-          Resumen operativo
-        </h2>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            label="Cobros pendientes"
-            value={stats?.pendingCobros ?? null}
-            accent={stats ? (stats.cobrosVencidos > 0 ? 'red' : stats.pendingCobros > 0 ? 'amber' : 'green') : 'amber'}
-            icon={CreditCard}
-          />
-          <StatCard label="Importaciones activas"  value={stats?.activeImports    ?? null}                icon={Upload} />
-          <StatCard label="Importaciones este mes" value={stats?.importsThisMonth ?? null} accent="green" icon={Zap} />
-          <StatCard label="Empresas activas"       value={stats?.activeEmpresas   ?? null}                icon={Building2} />
-        </div>
-        {stats && stats.cobrosVencidos > 0 ? (
-          <div className="mt-4 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-5 py-3">
-            <AlertTriangle size={16} className="shrink-0 text-amber-600" />
-            <p className="flex-1 text-sm font-medium text-amber-800">
-              Tenés {stats.cobrosVencidos} cobro{stats.cobrosVencidos !== 1 ? 's' : ''} con más de 30 días sin cobrar
-            </p>
-            <Link href="/cobros-unificado" className="text-sm font-semibold text-amber-700 hover:underline">
-              Ver cobros →
-            </Link>
-          </div>
-        ) : null}
-      </section>
 
       {resumen ? (() => {
         const { periodo, activacionesCobradas, activacionesPendientes, desarrolloPendienteUSD, desarrolloPendienteUYU, resultadoEstimado, mesAnterior } = resumen
@@ -226,4 +191,3 @@ export function DashboardMain() {
     </div>
   )
 }
-
