@@ -33,8 +33,6 @@ export async function GET(req: NextRequest) {
   const fechaFin    = new Date(anio, mes, 1)
 
   const [
-    empresasActivas,
-    importacionesExistentes,
     issuesPendientesCount,
     issuesEnProduccionSinFacturarCount,
     issuesEnDesarrolloCount,
@@ -44,19 +42,6 @@ export async function GET(req: NextRequest) {
     facturacionesSinCobro,
     facturacionesTotales,
   ] = await Promise.all([
-    prisma.empresa.findMany({
-      where: { activa: true },
-      select: { id: true, nombre: true },
-    }),
-    prisma.activacionImportada.findMany({
-      where: {
-        anio,
-        mes,
-        importacion: { estado: { not: 'ANULADA' } },
-      },
-      select: { empresaId: true },
-      distinct: ['empresaId'],
-    }),
     // PENDIENTE: not started
     prisma.issue.count({
       where: { eliminado: false, estado: 'PENDIENTE', fechaProduccion: null },
@@ -107,11 +92,6 @@ export async function GET(req: NextRequest) {
     }),
   ])
 
-  const importadasIds = new Set(importacionesExistentes.map((i) => i.empresaId))
-  const empresasFaltantes = empresasActivas
-    .filter((e) => !importadasIds.has(e.id))
-    .map((e) => e.nombre)
-
   const transferPendientes = Math.max(0, cierresSocioCount - transferenciasCount)
   const transferCompletas  = transferPendientes === 0 && cierresSocioCount > 0
 
@@ -119,10 +99,6 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     periodo: { anio, mes, nombre: periodoStr },
-    importacion: {
-      completo: empresasFaltantes.length === 0,
-      empresasFaltantes,
-    },
     issuesFacturables: {
       pendientes:               issuesPendientesCount,
       enProduccionSinFacturar:  issuesEnProduccionSinFacturarCount,
