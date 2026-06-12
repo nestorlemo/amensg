@@ -5,7 +5,8 @@ import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
 
-const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+const MESES      = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+const MESES_ABR  = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 
 export async function GET(req: NextRequest) {
   const auth = await requireApiAuth()
@@ -23,7 +24,10 @@ export async function GET(req: NextRequest) {
   }
 
   const mesNombre = MESES[mes - 1] ?? ''
+  const mesAbrev  = MESES_ABR[mes - 1] ?? ''
   const periodoStr = `${mesNombre} ${anio}`
+  // Flujo viejo (buildConcepto): "Activaciones May-May 2026" o "Activaciones May 2026"
+  const periodoStrAbrev = `${mesAbrev} ${anio}`
 
   // Rango de fechaProduccion para el período (para issues)
   const fechaInicio = new Date(anio, mes - 1, 1)
@@ -63,7 +67,12 @@ export async function GET(req: NextRequest) {
       select: { estado: true },
     }),
     prisma.transferencia.count({
-      where: { concepto: { contains: periodoStr } },
+      where: {
+        OR: [
+          { concepto: { contains: periodoStr } },      // "Activaciones Mayo 2026"
+          { concepto: { contains: periodoStrAbrev } }, // "Activaciones May-May 2026" / "Activaciones May 2026"
+        ],
+      },
     }),
     prisma.facturacionMensual.count({
       where: {
