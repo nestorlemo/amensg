@@ -86,7 +86,7 @@ export function DashboardMain() {
     <div className="space-y-8">
       <PageHeader
         section="SISTEMA ACTIVO"
-        title="Bienvenido a amensg"
+        title="Bienvenido"
         description="Sistema de facturación mensual de activaciones"
         statusDot
       />

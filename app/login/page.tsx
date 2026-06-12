@@ -71,15 +71,11 @@ export default async function LoginPage({ searchParams }: PageProps) {
         <div className="mb-6 flex flex-col items-center gap-3">
           <LogoMark />
           <div className="text-center">
-            <p className="text-xl font-bold" style={{ color: '#0B1F3A', letterSpacing: '-0.01em' }}>AMENSG</p>
-            <p className="text-sm" style={{ color: '#8ba3c7' }}>Sistema de facturación de activaciones</p>
+            <p className="text-xl font-bold" style={{ color: '#0B1F3A', letterSpacing: '-0.01em' }}>amensg</p>
           </div>
         </div>
 
-        <h1 className="text-lg font-semibold mb-1" style={{ color: '#0B1F3A' }}>Iniciar sesión</h1>
-        <p className="text-sm mb-6" style={{ color: '#5a6a82' }}>
-          Ingrese con el usuario local configurado para operar el sistema.
-        </p>
+        <h1 className="text-lg font-semibold mb-6" style={{ color: '#0B1F3A' }}>Iniciar sesión</h1>
 
         <LoginForm next={next ?? '/'} />
       </section>
